@@ -57,5 +57,22 @@ export type Charge = {
   id: string;
   description: string;
   totalCents: number;
+  paidCents: number;
   status: "open" | "paid" | "void";
+};
+
+export type PayoutRow = {
+  professionalId: string;
+  professionalName: string;
+  commissionCents: number;
+  tipCents: number;
+};
+
+export type Payment = {
+  id: string;
+  method: string;
+  amountCents: number;
+  status: "pending" | "confirmed" | "failed" | "refunded";
+  chargeDescription: string;
+  createdAt: string;
 };

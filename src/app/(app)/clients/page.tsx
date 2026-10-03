@@ -1,10 +1,11 @@
 import { and, asc, eq } from "drizzle-orm";
-import { clients, memberships } from "@/db/schema";
+import { clients, memberships, walletTransactions } from "@/db/schema";
 import { withUser } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import { ClientCard } from "./client-card";
 import { ClientCreateForm } from "./client-create-form";
+import { WalletList } from "./wallet-list";
 import type { Client } from "./types";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export default async function ClientsPage() {
   const session = await getSession();
   const userId = session?.user?.id ?? "";
 
-  const { clientList, canManage } = await withUser(userId, async (tx) => {
+  const { clientList, balanceByClient, canManage } = await withUser(userId, async (tx) => {
     const rows = await tx
       .select({
         id: clients.id,
@@ -42,6 +43,14 @@ export default async function ClientsPage() {
       .where(eq(clients.tenantId, tenant.id))
       .orderBy(asc(clients.name));
 
+    const walletRows = await tx
+      .select({
+        clientId: walletTransactions.clientId,
+        amountCents: walletTransactions.amountCents,
+      })
+      .from(walletTransactions)
+      .where(eq(walletTransactions.tenantId, tenant.id));
+
     const [membership] = await tx
       .select({ role: memberships.role })
       .from(memberships)
@@ -53,11 +62,26 @@ export default async function ClientsPage() {
       )
       .limit(1);
 
+    const balanceByClient = new Map<string, number>();
+    for (const row of walletRows) {
+      balanceByClient.set(
+        row.clientId,
+        (balanceByClient.get(row.clientId) ?? 0) + row.amountCents,
+      );
+    }
+
     return {
       clientList: rows as Client[],
+      balanceByClient,
       canManage: MANAGE_ROLES.includes(membership?.role ?? ""),
     };
   });
+
+  const walletClients = clientList.map((client) => ({
+    id: client.id,
+    name: client.name,
+    balanceCents: balanceByClient.get(client.id) ?? 0,
+  }));
 
   return (
     <div className="space-y-8">
@@ -74,7 +98,7 @@ export default async function ClientsPage() {
       <section>
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
-            Carteira
+            Clientes
           </h2>
           <span className="text-xs text-foreground/50">
             {clientList.length} cliente(s)
@@ -91,6 +115,15 @@ export default async function ClientsPage() {
               Nenhum cliente cadastrado ainda.
             </p>
           )}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
+          Carteira (crédito pré-pago)
+        </h2>
+        <div className="mt-4">
+          <WalletList clients={walletClients} canManage={canManage} />
         </div>
       </section>
     </div>

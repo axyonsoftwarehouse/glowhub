@@ -93,7 +93,28 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   Ao criar, lança **débito em Contas a Receber** e **crédito em Receita**
   (contas resolvidas por `ledger_accounts.system_key`). Receber = débito em Caixa
   e crédito em Contas a Receber, marcando `paid`. Cada lançamento guarda
-  `idempotency_key` (`charge-revenue-<id>`, `charge-settle-<id>`).
+  `idempotency_key` (`charge-revenue-<id>`, `payment-<id>`).
+- **Pagamentos** (`payments`): idempotentes (`idempotency_key`), com `method`
+  (cash/debit/credit/pix/transfer/wallet/other), `status`
+  (pending/confirmed/failed/refunded) e vínculo ao lançamento. O pagamento manual
+  confirma na hora (**D Caixa/Banco, C Contas a Receber**) e a cobrança vira
+  `paid` quando o total confirmado cobre o valor; **suporta parciais**.
+- **Comissão/gorjeta/repasses**: `professionals.commission_bp` (0–10000) define a
+  comissão; ao cobrar, acumula em `earnings` (kind commission) com lançamento
+  **D Comissões (despesa) / C Comissões a Pagar**. Gorjeta, no pagamento, vira
+  `earnings` (kind tip) com **C Gorjetas a Pagar**. O **repasse** (`payouts`) zera
+  as obrigações: **D Comissões a Pagar + D Gorjetas a Pagar / C Caixa|Banco**, e
+  marca os `earnings` como `paid`.
+- **Carteira** (`wallet_transactions`): crédito pré-pago do cliente. Recarga =
+  **D Caixa/Banco, C Carteira** (passivo); pagamento com `method = wallet` =
+  **D Carteira, C Contas a Receber** (com verificação de saldo). Saldo derivado
+  das transações (positivo = crédito, negativo = uso).
+- **Relatórios** (`/reports`): balancete do período por conta, resultado
+  (receitas − despesas), recebimentos e comissões/gorjetas por profissional.
+- **Webhooks** (`webhook_events`): eventos do provedor gravados de forma
+  idempotente (`provider` + `event_id`); endpoint `/api/webhooks/<provider>` já
+  existe e falta a confirmação por provedor (com validação de assinatura).
+  `webhook_events` é interno (sem acesso pela role do app).
 
 ## Princípios do financeiro (contábil)
 1. **Livro-razão de partidas dobradas** (`ledger_accounts`, `journal_entries`,

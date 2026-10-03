@@ -21,7 +21,16 @@ const nameInput = z.object({
     .trim()
     .min(2, "Informe ao menos 2 caracteres.")
     .max(120, "No máximo 120 caracteres."),
+  commission: z.string().trim().optional(),
 });
+
+function parseCommissionBp(raw: string | undefined): number | null {
+  const cleaned = (raw ?? "").replace("%", "").replace(",", ".").trim();
+  if (cleaned === "") return 0;
+  const value = Number(cleaned);
+  if (!Number.isFinite(value) || value < 0 || value > 100) return null;
+  return Math.round(value * 100);
+}
 
 function toFieldErrors(error: z.ZodError): Record<string, string[]> {
   const fieldErrors: Record<string, string[]> = {};
@@ -51,9 +60,16 @@ export async function createProfessionalAction(
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
 
-  const parsed = nameInput.safeParse({ name: formData.get("name") ?? "" });
+  const parsed = nameInput.safeParse({
+    name: formData.get("name") ?? "",
+    commission: formData.get("commission") ?? "",
+  });
   if (!parsed.success) {
     return { status: "error", fieldErrors: toFieldErrors(parsed.error) };
+  }
+  const commissionBp = parseCommissionBp(parsed.data.commission);
+  if (commissionBp === null) {
+    return { status: "error", fieldErrors: { commission: ["Comissão deve ser entre 0 e 100%."] } };
   }
 
   try {
@@ -61,6 +77,7 @@ export async function createProfessionalAction(
       await tx.insert(professionals).values({
         tenantId: ctx.tenant.id,
         name: parsed.data.name,
+        commissionBp,
       });
     });
   } catch (cause) {
@@ -87,16 +104,23 @@ export async function updateProfessionalAction(
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
 
-  const parsed = nameInput.safeParse({ name: formData.get("name") ?? "" });
+  const parsed = nameInput.safeParse({
+    name: formData.get("name") ?? "",
+    commission: formData.get("commission") ?? "",
+  });
   if (!parsed.success) {
     return { status: "error", fieldErrors: toFieldErrors(parsed.error) };
+  }
+  const commissionBp = parseCommissionBp(parsed.data.commission);
+  if (commissionBp === null) {
+    return { status: "error", fieldErrors: { commission: ["Comissão deve ser entre 0 e 100%."] } };
   }
 
   try {
     const updated = await withUser(ctx.userId, async (tx) =>
       tx
         .update(professionals)
-        .set({ name: parsed.data.name })
+        .set({ name: parsed.data.name, commissionBp })
         .where(
           and(
             eq(professionals.id, id),

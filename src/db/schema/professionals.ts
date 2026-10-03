@@ -1,7 +1,9 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
+  integer,
   pgTable,
   text,
   timestamp,
@@ -21,6 +23,7 @@ export const professionals = pgTable(
       .references(() => tenants.id, { onDelete: "cascade" }),
     userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
     name: text("name").notNull(),
+    commissionBp: integer("commission_bp").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -29,6 +32,7 @@ export const professionals = pgTable(
     index("professionals_tenant_idx").on(t.tenantId),
     index("professionals_user_idx").on(t.userId),
     uniqueIndex("professionals_tenant_name_key").on(t.tenantId, sql`lower(${t.name})`),
+    check("professionals_commission_range", sql`${t.commissionBp} between 0 and 10000`),
   ],
 );
 

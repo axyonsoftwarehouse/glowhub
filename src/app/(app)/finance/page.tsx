@@ -2,11 +2,15 @@ import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import {
   chargeItems,
   charges,
+  earnings,
   journalEntries,
   journalLines,
   ledgerAccounts,
   memberships,
+  payments,
+  professionals,
 } from "@/db/schema";
+import { formatCentsBRL } from "@/lib/money";
 import { withUser } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
@@ -14,11 +18,22 @@ import { AccountManager } from "./account-manager";
 import { ChargeList } from "./charge-list";
 import { JournalForm } from "./journal-form";
 import { JournalList } from "./journal-list";
+import { PayoutList } from "./payout-list";
 import type { Charge, JournalEntry, LedgerAccount } from "./types";
 
 export const dynamic = "force-dynamic";
 
 const MANAGE_ROLES = ["owner", "admin", "manager", "staff"];
+
+const METHOD_LABELS: Record<string, string> = {
+  cash: "Dinheiro",
+  debit: "Débito",
+  credit: "Crédito",
+  pix: "Pix",
+  transfer: "Transferência",
+  wallet: "Carteira",
+  other: "Outro",
+};
 
 export default async function FinancePage() {
   const tenant = await getCurrentTenant();
@@ -103,6 +118,36 @@ export default async function FinancePage() {
           .where(inArray(chargeItems.chargeId, chargeIds))
       : [];
 
+    const paymentRows = await tx
+      .select({
+        id: payments.id,
+        chargeId: payments.chargeId,
+        method: payments.method,
+        amountCents: payments.amountCents,
+        status: payments.status,
+        createdAt: payments.createdAt,
+      })
+      .from(payments)
+      .where(eq(payments.tenantId, tenant.id))
+      .orderBy(desc(payments.createdAt))
+      .limit(30);
+
+    const earningRows = await tx
+      .select({
+        professionalId: earnings.professionalId,
+        kind: earnings.kind,
+        amountCents: earnings.amountCents,
+      })
+      .from(earnings)
+      .where(
+        and(eq(earnings.tenantId, tenant.id), eq(earnings.status, "pending")),
+      );
+
+    const professionalRows = await tx
+      .select({ id: professionals.id, name: professionals.name })
+      .from(professionals)
+      .where(eq(professionals.tenantId, tenant.id));
+
     const [membership] = await tx
       .select({ role: memberships.role })
       .from(memberships)
@@ -121,6 +166,9 @@ export default async function FinancePage() {
       entryLines,
       chargeRows,
       chargeItemRows,
+      paymentRows,
+      earningRows,
+      professionalRows,
       canManage: MANAGE_ROLES.includes(membership?.role ?? ""),
     };
   });
@@ -164,11 +212,50 @@ export default async function FinancePage() {
       itemByCharge.set(item.chargeId, item.description);
     }
   }
+  const paidByCharge = new Map<string, number>();
+  for (const payment of data.paymentRows) {
+    if (payment.status !== "confirmed") continue;
+    paidByCharge.set(
+      payment.chargeId,
+      (paidByCharge.get(payment.chargeId) ?? 0) + payment.amountCents,
+    );
+  }
+
   const chargeList: Charge[] = data.chargeRows.map((row) => ({
     id: row.id,
     description: itemByCharge.get(row.id) ?? "Cobrança",
     totalCents: row.totalCents,
+    paidCents: paidByCharge.get(row.id) ?? 0,
     status: row.status,
+  }));
+
+  const paymentList = data.paymentRows.map((row) => ({
+    id: row.id,
+    method: row.method,
+    amountCents: row.amountCents,
+    status: row.status,
+    chargeDescription: itemByCharge.get(row.chargeId) ?? "Cobrança",
+    createdAt: row.createdAt.toISOString(),
+  }));
+
+  const professionalName = new Map(
+    data.professionalRows.map((row) => [row.id, row.name]),
+  );
+  const payoutMap = new Map<string, { commissionCents: number; tipCents: number }>();
+  for (const row of data.earningRows) {
+    const bucket = payoutMap.get(row.professionalId) ?? {
+      commissionCents: 0,
+      tipCents: 0,
+    };
+    if (row.kind === "commission") bucket.commissionCents += row.amountCents;
+    else bucket.tipCents += row.amountCents;
+    payoutMap.set(row.professionalId, bucket);
+  }
+  const payoutRows = [...payoutMap.entries()].map(([professionalId, totals]) => ({
+    professionalId,
+    professionalName: professionalName.get(professionalId) ?? "Profissional",
+    commissionCents: totals.commissionCents,
+    tipCents: totals.tipCents,
   }));
 
   return (
@@ -200,6 +287,46 @@ export default async function FinancePage() {
         </h2>
         <div className="mt-4">
           <ChargeList charges={chargeList} canSettle={data.canManage} />
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
+          Pagamentos
+        </h2>
+        <div className="mt-4 space-y-1">
+          {paymentList.map((payment) => (
+            <div
+              key={payment.id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-white/60 px-3 py-2 text-sm"
+            >
+              <span className="min-w-0 truncate text-foreground/70">
+                {payment.chargeDescription}
+              </span>
+              <span className="flex shrink-0 items-center gap-3">
+                <span className="text-xs text-foreground/50">
+                  {METHOD_LABELS[payment.method] ?? payment.method}
+                </span>
+                <span className="font-medium">
+                  {formatCentsBRL(payment.amountCents)}
+                </span>
+              </span>
+            </div>
+          ))}
+          {paymentList.length === 0 && (
+            <p className="text-sm text-foreground/60">
+              Nenhum pagamento registrado.
+            </p>
+          )}
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
+          Repasses (comissão + gorjeta)
+        </h2>
+        <div className="mt-4">
+          <PayoutList rows={payoutRows} />
         </div>
       </section>
 

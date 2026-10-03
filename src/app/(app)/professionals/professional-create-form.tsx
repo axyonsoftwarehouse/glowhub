@@ -26,6 +26,7 @@ export function ProfessionalCreateForm() {
   }
 
   const nameError = result.fieldErrors?.name?.[0];
+  const commissionError = result.fieldErrors?.commission?.[0];
 
   return (
     <details className="rounded-2xl border border-border bg-white/70 p-5">
@@ -46,6 +47,16 @@ export function ProfessionalCreateForm() {
           )}
           {result.status === "success" && result.message && (
             <p className="mt-1 text-xs text-emerald-700">{result.message}</p>
+          )}
+        </div>
+        <div className="w-28">
+          <input
+            name="commission"
+            placeholder="Comissão %"
+            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+          />
+          {commissionError && (
+            <p className="mt-1 text-xs text-red-600">{commissionError}</p>
           )}
         </div>
         <button

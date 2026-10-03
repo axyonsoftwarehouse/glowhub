@@ -3,9 +3,9 @@
 Construção incremental. Cada fase entrega algo utilizável e testável.
 
 ## Fase 0 — Fundação (concluída)
-- [x] Projeto Next 16 + Tailwind + TypeScript + Supabase + Drizzle
+- [x] Projeto Next 16 + Tailwind + TypeScript + Neon + Drizzle + Better Auth
 - [x] Tenancy: `tenants`, `branches`, `memberships`, `invitations`, `profiles`
-- [x] RLS por `tenant_id` com claim de JWT + hook de access token
+- [x] RLS por `tenant_id` via `auth_uid()` (claims injetados por transação)
 - [x] Resolução de tenant por subdomínio (`src/proxy.ts`)
 - [x] Login/cadastro + shell autenticado + lista de filiais
 
@@ -27,12 +27,13 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Agendamento (painel) + status/check-in/checkout
 - [x] Clientes (histórico via agenda)
 
-## Fase 4 — Financeiro
+## Fase 4 — Financeiro (concluída)
 - [x] Chart of accounts + **ledger de partidas dobradas** (centavos)
 - [x] Cobrança de atendimento (`charges`/`charge_items`; serviços; produtos/pacotes via `kind`)
-- [ ] Pagamentos **idempotentes** (gateway) + webhooks + conciliação
-- [ ] Gorjeta, comissão e repasses; carteira
-- [ ] Relatórios e fechamento
+- [x] Pagamentos **idempotentes** + webhooks + conciliação (manual; gateway a integrar)
+- [x] Gorjeta, comissão e repasses
+- [x] Carteira do cliente (crédito pré-pago; pagamento por carteira)
+- [x] Relatórios (balancete, resultado, recebimentos, comissões/gorjetas) — fechamento formal pendente
 
 ## Fase 5 — Recorrência & comercial
 - [ ] Pacotes e assinaturas

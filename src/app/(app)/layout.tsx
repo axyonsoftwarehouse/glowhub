@@ -91,12 +91,12 @@ export default async function AppLayout({
           <Link href="/finance" className="rounded-lg px-3 py-2 hover:bg-muted">
             Financeiro
           </Link>
+          <Link href="/reports" className="rounded-lg px-3 py-2 hover:bg-muted">
+            Relatórios
+          </Link>
           <Link href="/profile" className="rounded-lg px-3 py-2 hover:bg-muted">
             Perfil
           </Link>
-          <span className="rounded-lg px-3 py-2 text-foreground/40">
-            Relatórios (em breve)
-          </span>
         </nav>
 
         <div className="mt-auto space-y-3">

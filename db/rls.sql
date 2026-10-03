@@ -90,7 +90,8 @@ begin
     'branch_hours', 'professional_hours', 'branch_closures',
     'clients', 'appointments',
     'ledger_accounts', 'journal_entries', 'journal_lines',
-    'charges', 'charge_items'
+    'charges', 'charge_items', 'payments', 'earnings', 'payouts',
+    'wallet_transactions'
   ]
   loop
     execute format('alter table public.%I enable row level security', t);
@@ -163,7 +164,7 @@ begin
     'professionals', 'professional_branches', 'professional_services',
     'products', 'product_variants',
     'branch_hours', 'professional_hours', 'branch_closures',
-    'ledger_accounts'
+    'ledger_accounts', 'payouts'
   ]
   loop
     execute format('drop policy if exists %I on public.%I', t || '_member_read', t);
@@ -185,7 +186,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['clients', 'appointments', 'charges', 'charge_items']
+  foreach t in array array['clients', 'appointments', 'charges', 'charge_items', 'payments', 'earnings', 'wallet_transactions']
   loop
     execute format('drop policy if exists %I on public.%I', t || '_member_read', t);
     execute format(
@@ -309,3 +310,6 @@ grant execute on all functions in schema public to glowhub_app;
 -- Ledger e append-only tambem via permissoes.
 revoke update, delete on public.journal_entries from glowhub_app;
 revoke update, delete on public.journal_lines from glowhub_app;
+
+-- webhook_events e interno (sem tenant_id; escrito so pelo admin).
+revoke all on public.webhook_events from glowhub_app;

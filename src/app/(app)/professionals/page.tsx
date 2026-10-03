@@ -42,6 +42,7 @@ export default async function ProfessionalsPage() {
         .select({
           id: professionals.id,
           name: professionals.name,
+          commissionBp: professionals.commissionBp,
           isActive: professionals.isActive,
         })
         .from(professionals)
@@ -111,6 +112,7 @@ export default async function ProfessionalsPage() {
       const list: Professional[] = proRows.map((row) => ({
         id: row.id,
         name: row.name,
+        commissionBp: row.commissionBp,
         isActive: row.isActive,
         branchIds: branchMap.get(row.id) ?? [],
         serviceIds: serviceMap.get(row.id) ?? [],

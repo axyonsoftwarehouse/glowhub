@@ -121,5 +121,8 @@ Acesse: http://localhost:3000/dashboard
 - [x] Agendamentos e clientes
 - [x] Financeiro: plano de contas + ledger de partidas dobradas (append-only)
 - [x] Financeiro: cobrança de atendimento (gera receita + contas a receber)
-- [ ] Financeiro: pagamentos idempotentes (gateway) + webhooks + relatórios
+- [x] Financeiro: pagamentos idempotentes (offline) + webhooks + conciliação
+- [x] Financeiro: comissão, gorjeta e repasses ao profissional
+- [x] Financeiro: carteira do cliente (crédito pré-pago) e relatórios (balancete/resultado)
+- [ ] Financeiro: integração de gateway (online) e fechamento formal
 - [ ] Notificações, website público e app do cliente

@@ -1,24 +1,34 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { formatCentsBRL } from "@/lib/money";
-import { settleChargeAction } from "./actions";
+import { formatCentsBRL, formatCentsToInput } from "@/lib/money";
+import { registerPaymentAction } from "./actions";
 import {
   initialFinanceActionState,
   type Charge,
   type FinanceActionState,
 } from "./types";
 
-const STATUS_LABELS: Record<Charge["status"], string> = {
-  open: "Aberta",
-  paid: "Paga",
-  void: "Estornada",
-};
+const METHODS = [
+  { value: "cash", label: "Dinheiro" },
+  { value: "debit", label: "Débito" },
+  { value: "credit", label: "Crédito" },
+  { value: "pix", label: "Pix" },
+  { value: "transfer", label: "Transferência" },
+  { value: "wallet", label: "Carteira" },
+  { value: "other", label: "Outro" },
+];
 
 const STATUS_STYLES: Record<Charge["status"], string> = {
   open: "bg-amber-100 text-amber-700",
   paid: "bg-emerald-100 text-emerald-700",
   void: "bg-zinc-100 text-zinc-600",
+};
+
+const STATUS_LABELS: Record<Charge["status"], string> = {
+  open: "Aberta",
+  paid: "Paga",
+  void: "Estornada",
 };
 
 export function ChargeList({
@@ -33,11 +43,9 @@ export function ChargeList({
   );
   const [pending, startTransition] = useTransition();
 
-  function settle(id: string) {
-    const formData = new FormData();
-    formData.set("id", id);
+  function handlePayment(formData: FormData) {
     startTransition(async () => {
-      setResult(await settleChargeAction(initialFinanceActionState, formData));
+      setResult(await registerPaymentAction(initialFinanceActionState, formData));
     });
   }
 
@@ -51,36 +59,74 @@ export function ChargeList({
 
   return (
     <div className="space-y-2">
-      {charges.map((charge) => (
-        <div
-          key={charge.id}
-          className="flex items-center justify-between gap-3 rounded-lg border border-border bg-white/60 p-3"
-        >
-          <div className="min-w-0">
-            <p className="truncate text-sm">{charge.description}</p>
-            <span
-              className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[11px] ${STATUS_STYLES[charge.status]}`}
-            >
-              {STATUS_LABELS[charge.status]}
-            </span>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <span className="text-sm font-medium">
-              {formatCentsBRL(charge.totalCents)}
-            </span>
-            {canSettle && charge.status === "open" && (
-              <button
-                type="button"
-                onClick={() => settle(charge.id)}
-                disabled={pending}
-                className="rounded-full bg-brand px-3 py-1 text-xs font-medium text-brand-foreground disabled:opacity-60"
+      {charges.map((charge) => {
+        const remaining = charge.totalCents - charge.paidCents;
+        return (
+          <div
+            key={charge.id}
+            className="rounded-lg border border-border bg-white/60 p-3"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-sm">{charge.description}</p>
+                <span
+                  className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[11px] ${STATUS_STYLES[charge.status]}`}
+                >
+                  {STATUS_LABELS[charge.status]}
+                </span>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-sm font-medium">
+                  {formatCentsBRL(charge.totalCents)}
+                </p>
+                {charge.paidCents > 0 && charge.paidCents < charge.totalCents && (
+                  <p className="text-[11px] text-foreground/50">
+                    pago {formatCentsBRL(charge.paidCents)} · saldo{" "}
+                    {formatCentsBRL(remaining)}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {canSettle && charge.status === "open" && remaining > 0 && (
+              <form
+                action={handlePayment}
+                className="mt-2 flex flex-wrap items-center gap-2"
               >
-                {pending ? "..." : "Receber"}
-              </button>
+                <input type="hidden" name="chargeId" value={charge.id} />
+                <select
+                  name="method"
+                  defaultValue="cash"
+                  className="rounded-lg border border-border bg-white px-2 py-1.5 text-xs outline-none focus:border-brand"
+                >
+                  {METHODS.map((method) => (
+                    <option key={method.value} value={method.value}>
+                      {method.label}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  name="amount"
+                  defaultValue={formatCentsToInput(remaining)}
+                  className="w-24 rounded-lg border border-border bg-white px-2 py-1.5 text-xs outline-none focus:border-brand"
+                />
+                <input
+                  name="tip"
+                  placeholder="Gorjeta"
+                  className="w-20 rounded-lg border border-border bg-white px-2 py-1.5 text-xs outline-none focus:border-brand"
+                />
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="rounded-full bg-brand px-3 py-1 text-xs font-medium text-brand-foreground disabled:opacity-60"
+                >
+                  {pending ? "..." : "Receber"}
+                </button>
+              </form>
             )}
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {result.status === "error" && result.message && (
         <p className="text-xs text-red-600">{result.message}</p>

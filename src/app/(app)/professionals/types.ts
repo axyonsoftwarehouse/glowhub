@@ -11,6 +11,7 @@ export const initialProfessionalActionState: ProfessionalActionState = {
 export type Professional = {
   id: string;
   name: string;
+  commissionBp: number;
   isActive: boolean;
   branchIds: string[];
   serviceIds: string[];

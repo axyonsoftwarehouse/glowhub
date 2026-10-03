@@ -6,3 +6,6 @@ export * from "./products";
 export * from "./schedule";
 export * from "./appointments";
 export * from "./ledger";
+export * from "./payments";
+export * from "./payroll";
+export * from "./wallet";

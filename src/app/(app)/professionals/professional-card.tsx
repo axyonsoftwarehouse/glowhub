@@ -61,6 +61,7 @@ export function ProfessionalCard({
   }
 
   const nameError = updateResult.fieldErrors?.name?.[0];
+  const commissionError = updateResult.fieldErrors?.commission?.[0];
 
   return (
     <article className="rounded-2xl border border-border bg-white/70 p-5">
@@ -70,6 +71,9 @@ export function ProfessionalCard({
           <p className="mt-0.5 text-xs text-foreground/50">
             {professional.serviceIds.length} serviço(s) ·{" "}
             {linkedBranchNames.length} filial(is)
+            {professional.commissionBp > 0
+              ? ` · comissão ${professional.commissionBp / 100}%`
+              : ""}
           </p>
         </div>
         <span
@@ -100,6 +104,17 @@ export function ProfessionalCard({
             />
             {nameError && (
               <p className="mt-1 text-xs text-red-600">{nameError}</p>
+            )}
+          </div>
+          <div className="w-28">
+            <input
+              name="commission"
+              defaultValue={(professional.commissionBp / 100).toString()}
+              placeholder="Comissão %"
+              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+            />
+            {commissionError && (
+              <p className="mt-1 text-xs text-red-600">{commissionError}</p>
             )}
           </div>
           <button
