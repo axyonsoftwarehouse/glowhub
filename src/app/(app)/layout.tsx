@@ -85,6 +85,9 @@ export default async function AppLayout({
           <Link href="/clients" className="rounded-lg px-3 py-2 hover:bg-muted">
             Clientes
           </Link>
+          <Link href="/packages" className="rounded-lg px-3 py-2 hover:bg-muted">
+            Pacotes
+          </Link>
           <Link href="/team" className="rounded-lg px-3 py-2 hover:bg-muted">
             Equipe
           </Link>

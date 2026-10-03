@@ -91,7 +91,8 @@ begin
     'clients', 'appointments',
     'ledger_accounts', 'journal_entries', 'journal_lines',
     'charges', 'charge_items', 'payments', 'earnings', 'payouts',
-    'wallet_transactions'
+    'wallet_transactions',
+    'packages', 'package_items', 'client_packages', 'package_redemptions'
   ]
   loop
     execute format('alter table public.%I enable row level security', t);
@@ -164,7 +165,7 @@ begin
     'professionals', 'professional_branches', 'professional_services',
     'products', 'product_variants',
     'branch_hours', 'professional_hours', 'branch_closures',
-    'ledger_accounts', 'payouts'
+    'ledger_accounts', 'payouts', 'packages', 'package_items'
   ]
   loop
     execute format('drop policy if exists %I on public.%I', t || '_member_read', t);
@@ -186,7 +187,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['clients', 'appointments', 'charges', 'charge_items', 'payments', 'earnings', 'wallet_transactions']
+  foreach t in array array['clients', 'appointments', 'charges', 'charge_items', 'payments', 'earnings', 'wallet_transactions', 'client_packages', 'package_redemptions']
   loop
     execute format('drop policy if exists %I on public.%I', t || '_member_read', t);
     execute format(

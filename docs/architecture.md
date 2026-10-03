@@ -109,6 +109,10 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   **D Caixa/Banco, C Carteira** (passivo); pagamento com `method = wallet` =
   **D Carteira, C Contas a Receber** (com verificação de saldo). Saldo derivado
   das transações (positivo = crédito, negativo = uso).
+- **Pacotes** (`packages`/`package_items` templates; `client_packages` vendidos;
+  `package_redemptions`). Venda = **D Caixa/Banco, C Pacotes a Resgatar**
+  (passivo); resgate = **D Pacotes a Resgatar, C Receita de Serviços**. Validade
+  opcional em `expires_at`; saldo por serviço derivado dos resgates.
 - **Relatórios** (`/reports`): balancete do período por conta, resultado
   (receitas − despesas), recebimentos e comissões/gorjetas por profissional.
 - **Webhooks** (`webhook_events`): eventos do provedor gravados de forma
