@@ -103,6 +103,12 @@ export default async function AppLayout({
           <Link href="/finance" className="rounded-lg px-3 py-2 hover:bg-muted">
             Financeiro
           </Link>
+          <Link
+            href="/reconciliation"
+            className="rounded-lg px-3 py-2 hover:bg-muted"
+          >
+            Conciliação
+          </Link>
           <Link href="/reports" className="rounded-lg px-3 py-2 hover:bg-muted">
             Relatórios
           </Link>
