@@ -126,5 +126,6 @@ Acesse: http://localhost:3000/dashboard
 - [x] Financeiro: carteira do cliente (crédito pré-pago) e relatórios (balancete/resultado)
 - [x] Pacotes (pré-pago) e assinaturas (planos recorrentes) com ledger
 - [x] Cupons/promoções (desconto em cobranças abertas, com ledger)
-- [ ] Notificações/lembretes; gateway online e fechamento
+- [x] Website público / agendamento online (`/book`)
+- [ ] App mobile, notificações, gateway online, CI/testes e onboarding
 - [ ] Notificações, website público e app do cliente

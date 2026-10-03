@@ -41,7 +41,7 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [ ] Notificações (e-mail/push) e lembretes
 
 ## Fase 6 — Canais
-- [ ] Website público / agendamento online
+- [x] Website público / agendamento online (`/book`, por subdomínio/slug)
 - [ ] App do cliente (mobile)
 
 ## Transversal (em todas as fases)

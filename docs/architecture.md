@@ -129,6 +129,17 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   existe e falta a confirmação por provedor (com validação de assinatura).
   `webhook_events` é interno (sem acesso pela role do app).
 
+## Canal público (agendamento online)
+- `/book` resolve o tenant por **subdomínio/slug** (`getCurrentTenant`) e deixa o
+  visitante escolher serviço → profissional → filial/data → horário → contato.
+- A disponibilidade reutiliza `src/lib/availability-data.ts` (extraído da agenda).
+- Como não há sessão, as leituras/gravações públicas usam a conexão **admin**
+  (`getDb`) com **escopo explícito por `tenant_id`** — decisão consciente para o
+  canal público. A reserva cria/associa o cliente e insere o agendamento
+  (`pending`); a *exclusion constraint* de sobreposição continua valendo.
+- `pending` cai no painel para confirmação/check-in. Integração com pagamento
+  online fica para a fase de gateway.
+
 ## Princípios do financeiro (contábil)
 1. **Livro-razão de partidas dobradas** (`ledger_accounts`, `journal_entries`,
    `journal_lines`) — **append-only**, nunca editar/apagar.
