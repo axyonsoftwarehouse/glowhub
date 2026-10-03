@@ -3,7 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { branches, memberships } from "@/db/schema";
 import { withUser } from "@/lib/db";
 import { getSession } from "@/lib/session";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getCurrentTenant, getUserTenants } from "@/lib/tenant";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +33,7 @@ export default async function DashboardPage() {
 
   const session = await getSession();
   const userId = session?.user?.id ?? "";
+  const myTenants = await getUserTenants();
 
   const { branchList, role } = await withUser(userId, async (tx) => {
     const branchRows = await tx
@@ -78,6 +79,22 @@ export default async function DashboardPage() {
           ) : null}
         </p>
       </header>
+
+      {myTenants.length === 0 && (
+        <section className="rounded-2xl border border-brand/40 bg-brand/5 p-6">
+          <h2 className="text-base font-semibold">Crie sua empresa</h2>
+          <p className="mt-1 text-sm text-foreground/70">
+            Você ainda não está vinculado a nenhuma empresa. Crie a sua para
+            começar a usar a agenda, o catálogo e o financeiro.
+          </p>
+          <Link
+            href="/onboarding"
+            className="mt-3 inline-block rounded-full bg-brand px-4 py-2 text-sm font-medium text-brand-foreground"
+          >
+            Criar empresa
+          </Link>
+        </section>
+      )}
 
       <section>
         <div className="flex items-center justify-between">

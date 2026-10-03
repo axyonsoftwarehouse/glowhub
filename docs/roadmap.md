@@ -45,6 +45,10 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [ ] App do cliente (mobile)
 
 ## Transversal (em todas as fases)
-- Testes (unit + e2e dos fluxos críticos)
-- Observabilidade (logs, métricas, alertas de pagamento)
-- Segurança (RLS, revisão de policies, rate limit)
+- [x] Onboarding de tenant (cadastro cria empresa + filial + owner)
+- [x] CI (lint + typecheck + build no GitHub Actions)
+- [ ] Testes (unit + e2e dos fluxos críticos)
+- [ ] Observabilidade (logs, métricas, alertas de pagamento)
+- [ ] Segurança (revisão de policies, rate limit)
+- [ ] Provedor de e-mail (verificação, convites, lembretes)
+- [ ] Gateway de pagamento online e fechamento formal

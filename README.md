@@ -127,5 +127,6 @@ Acesse: http://localhost:3000/dashboard
 - [x] Pacotes (pré-pago) e assinaturas (planos recorrentes) com ledger
 - [x] Cupons/promoções (desconto em cobranças abertas, com ledger)
 - [x] Website público / agendamento online (`/book`)
-- [ ] App mobile, notificações, gateway online, CI/testes e onboarding
+- [x] Onboarding de tenant (cadastro cria empresa) + CI (lint/typecheck/build)
+- [ ] App mobile, notificações, gateway online e testes
 - [ ] Notificações, website público e app do cliente

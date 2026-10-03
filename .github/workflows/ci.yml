@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      # Valores fictícios: as páginas são dinâmicas e não conectam no build.
+      DATABASE_URL: postgresql://user:pass@localhost:5432/glowhub
+      DATABASE_AUTHENTICATED_URL: postgresql://user:pass@localhost:5432/glowhub
+      BETTER_AUTH_SECRET: ci-secret-at-least-32-characters-long-000000
+      BETTER_AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_ROOT_DOMAIN: glowhub.app
+      DEFAULT_TENANT_SLUG: demo
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Build
+        run: npm run build

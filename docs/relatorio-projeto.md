@@ -229,8 +229,8 @@ Rotas implementadas:
 - [ ] **Storage de arquivos** (avatar/logo/imagens por tenant; hoje só URL).
 
 ### Lacunas funcionais relevantes
-- [ ] **Onboarding de novo tenant**: hoje o cadastro **não cria empresa**; não há
-      fluxo de "criar minha empresa" (tenants são criados por seed/SQL).
+- [x] **Onboarding de novo tenant**: `/onboarding` cria empresa + filial + owner
+      (com CTA no dashboard). CI de lint/typecheck/build no GitHub Actions.
 - [ ] **Visão do profissional** (agenda própria) e **histórico por cliente**.
 - [ ] **Multi-filial por profissional** já é modelado, mas a UI de agenda não
       filtra por profissional de forma dedicada.
