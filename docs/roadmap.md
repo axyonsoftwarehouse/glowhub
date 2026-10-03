@@ -36,7 +36,7 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Relatórios (balancete, resultado, recebimentos, comissões/gorjetas) — fechamento formal pendente
 
 ## Fase 5 — Recorrência & comercial
-- [x] Pacotes (pré-pago: venda e resgate lançados no ledger); assinaturas pendentes
+- [x] Pacotes (pré-pago) e assinaturas (planos recorrentes com cobrança no ledger)
 - [ ] Cupons e promoções
 - [ ] Notificações (e-mail/push) e lembretes
 

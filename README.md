@@ -124,6 +124,6 @@ Acesse: http://localhost:3000/dashboard
 - [x] Financeiro: pagamentos idempotentes (offline) + webhooks + conciliação
 - [x] Financeiro: comissão, gorjeta e repasses ao profissional
 - [x] Financeiro: carteira do cliente (crédito pré-pago) e relatórios (balancete/resultado)
-- [x] Pacotes (pré-pago): venda, validade e resgate com lançamentos no ledger
-- [ ] Assinaturas, cupons e notificações; gateway online e fechamento
+- [x] Pacotes (pré-pago) e assinaturas (planos recorrentes) com ledger
+- [ ] Cupons/promoções, notificações; gateway online e fechamento
 - [ ] Notificações, website público e app do cliente

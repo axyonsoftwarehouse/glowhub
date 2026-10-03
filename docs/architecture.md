@@ -113,6 +113,11 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   `package_redemptions`). Venda = **D Caixa/Banco, C Pacotes a Resgatar**
   (passivo); resgate = **D Pacotes a Resgatar, C Receita de Serviços**. Validade
   opcional em `expires_at`; saldo por serviço derivado dos resgates.
+- **Assinaturas** (`subscription_plans`/`plan_items` + `client_subscriptions`):
+  planos recorrentes (mês/ano). Assinar/renovar emite cobrança com lançamento
+  **D Caixa/Banco, C Receita de Assinaturas** (4.4) e avança o período; cancelar
+  encerra sem nova cobrança. Benefícios/limites por período estão modelados
+  (`plan_items`); o consumo por período ainda não é controlado.
 - **Relatórios** (`/reports`): balancete do período por conta, resultado
   (receitas − despesas), recebimentos e comissões/gorjetas por profissional.
 - **Webhooks** (`webhook_events`): eventos do provedor gravados de forma
