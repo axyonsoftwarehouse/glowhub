@@ -10,7 +10,7 @@ import { branches, memberships, profiles, tenants } from "@/db/schema";
 const DEMO_EMAIL = process.env.DEMO_EMAIL?.trim() || "demo@glowhub.app";
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "demo123456";
 const DEMO_TENANT_SLUG = process.env.DEMO_TENANT_SLUG?.trim() || "demo";
-const DEMO_EXTRA_SLUGS = (process.env.DEMO_EXTRA_TENANTS ?? "studio-bella")
+const DEMO_EXTRA_SLUGS = (process.env.DEMO_EXTRA_TENANTS ?? "studio-bella,clinica-lumina")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);

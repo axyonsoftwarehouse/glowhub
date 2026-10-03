@@ -14,6 +14,7 @@ const sql = postgres(process.env.DATABASE_URL, {
 
 const DEMO_SLUG = "demo";
 const BELLA_SLUG = "studio-bella";
+const CLINICA_SLUG = "clinica-lumina";
 
 // ---------- helpers ----------
 function spToday() {
@@ -307,6 +308,16 @@ async function seedDemo(tx) {
   await sellProducts({ client: "Rafael Nunes", items: [{ variantId: variants["Shampoo profissional"][0].id, description: "Shampoo profissional 300ml", unit: money(45), qty: 2 }], pay: true, method: "credit" });
   await sellProducts({ client: "Beatriz Rocha", items: [{ variantId: variants["Máscara de hidratação"][0].id, description: "Máscara de hidratação 250g", unit: money(70), qty: 1 }], pay: false });
 
+  // gateway mock: pagamento pendente + eventos de webhook (conciliacao)
+  {
+    const [openCharge] = await tx`select id, total_cents from public.charges where tenant_id = ${tenantId} and status = 'open' order by created_at limit 1`;
+    if (openCharge) {
+      await tx`insert into public.payments ${tx({ tenant_id: tenantId, charge_id: openCharge.id, method: "pix", amount_cents: Number(openCharge.total_cents), status: "pending", provider: "mock", provider_ref: "mock_pix_0001", idempotency_key: `demo-gw-${openCharge.id}` })}`;
+    }
+    await tx`insert into public.webhook_events ${tx({ provider: "mock", event_id: "evt_demo_payment_created", payload: tx.json({ type: "payment.created", provider_ref: "mock_pix_0001" }) })}`;
+    await tx`insert into public.webhook_events ${tx({ provider: "mock", event_id: "evt_demo_payment_pending", payload: tx.json({ type: "payment.pending", provider_ref: "mock_pix_0001" }) })}`;
+  }
+
   // repasse (Ana)
   {
     const pending = await tx`select kind, amount_cents from public.earnings where tenant_id = ${tenantId} and professional_id = ${pros["Ana Souza"]} and status = 'pending'`;
@@ -449,24 +460,132 @@ async function seedBella(tx) {
   return { tenantId };
 }
 
+// ------------------------------------------------------------------
+// Tenant 3: Clínica Lumina (clinica-lumina) — estética
+// ------------------------------------------------------------------
+async function seedClinica(tx) {
+  const today = spToday();
+  const [tenant] = await tx`insert into public.tenants ${tx({ slug: CLINICA_SLUG, name: "Clínica Lumina" })} returning id`;
+  const tenantId = tenant.id;
+  const accounts = await seedChart(tx, tenantId);
+
+  const [branch] = await tx`insert into public.branches ${tx({ tenant_id: tenantId, slug: "jardins", name: "Clínica Lumina - Jardins", address: "Alameda Santos, 1200 - Jardins", timezone: "America/Sao_Paulo" })} returning id`;
+  for (const [wd, start, end] of [[1, "08:00", "18:00"], [2, "08:00", "18:00"], [3, "08:00", "18:00"], [4, "08:00", "18:00"], [5, "08:00", "18:00"], [6, "09:00", "13:00"]]) {
+    await tx`insert into public.branch_hours ${tx({ tenant_id: tenantId, branch_id: branch.id, weekday: wd, start_time: start, end_time: end })}`;
+  }
+
+  const [cat] = await tx`insert into public.categories ${tx({ tenant_id: tenantId, kind: "service", name: "Estética avançada" })} returning id`;
+  const svcDefs = [
+    ["Limpeza de pele profunda", 60, 220, "limpeza"],
+    ["Peeling de diamante", 50, 280, "peeling"],
+    ["Drenagem linfática", 60, 160, "drenagem"],
+    ["Massagem modeladora", 60, 190, "modeladora"],
+    ["Avaliação facial", 30, 150, "avaliacao"],
+  ];
+  const services = {};
+  for (const [name, dur, price, img] of svcDefs) services[name] = await createService(tx, tenantId, cat.id, [name, dur, price, img]);
+  const priceOf = (n) => money(svcDefs.find((s) => s[0] === n)[2]);
+  const durOf = (n) => svcDefs.find((s) => s[0] === n)[1];
+
+  const pros = {};
+  for (const [name, bp, svcNames] of [
+    ["Dra. Paula Reis", 5000, ["Limpeza de pele profunda", "Peeling de diamante", "Avaliação facial"]],
+    ["Fernanda Melo", 4000, ["Drenagem linfática", "Massagem modeladora"]],
+  ]) {
+    const [pro] = await tx`insert into public.professionals ${tx({ tenant_id: tenantId, name, commission_bp: bp })} returning id`;
+    pros[name] = pro.id;
+    for (const s of svcNames) await tx`insert into public.professional_services ${tx({ tenant_id: tenantId, professional_id: pro.id, service_id: services[s] })}`;
+    await tx`insert into public.professional_branches ${tx({ tenant_id: tenantId, professional_id: pro.id, branch_id: branch.id })}`;
+  }
+
+  const clients = {};
+  for (const [name, phone, email] of [["Helena Prado", "11944440001", "helena@example.com"], ["Sofia Nunes", "11944440002", "sofia@example.com"], ["Paulo Mota", "11944440003", null], ["Renata Lopes", "11944440004", null]]) {
+    const [c] = await tx`insert into public.clients ${tx({ tenant_id: tenantId, name, phone, email })} returning id`;
+    clients[name] = c.id;
+  }
+
+  const commissionBp = { "Dra. Paula Reis": 5000, "Fernanda Melo": 4000 };
+  async function complete({ days, time, pro, service, client, pay }) {
+    const dateStr = addDays(today, days);
+    const startsAt = sp(dateStr, time);
+    const price = priceOf(service);
+    const endsAt = new Date(startsAt.getTime() + durOf(service) * 60000);
+    const [a] = await tx`insert into public.appointments ${tx({ tenant_id: tenantId, branch_id: branch.id, professional_id: pros[pro], service_id: services[service], client_id: clients[client], starts_at: startsAt, ends_at: endsAt, status: "completed", price_cents: price })} returning id`;
+    const commission = Math.round((price * commissionBp[pro]) / 10000);
+    const [charge] = await tx`insert into public.charges ${tx({ tenant_id: tenantId, appointment_id: a.id, client_id: clients[client], status: pay ? "paid" : "open", total_cents: price })} returning id`;
+    await tx`insert into public.charge_items ${tx({ tenant_id: tenantId, charge_id: charge.id, kind: "service", reference_id: services[service], description: service, quantity: 1, unit_price_cents: price, total_cents: price })}`;
+    const rev = await postEntry(tx, { tenantId, description: `Cobrança: ${service}`, idem: `lumina-charge-${charge.id}`, refType: "charge", refId: charge.id, occurredAt: startsAt, lines: [
+      { accountId: accounts.accounts_receivable, direction: "debit", amount: price },
+      { accountId: accounts.revenue_service, direction: "credit", amount: price },
+    ] });
+    await tx`update public.charges set revenue_entry_id = ${rev} where id = ${charge.id}`;
+    const comm = await postEntry(tx, { tenantId, description: `Comissão: ${service}`, idem: `lumina-commission-${charge.id}`, refType: "charge", refId: charge.id, occurredAt: startsAt, lines: [
+      { accountId: accounts.expense_commission, direction: "debit", amount: commission },
+      { accountId: accounts.liability_commission, direction: "credit", amount: commission },
+    ] });
+    await tx`insert into public.earnings ${tx({ tenant_id: tenantId, professional_id: pros[pro], kind: "commission", amount_cents: commission, status: "pending", reference_type: "charge", reference_id: charge.id, entry_id: comm })}`;
+    if (pay) {
+      const [pm] = await tx`insert into public.payments ${tx({ tenant_id: tenantId, charge_id: charge.id, method: "credit", amount_cents: price, status: "confirmed", idempotency_key: `lumina-pay-${charge.id}` })} returning id`;
+      const payEntry = await postEntry(tx, { tenantId, description: "Recebimento (credit)", idem: `lumina-payment-${pm.id}`, refType: "payment", refId: pm.id, occurredAt: startsAt, lines: [
+        { accountId: accounts.bank, direction: "debit", amount: price },
+        { accountId: accounts.accounts_receivable, direction: "credit", amount: price },
+      ] });
+      await tx`update public.payments set entry_id = ${payEntry} where id = ${pm.id}`;
+      await tx`update public.charges set settlement_entry_id = ${payEntry} where id = ${charge.id}`;
+    }
+  }
+
+  const history = [
+    [-12, "10:00", "Dra. Paula Reis", "Limpeza de pele profunda", "Helena Prado", true],
+    [-9, "11:00", "Fernanda Melo", "Drenagem linfática", "Sofia Nunes", true],
+    [-6, "15:00", "Dra. Paula Reis", "Peeling de diamante", "Renata Lopes", true],
+    [-3, "09:00", "Fernanda Melo", "Massagem modeladora", "Paulo Mota", true],
+    [-1, "14:00", "Dra. Paula Reis", "Limpeza de pele profunda", "Sofia Nunes", false],
+  ];
+  for (const [days, time, pro, service, client, pay] of history) {
+    const dateStr = addDays(today, days);
+    if (weekdayOf(dateStr) === 0) continue;
+    await complete({ days, time, pro, service, client, pay });
+  }
+
+  // agendamento futuro
+  const startsAt = sp(addDays(today, 2), "10:00");
+  await tx`insert into public.appointments ${tx({ tenant_id: tenantId, branch_id: branch.id, professional_id: pros["Dra. Paula Reis"], service_id: services["Avaliação facial"], client_id: clients["Helena Prado"], starts_at: startsAt, ends_at: new Date(startsAt.getTime() + durOf("Avaliação facial") * 60000), status: "confirmed", price_cents: priceOf("Avaliação facial") })}`;
+
+  // pacote de limpezas
+  const [pack] = await tx`insert into public.packages ${tx({ tenant_id: tenantId, name: "Pacote 4 Limpezas", description: "Quatro limpezas de pele profundas.", price_cents: money(760), validity_days: 240 })} returning id`;
+  await tx`insert into public.package_items ${tx({ tenant_id: tenantId, package_id: pack.id, service_id: services["Limpeza de pele profunda"], quantity: 4 })}`;
+  const [sold] = await tx`insert into public.client_packages ${tx({ tenant_id: tenantId, client_id: clients["Helena Prado"], package_id: pack.id, price_cents: money(760), status: "active", expires_at: new Date(Date.now() + 240 * 86400000) })} returning id`;
+  await postEntry(tx, { tenantId, description: "Venda de pacote: Pacote 4 Limpezas", idem: `lumina-package-${sold.id}`, refType: "client_package", refId: sold.id, lines: [
+    { accountId: accounts.bank, direction: "debit", amount: money(760) },
+    { accountId: accounts.liability_package, direction: "credit", amount: money(760) },
+  ] });
+
+  await tx`insert into public.coupons ${tx({ tenant_id: tenantId, code: "LUMINA15", description: "15% de boas-vindas", discount_type: "percent", discount_value: 1500, min_amount_cents: money(150) })}`;
+
+  return { tenantId };
+}
+
 async function main() {
-  await wipeTenants([DEMO_SLUG, BELLA_SLUG]);
+  await wipeTenants([DEMO_SLUG, BELLA_SLUG, CLINICA_SLUG]);
 
   const demo = await sql.begin((tx) => seedDemo(tx));
   const bella = await sql.begin((tx) => seedBella(tx));
+  const clinica = await sql.begin((tx) => seedClinica(tx));
 
   const [counts] = await sql`
     select
       (select count(*) from public.appointments where tenant_id = ${demo.tenantId})::int as demo_appointments,
       (select count(*) from public.charges where tenant_id = ${demo.tenantId})::int as demo_charges,
       (select count(*) from public.journal_entries where tenant_id = ${demo.tenantId})::int as demo_entries,
-      (select count(*) from public.appointments where tenant_id = ${bella.tenantId})::int as bella_appointments
+      (select count(*) from public.appointments where tenant_id = ${bella.tenantId})::int as bella_appointments,
+      (select count(*) from public.appointments where tenant_id = ${clinica.tenantId})::int as clinica_appointments
   `;
   const [tb] = await sql`
     select
       coalesce(sum(amount_cents) filter (where direction = 'debit'), 0)::bigint as debits,
       coalesce(sum(amount_cents) filter (where direction = 'credit'), 0)::bigint as credits
-    from public.journal_lines where tenant_id in (${demo.tenantId}, ${bella.tenantId})
+    from public.journal_lines where tenant_id in (${demo.tenantId}, ${bella.tenantId}, ${clinica.tenantId})
   `;
   console.log("Seed demo concluído:", counts);
   console.log("Balancete:", tb.debits.toString(), "=", tb.credits.toString(), "->", tb.debits.toString() === tb.credits.toString() ? "OK" : "DESBALANCEADO");
