@@ -1,6 +1,7 @@
 import { isConfigured } from "@/lib/env";
 import { SetupNotice } from "@/components/setup-notice";
 import { LoginForm } from "./login-form";
+import { DemoLoginButton } from "./demo-login-button";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,10 @@ export default async function LoginPage({
         </p>
       </div>
       {isConfigured() ? (
-        <LoginForm redirectTo={safeNext(next)} />
+        <>
+          <LoginForm redirectTo={safeNext(next)} />
+          {process.env.NEXT_PUBLIC_DEMO_LOGIN !== "false" && <DemoLoginButton />}
+        </>
       ) : (
         <SetupNotice />
       )}

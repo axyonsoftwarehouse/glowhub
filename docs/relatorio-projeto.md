@@ -158,8 +158,11 @@ Browser ──► Next (RSC + Server Actions)
 - Scripts: `scripts/apply-sql.mjs`, `scripts/smoke-rls.mjs`, `scripts/smoke-ledger.mjs`.
 
 ### 2.8 Infra & deploy
-- **Vercel** + **Neon** previstos; **CI** (lint/typecheck/test/build) já no GitHub
-  Actions. Deploy e variáveis de produção ainda **não configurados**.
+- **Vercel** + **Neon**; **CI** (lint/typecheck/test/build) no GitHub Actions.
+- **Produção:** https://glowhub-torinoorbit-dev.vercel.app (env de produção
+  configuradas; `DATABASE_URL` pooled). **Login demo:** botão *"Entrar com conta
+  demo"* na tela de login (cria/entra numa conta owner do tenant `demo`).
+  Desativável com `NEXT_PUBLIC_DEMO_LOGIN=false`.
 
 ---
 
