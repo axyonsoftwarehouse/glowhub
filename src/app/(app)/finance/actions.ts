@@ -88,7 +88,7 @@ const DEFAULT_CHART: {
   { code: "5.1", name: "Despesas Operacionais", type: "expense" },
   { code: "5.2", name: "Comissões", type: "expense", systemKey: "expense_commission" },
   { code: "5.3", name: "Taxas de Cartão", type: "expense" },
-  { code: "5.4", name: "Descontos e Estornos", type: "expense" },
+  { code: "5.4", name: "Descontos e Estornos", type: "expense", systemKey: "expense_discount" },
 ];
 
 export async function createAccountAction(

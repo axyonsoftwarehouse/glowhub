@@ -11,3 +11,4 @@ export * from "./payroll";
 export * from "./wallet";
 export * from "./packages";
 export * from "./subscriptions";
+export * from "./coupons";

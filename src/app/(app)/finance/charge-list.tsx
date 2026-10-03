@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { applyCouponAction } from "@/app/(app)/coupons/actions";
 import { formatCentsBRL, formatCentsToInput } from "@/lib/money";
 import { registerPaymentAction } from "./actions";
 import {
@@ -41,11 +42,20 @@ export function ChargeList({
   const [result, setResult] = useState<FinanceActionState>(
     initialFinanceActionState,
   );
+  const [couponResult, setCouponResult] = useState<FinanceActionState>(
+    initialFinanceActionState,
+  );
   const [pending, startTransition] = useTransition();
 
   function handlePayment(formData: FormData) {
     startTransition(async () => {
       setResult(await registerPaymentAction(initialFinanceActionState, formData));
+    });
+  }
+
+  function handleCoupon(formData: FormData) {
+    startTransition(async () => {
+      setCouponResult(await applyCouponAction({ status: "idle" }, formData));
     });
   }
 
@@ -124,6 +134,27 @@ export function ChargeList({
                 </button>
               </form>
             )}
+
+            {canSettle && charge.status === "open" && (
+              <form
+                action={handleCoupon}
+                className="mt-2 flex flex-wrap items-center gap-2"
+              >
+                <input type="hidden" name="chargeId" value={charge.id} />
+                <input
+                  name="code"
+                  placeholder="Cupom"
+                  className="w-28 rounded-lg border border-border bg-white px-2 py-1.5 text-xs uppercase outline-none focus:border-brand"
+                />
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="rounded-full border border-border px-3 py-1 text-xs font-medium hover:bg-muted disabled:opacity-60"
+                >
+                  Aplicar cupom
+                </button>
+              </form>
+            )}
           </div>
         );
       })}
@@ -133,6 +164,12 @@ export function ChargeList({
       )}
       {result.status === "success" && result.message && (
         <p className="text-xs text-emerald-700">{result.message}</p>
+      )}
+      {couponResult.status === "error" && couponResult.message && (
+        <p className="text-xs text-red-600">{couponResult.message}</p>
+      )}
+      {couponResult.status === "success" && couponResult.message && (
+        <p className="text-xs text-emerald-700">{couponResult.message}</p>
       )}
     </div>
   );

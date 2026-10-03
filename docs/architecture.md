@@ -118,6 +118,10 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   **D Caixa/Banco, C Receita de Assinaturas** (4.4) e avança o período; cancelar
   encerra sem nova cobrança. Benefícios/limites por período estão modelados
   (`plan_items`); o consumo por período ainda não é controlado.
+- **Cupons** (`coupons` + `coupon_redemptions`): desconto percentual (basis points)
+  ou fixo, com validade, mínimo e limite de usos. Aplicado a uma **cobrança aberta**:
+  reduz `charges.total_cents` e lança **D Descontos e Estornos (despesa) /
+  C Contas a Receber**, registrando o resgate.
 - **Relatórios** (`/reports`): balancete do período por conta, resultado
   (receitas − despesas), recebimentos e comissões/gorjetas por profissional.
 - **Webhooks** (`webhook_events`): eventos do provedor gravados de forma
