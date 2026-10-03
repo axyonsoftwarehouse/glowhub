@@ -4,6 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { appointments, clients } from "@/db/schema";
 import { computeSlotsForDay } from "@/lib/availability-data";
 import { getDb } from "@/lib/db";
+import { enqueueEmail } from "@/lib/notifications";
 import { getCurrentTenant } from "@/lib/tenant";
 import { zonedTimeToUtc } from "@/lib/timezone";
 
@@ -133,6 +134,15 @@ export async function createPublicBookingAction(input: {
             ? `Online: ${input.notes}`
             : "Agendamento online",
       });
+
+      if (email.length > 0) {
+        await enqueueEmail(tx, {
+          tenantId: tenant.id,
+          recipient: email,
+          subject: `Agendamento confirmado - ${input.date} às ${input.time}`,
+          body: `Olá ${name}, seu agendamento foi reservado para ${input.date} às ${input.time}. Até logo!`,
+        });
+      }
 
       return { ok: true as const };
     });

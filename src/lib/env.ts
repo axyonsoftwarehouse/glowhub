@@ -7,6 +7,8 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z.string().optional(),
   NEXT_PUBLIC_ROOT_DOMAIN: z.string().optional(),
   DEFAULT_TENANT_SLUG: z.string().optional(),
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

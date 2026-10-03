@@ -94,6 +94,9 @@ export default async function AppLayout({
           <Link href="/coupons" className="rounded-lg px-3 py-2 hover:bg-muted">
             Cupons
           </Link>
+          <Link href="/notifications" className="rounded-lg px-3 py-2 hover:bg-muted">
+            Mensagens
+          </Link>
           <Link href="/team" className="rounded-lg px-3 py-2 hover:bg-muted">
             Equipe
           </Link>

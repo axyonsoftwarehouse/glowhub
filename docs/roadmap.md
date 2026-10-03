@@ -38,7 +38,7 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 ## Fase 5 — Recorrência & comercial
 - [x] Pacotes (pré-pago) e assinaturas (planos recorrentes com cobrança no ledger)
 - [x] Cupons e promoções (percentual/fixo, validade, limite de uso)
-- [ ] Notificações (e-mail/push) e lembretes
+- [x] Notificações por e-mail (caixa de saída + adapter portável); push e lembretes agendados pendentes
 
 ## Fase 6 — Canais
 - [x] Website público / agendamento online (`/book`, por subdomínio/slug)

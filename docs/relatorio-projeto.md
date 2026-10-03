@@ -1,12 +1,12 @@
 # GlowHub — Escopo e Status do Projeto
 
-> Documento de referência para o time de desenvolvimento. Une a **visão de
-> negócio** e a **visão técnica** num só lugar: o que o produto é, para quem,
-> como está construído e o que falta.
+> Documento de referência para o time. Une **visão de negócio** e **técnica**:
+> o que o produto é, para quem, como está construído, o que falta e como
+> **retomar o trabalho** (handoff).
 
-- Repositório: privado
-- Estágio: **MVP interno funcional** (fundação + Fases 1–3 completas; Fase 4
-  iniciada). Ainda **não pronto para produção** (ver riscos e backlog).
+- Repositório: privado (`torinoorbit-dev/glowhub`).
+- Estágio: **MVP interno funcional** (Fases 0–5 concluídas; Fase 6 parcial).
+  Ainda **não pronto para produção** (ver backlog e riscos).
 - Última atualização: alinhada ao estado atual do código.
 
 ---
@@ -14,13 +14,11 @@
 ## 1. Visão de negócio
 
 ### 1.1 Problema e oportunidade
-Salões, barbearias, clínicas de estética e spas operam hoje com uma mistura de
-agenda em papel/planilha, WhatsApp e sistemas genéricos que **não conversam com o
-financeiro**. Isso gera: overbooking, no-show, preços inconsistentes entre
-filiais, comissões calculadas na mão e falta de visão de caixa.
-
-O GlowHub ataca isso como um **SaaS multi-tenant** de agendamento + gestão, com
-um **financeiro contábil de verdade** (partidas dobradas) como diferencial.
+Salões, barbearias, clínicas de estética e spas operam com agenda em papel/planilha,
+WhatsApp e sistemas que **não conversam com o financeiro**. Isso gera overbooking,
+no-show, preços inconsistentes entre filiais, comissões na mão e falta de visão de
+caixa. O GlowHub ataca isso como um **SaaS multi-tenant** de agendamento + gestão,
+com um **financeiro contábil de verdade** (partidas dobradas) como diferencial.
 
 ### 1.2 Público-alvo
 Negócios de agendamento com profissionais e venda de produtos: salões, barbearias,
@@ -30,15 +28,15 @@ massagem. Do **autônomo com 1 cadeira** à **rede com várias filiais**.
 ### 1.3 Proposta de valor
 - Agenda e disponibilidade por **profissional e filial**, com bloqueios.
 - Catálogo de **serviços e produtos** com preço/duração por filial.
-- **Financeiro auditável** (livro imutável, centavos, idempotência) — não um
-  relatório solto.
+- **Financeiro auditável** (livro imutável, centavos, idempotência).
 - **Multi-tenant** seguro por padrão (isolamento por RLS no banco).
+- **Agendamento online** (canal público) por subdomínio.
 
 ### 1.4 Modelo de negócio (hipóteses)
-- **Assinatura por tenant** (SaaS), com planos por nº de filiais/profissionais e
-  usuários. (Planos/assinaturas ainda **não implementados**.)
-- Receita adicional possível: taxas sobre pagamentos online (a definir gateway).
-- Múltiplos **tenants** no mesmo banco, isolados por `tenant_id` + RLS.
+- **Assinatura por tenant** (SaaS), com planos por filiais/profissionais/usuários.
+  (Planos de billing da própria plataforma ainda **não implementados** — hoje há
+  planos de assinatura vendidos *ao cliente final do salão*.)
+- Receita adicional possível: taxas sobre pagamentos online (gateway a definir).
 
 ### 1.5 Personas e papéis
 Papéis por tenant: **owner, admin, manager, staff, viewer**.
@@ -48,37 +46,30 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Dono (owner) | Configura empresa, preços, equipe, vê financeiro e relatórios. |
 | Gerente (manager) | Opera filiais, catálogo, agenda e equipe. |
 | Recepção / staff | Agenda, check-in/checkout, cobrança, clientes. |
-| Profissional | (Vê sua agenda — visão "profissional" ainda **não** é dedicada.) |
-| Cliente final | Ainda **sem canal próprio** (site/app a construir). |
+| Profissional | (Visão dedicada da própria agenda ainda **não**.) |
+| Cliente final | **Agendamento online** em `/book`; app mobile pendente. |
 
 ### 1.6 Escopo funcional (módulos)
 
-| Módulo | Descrição de negócio | Status |
+| Módulo | Descrição | Status |
 |---|---|---|
-| Fundação & Tenancy | Empresas, filiais, vínculos e papéis | ✅ |
+| Fundação & Tenancy | Empresas, filiais, vínculos, papéis | ✅ |
 | Autenticação | Login/cadastro, sessão, logout, aceite de convite | ✅ (verificação de e-mail pendente) |
+| Onboarding | Cadastro cria empresa + filial + owner | ✅ |
 | Equipe & Convites | Convidar por link, papéis, troca de empresa ativa | ✅ (envio de e-mail pendente) |
-| Filiais | Criar/editar/ativar-desativar unidades | ✅ |
+| Filiais | Criar/editar/ativar-desativar | ✅ |
 | Catálogo | Categorias, serviços, produtos (variações/estoque), profissionais | ✅ |
-| Preços por filial | Override de preço/duração e disponibilidade por unidade | ✅ |
-| Agenda | Horários, intervalos, feriados e cálculo de disponibilidade | ✅ |
-| Agendamentos | Reserva com status (pendente→confirmado→check-in→checkout→concluído) | ✅ |
-| Clientes | Cadastro e histórico via agenda | ✅ (página de histórico dedicada pendente) |
-| Financeiro | Plano de contas + ledger de partidas dobradas + cobrança | 🟡 (núcleo pronto; pagamentos/relatórios pendentes) |
-| Pacotes/Assinaturas | Pré-pago e recorrência | ⛔ |
-| Cupons/Promoções | Descontos com regras | ⛔ |
-| Notificações | E-mail/push e lembretes | ⛔ |
-| Canal cliente | Site público/agendamento online e app mobile | ⛔ |
-| Relatórios | Faturamento, ocupação, comissões, fechamento | ⛔ |
+| Preços por filial | Override de preço/duração e disponibilidade | ✅ |
+| Agenda | Horários, intervalos, feriados, disponibilidade | ✅ |
+| Agendamentos | Reserva + status (pendente→confirmado→check-in→checkout→concluído) | ✅ |
+| Clientes | Cadastro; histórico via agenda | ✅ (página de histórico dedicada pendente) |
+| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, relatórios | ✅ (gateway online e fechamento pendentes) |
+| Pacotes & Assinaturas | Pré-pago e recorrente, com ledger | ✅ (consumo por período pendente) |
+| Notificações | Caixa de saída + e-mail (adapter portável) | 🟡 (push/lembretes agendados pendentes) |
+| Canal cliente | Agendamento online `(/book)`; app mobile | 🟡 |
+| Relatórios | Balancete, resultado, recebimentos, comissões | ✅ (fechamento formal pendente) |
 
 Legenda: ✅ pronto · 🟡 parcial · ⛔ não iniciado.
-
-### 1.7 Jornadas (estado atual)
-- **Dono/gerente:** cria filial → cadastra categorias/serviços/produtos →
-  profissionais e vínculos → horários/bloqueios → agenda e cobra.
-- **Recepção:** abre a Agenda do dia → cria agendamento (busca de slots) →
-  check-in/checkout → **Cobrar** → **Receber**.
-- **Cliente final:** ainda **não** tem autoatendimento (depende da Fase 6).
 
 ---
 
@@ -87,193 +78,181 @@ Legenda: ✅ pronto · 🟡 parcial · ⛔ não iniciado.
 ### 2.1 Stack
 - **Next.js 16** (App Router, Turbopack, Server Actions) + **React 19** +
   **TypeScript** na **Vercel**.
-- **Neon (Postgres)** como banco; **Row Level Security (RLS)** como camada de
-  isolamento.
+- **Neon (Postgres)** + **Row Level Security (RLS)** como isolamento.
 - **Better Auth self-hosted** (tabelas `user`/`session`/`account`/`verification`
-  no próprio banco) — escolhido por **portabilidade** (troca de Postgres não afeta
-  a auth).
-- **Drizzle ORM** para schema e queries (server-side). **Zod** para validação.
-- **Tailwind v4** para UI.
+  no banco) — escolhido por **portabilidade**.
+- **Drizzle ORM** (schema e queries) + **Zod** (validação) + **Tailwind v4**.
+- **Vitest** para testes unitários; **GitHub Actions** para CI.
 
-### 2.2 Arquitetura (visão geral)
+### 2.2 Arquitetura
 ```
 Browser ──► Next (RSC + Server Actions)
               │  Better Auth (app/api/auth/[...all])
               │
-              ├─ getDb()            → role owner  (auth, migrations/admin, ignora RLS)
-              └─ withUser(userId, cb) → role app   (queries do usuário, RLS aplicada)
+              ├─ getDb()             → role owner  (auth, admin, canal público, ignora RLS)
+              └─ withUser(userId, cb) → role app   (queries do usuário, RLS via set_config)
                                           │
                                 Neon Postgres (RLS + ledger)
 ```
-- O app é **100% server-side** para dados; não há acesso direto do browser ao
-  banco.
-- `src/proxy.ts` resolve o **tenant por subdomínio** (`<slug>.dominio`, e
-  `DEFAULT_TENANT_SLUG`/`?tenant=` em dev) e injeta o header de tenant.
+- `src/proxy.ts` resolve o **tenant por subdomínio** (`<slug>.dominio`,
+  `DEFAULT_TENANT_SLUG`/`?tenant=` em dev).
+- O app é **100% server-side** para dados.
 
 ### 2.3 Multi-tenancy e segurança
-- **Modelo:** schema compartilhado + `tenant_id` em todas as tabelas de domínio +
-  **RLS**.
-- **Identidade no banco:** a role do app (`glowhub_app`, **sem `BYPASSRLS`**)
-  recebe, por transação, `set_config('request.jwt.claims', '{"sub": <userId>}')`.
-  As policies usam `public.auth_uid()` (e helpers `is_tenant_member`,
-  `has_tenant_role`).
-- **Tenant ativo** do usuário fica em `profiles.active_tenant_id` (troca = UPDATE;
-  sem refresh de token).
-- **Admin** (`DATABASE_URL`, owner) ignora RLS — usado só por auth/migrations.
-- **RLS por papel:** leitura por membros; escrita por papel (catálogo:
-  `owner/admin/manager`; agenda/clientes/cobranças: também `staff`).
-- **Convites:** token por link; aceite via função `SECURITY DEFINER`
-  (`accept_invitation`) porque o convidado ainda não é membro.
+- `tenant_id` em todas as tabelas de domínio + **RLS**.
+- Role do app (`glowhub_app`, **sem `BYPASSRLS`**) recebe, por transação,
+  `set_config('request.jwt.claims', '{"sub": <userId>}')`; policies usam
+  `public.auth_uid()`, `is_tenant_member`, `has_tenant_role`.
+- Tenant ativo em `profiles.active_tenant_id`.
+- **Canal público** (`/book`, `/api/webhooks/*`) usa `getDb()` (owner) com
+  **escopo explícito por `tenant_id`** — decisão consciente.
+- Convites: `SECURITY DEFINER` (`accept_invitation`).
 
-### 2.4 Modelo de dados (tabelas por domínio)
+### 2.4 Modelo de dados (por domínio)
 - **Auth:** `user`, `session`, `account`, `verification`.
 - **Tenancy:** `tenants`, `branches`, `memberships`, `invitations`, `profiles`.
-- **Catálogo:** `categories` (kind service/product, hierarquia), `services`,
-  `service_branches` (override), `professionals`, `professional_branches`,
-  `professional_services`.
-- **Produtos:** `products`, `product_variants` (preço, SKU, estoque).
+- **Catálogo:** `categories`, `services`, `service_branches`, `professionals`,
+  `professional_branches`, `professional_services`.
+- **Produtos:** `products`, `product_variants`.
 - **Agenda:** `branch_hours`, `professional_hours`, `branch_closures`.
-- **Atendimento:** `clients`, `appointments` (status enum + trava de sobreposição
-  por profissional via *exclusion constraint* `btree_gist`).
+- **Atendimento:** `clients`, `appointments` (status + *exclusion constraint*).
 - **Financeiro:** `ledger_accounts`, `journal_entries`, `journal_lines`,
-  `charges`, `charge_items`.
-- Dinheiro sempre em **centavos** (`bigint`). Conversão em `src/lib/money.ts`.
+  `charges`, `charge_items`, `payments`, `webhook_events`, `earnings`, `payouts`,
+  `wallet_transactions`.
+- **Comercial:** `packages`/`package_items`/`client_packages`/`package_redemptions`,
+  `subscription_plans`/`plan_items`/`client_subscriptions`,
+  `coupons`/`coupon_redemptions`.
+- **Comunicação:** `notifications` (caixa de saída).
 
 ### 2.5 Financeiro (princípios e estado)
-- **Partidas dobradas**, **livro append-only** (sem UPDATE/DELETE para a role do
-  app; há trigger bloqueando `UPDATE`), **balanceado** (constraint trigger deferido
-  valida débitos = créditos no commit).
-- **Idempotência** por `idempotency_key` única por tenant (ex.:
-  `charge-revenue-<id>`, `charge-settle-<id>`).
-- **Cobrança** do atendimento: gera **Débito Contas a Receber / Crédito Receita**.
-  **Recebimento** (manual, dinheiro): **Débito Caixa / Crédito Contas a Receber**.
-- Contas de sistema resolvidas por `ledger_accounts.system_key`
-  (`cash`, `bank`, `accounts_receivable`, `revenue_service/product/package`).
-- **Ainda não há:** gateway de pagamento, webhooks, conciliação, estorno/void
-  (existe estrutura `reverses_entry_id`), gorjeta/comissão/repasse, carteira,
-  relatórios e fechamento.
+- **Partidas dobradas**, **append-only** (sem UPDATE/DELETE para a role do app;
+  trigger bloqueando `UPDATE`), **balanceado** (constraint trigger deferido).
+- **Idempotência** por `idempotency_key` (pagamentos, cobranças, etc.).
+- Fluxos implementados: cobrança (D Receber / C Receita), pagamento
+  (D Caixa/Banco / C Receber), comissão (D Despesa Comissão / C Comissão a Pagar),
+  gorjeta (C Gorjetas a Pagar), repasse (D Comissão+Gorjeta a Pagar / C Caixa),
+  carteira (D Caixa / C Carteira; pagamento com carteira), cupom (D Descontos /
+  C Receber), pacote (D Caixa / C Pacotes a Resgatar; resgate D Pacotes / C Receita),
+  assinatura (D Caixa / C Receita de Assinaturas).
+- **Falta:** gateway online + webhooks assinados + conciliação automática,
+  estorno/void formal, fechamento contábil e reconhecimento diferido de receita.
 
-### 2.6 Convenções de código
-- Schema Drizzle em `src/db/schema` é a **fonte de verdade** das tabelas; funções,
-  triggers, policies e grants ficam em `db/rls.sql`.
+### 2.6 Convenções
+- Schema Drizzle em `src/db/schema` é a **fonte de verdade**; funções, triggers,
+  policies e grants em `db/rls.sql`.
 - **Ordem ao mexer no schema:** `npx drizzle-kit push` **e depois** aplicar
-  `db/rls.sql` (o push pode recriar tabelas e derrubar RLS).
-- Nada de lógica de dinheiro no client; tudo em centavos.
-- Server Actions validam com Zod; erros de RLS/constraint são tratados por código
-  (`23505`, `42501`, `23P01`).
-- `npx tsc --noEmit`, `npx eslint .` e `npm run build` devem passar sempre.
+  `db/rls.sql`.
+- Dinheiro sempre em centavos; sem lógica de dinheiro no client.
+- Quality gate: `npx tsc --noEmit`, `npx eslint .`, `npm test`, `npm run build`.
 
-### 2.7 Setup de desenvolvimento (onboarding)
+### 2.7 Setup de desenvolvimento (onboarding do dev)
 1. `npm install`
-2. Criar `.env.local` a partir de `.env.example` com:
+2. `.env.local` a partir de `.env.example`:
    `DATABASE_URL`, `DATABASE_AUTHENTICATED_URL`, `BETTER_AUTH_SECRET`,
-   `BETTER_AUTH_URL`.
-3. Criar a role do app no Neon e aplicar:
-   `npx drizzle-kit push` → `node --env-file=.env.local scripts/apply-sql.mjs db/rls.sql`
-   → `... db/seed.sql`.
-4. `npm run dev` e cadastrar em `/login`; vincular `membership` do tenant demo.
-- Scripts auxiliares: `scripts/apply-sql.mjs`, `scripts/smoke-rls.mjs`,
-  `scripts/smoke-ledger.mjs`.
+   `BETTER_AUTH_URL` (opcional: `RESEND_API_KEY`, `EMAIL_FROM`).
+3. Aplicar schema/RLS/seed:
+   `npx drizzle-kit push`
+   → `node --env-file=.env.local scripts/apply-sql.mjs db/rls.sql`
+   → `... db/seed.sql`
+4. `npm run dev`; cadastrar em `/login`; criar a empresa em `/onboarding`.
+- Scripts: `scripts/apply-sql.mjs`, `scripts/smoke-rls.mjs`, `scripts/smoke-ledger.mjs`.
 
 ### 2.8 Infra & deploy
-- **Vercel** (previsto) + **Neon** (banco). Vercel ainda **não configurado** no
-  repo (sem CI/CD). Runbook em `docs/neon-migration.md`.
+- **Vercel** + **Neon** previstos; **CI** (lint/typecheck/test/build) já no GitHub
+  Actions. Deploy e variáveis de produção ainda **não configurados**.
 
 ---
 
 ## 3. Status atual (o que está pronto)
+Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
+`/branches`, `/services`, `/products`, `/professionals`, `/schedule`,
+`/appointments`, `/clients`, `/packages`, `/subscriptions`, `/coupons`,
+`/notifications`, `/finance`, `/reports`, `/book`, `/api/auth/[...all]`,
+`/api/webhooks/[provider]`.
 
-Rotas implementadas:
-`/` (landing), `/login`, `/invite/[token]`, `/dashboard`, `/branches`,
-`/services`, `/products`, `/professionals`, `/schedule`, `/appointments`,
-`/clients`, `/team`, `/profile`, `/finance`, `/api/auth/[...all]`.
-
-- **Auth e sessão** funcionando (Better Auth), com convites por link e troca de
-  empresa ativa.
-- **Catálogo completo** com overrides por filial e vínculos de profissionais.
-- **Agenda** com disponibilidade calculada (`src/lib/availability.ts`) e
-  **agendamentos** com fluxo de status.
-- **Clientes** cadastráveis; **financeiro** com ledger e cobrança do atendimento.
-- **Qualidade:** `tsc`, `eslint` e `build` verdes; smoke tests de RLS e do ledger
-  passando.
+- Auth/sessão, convites por link, troca de empresa, **onboarding**.
+- Catálogo completo com overrides por filial; agenda e **disponibilidade**;
+  **agendamentos**; **clientes**.
+- **Financeiro** completo no núcleo: ledger, cobrança, pagamentos idempotentes,
+  comissão/gorjeta/repasse, carteira, cupons, pacotes, assinaturas, relatórios.
+- **Agendamento online** e **notificações por e-mail** (caixa de saída).
+- **CI** + **23 testes unitários**; `tsc`/`eslint`/`build` verdes.
 
 ---
 
 ## 4. O que falta (backlog priorizado)
 
-### Fase 4 — Financeiro (continuação) — **prioridade alta**
-- [ ] **Pagamentos idempotentes** com gateway + **webhooks** + **conciliação**
-      (substituir o "Receber" manual). Registrar `event_id` do provedor.
-- [ ] **Estorno/cancelamento** como lançamento reverso (usar `reverses_entry_id`).
-- [ ] **Gorjeta, comissão e repasses**; estado pendente/pago; **carteira** do
-      cliente (crédito pré-pago).
-- [ ] **Relatórios e fechamento** (faturamento, ocupação, comissões, DRE simples).
+### Fase 6 — Canais
+- [ ] **App do cliente (mobile)** — projeto separado (Expo/React Native), consumindo
+      a mesma API/DB (avaliar expor uma API dedicada ou usar o Supabase-like).
 
-### Fase 5 — Recorrência & comercial — **prioridade média**
-- [ ] **Pacotes** (pré-pago) e **assinaturas** (planos recorrentes/limites).
-- [ ] **Cupons/promoções** (percentual/fixo, validade, limite de uso).
-- [ ] **Notificações** (e-mail/push) e **lembretes** de agendamento.
+### Financeiro / comercial
+- [ ] **Gateway online** (Stripe/Mercado Pago/Pagar.me) + webhooks assinados +
+      conciliação automática; estorno/void.
+- [ ] **Recorrência automática de assinaturas** (agendador) e **consumo/limites**
+      por período (pacotes e assinaturas).
+- [ ] **Fechamento** contábil e reconhecimento de receita diferida.
 
-### Fase 6 — Canais — **prioridade média/baixa**
-- [ ] **Website público / agendamento online** (cliente final).
-- [ ] **App mobile** do cliente.
+### Comunicação
+- [ ] **Agendador** (pg_cron/Inngest) para **lembretes** de agendamento.
+- [ ] **Verificação de e-mail** no cadastro e envio por e-mail dos **convites**.
+- [ ] Canais **push/SMS**.
 
-### Transversal — **prioridade alta conforme o time**
-- [x] **Testes automatizados**: unitários (vitest) de dinheiro/disponibilidade/
-      fuso; e2e pendente.
-- [x] **CI** (lint + typecheck + test + build) no GitHub Actions; deploy pendente.
-- [ ] **Observabilidade**: logs, métricas e **alertas de pagamento**.
-- [ ] **Segurança**: revisão de policies de RLS, **rate limiting** e proteção de
-      rotas do Better Auth.
-- [ ] **Provedor de e-mail** (verificação de conta + convites + lembretes).
-- [ ] **Storage de arquivos** (avatar/logo/imagens por tenant; hoje só URL).
-
-### Lacunas funcionais relevantes
-- [x] **Onboarding de novo tenant**: `/onboarding` cria empresa + filial + owner
-      (com CTA no dashboard). CI de lint/typecheck/build no GitHub Actions.
+### Produto
 - [ ] **Visão do profissional** (agenda própria) e **histórico por cliente**.
-- [ ] **Multi-filial por profissional** já é modelado, mas a UI de agenda não
-      filtra por profissional de forma dedicada.
-- [ ] **Paginação/busca** nas listas (clientes, catálogo, agenda).
-- [ ] **Cancelamento/no-show**: políticas e taxas configuráveis por tenant.
-- [ ] **Edição/remoção de membros** da equipe (hoje só convite/papéis via SQL).
+- [ ] **Paginação/busca** nas listas.
+- [ ] **Edição/remoção de membros** da equipe.
+- [ ] Políticas de **cancelamento/no-show** por tenant.
+- [ ] **Storage de arquivos** (logo/imagens por tenant; hoje só URL).
 
-### Dívidas técnicas / pontos de atenção
-- Sem testes automatizados; sem pipeline de CI.
-- Erros de banco vazam mensagens cruas em alguns pontos (padronizar).
-- `professionals.user_id` existe, mas **não** liga profissional a usuário ainda.
-- `drizzle.config.ts` aponta `out: ./drizzle` (não usamos generate; usamos push).
-- Better Auth `1.7.7` vs CLI `@better-auth/cli` `1.4.21` (verificar compatibilidade
-  antes de depender do CLI para migrações).
-- Dependência `postgres` usada apenas por scripts (não no runtime).
-- Sem log de auditoria (quem fez o quê) além de `created_by` disperso.
+### Transversal / produção
+- [x] Onboarding de tenant; CI; testes unitários; e-mail (caixa de saída).
+- [ ] **e2e** (Playwright) dos fluxos críticos.
+- [ ] **Observabilidade** (logs, métricas, alertas de pagamento).
+- [ ] **Deploy na Vercel** + env de produção + domínio/subdomínios.
+- [ ] **Segurança**: revisão de policies, **rate limiting**, proteção das rotas
+      do Better Auth.
+- [ ] Revisão de **acessibilidade** e i18n (hoje só pt-BR).
 
 ---
 
 ## 5. Riscos e considerações
-- **Produção**: o app precisa de e-mail, CI/CD, observabilidade e revisão de
-  segurança antes de ir ao ar.
-- **Financeiro**: qualquer mudança no ledger exige cuidado redobrado (imutável,
-  balanceado, idempotente). Novos lançamentos devem passar por `src/lib/ledger.ts`.
-- **Gateways**: a escolha (Stripe/Connect, Pagar.me, Mercado Pago...) e o desenho
-  dos webhooks são decisões em aberto (`docs/architecture.md`).
-- **Tenant onboarding**: sem "self-service", a aquisição de clientes depende de
-  provisionamento manual — bloqueador comercial.
+- **Produção**: falta e-mail de verificação, CI/CD de deploy, observabilidade e
+  revisão de segurança.
+- **Financeiro**: mudanças exigem cuidado (imutável, balanceado, idempotente);
+  novos lançamentos devem passar por `src/lib/ledger.ts`.
+- **Gateway**: escolha e desenho de webhooks ainda em aberto.
+- **RLS vs. canal público**: o `/book` usa a conexão admin com escopo explícito;
+  manter essa disciplina ao evoluir.
 
 ---
 
-## 6. Próximos passos sugeridos
-1. **Fechar a Fase 4**: gateway + webhooks idempotentes + conciliação; depois
-   gorjeta/comissão/repasse e relatórios.
-2. **Onboarding de tenant** (criar empresa no cadastro) — destrava uso real.
-3. **Qualidade**: CI (lint/typecheck/build) + primeiros testes (availability,
-   ledger, fluxo de agendamento).
-4. **E-mail + deploy** (Vercel) para ambiente de homologação.
+## 6. Retomada (handoff) — como continuar em uma nova sessão
 
-## 7. Glossário rápido
-- **Tenant**: empresa cliente do SaaS (isolamento de dados).
-- **Branch**: filial/unidade.
+1. **Repositório**: `git clone`/`git pull`; branch `master`.
+2. **Dependências**: `npm install`.
+3. **Env**: criar `.env.local` a partir de `.env.example` (Neon owner + role do
+   app + `BETTER_AUTH_SECRET`). Ver `docs/neon-migration.md` para o setup do Neon.
+4. **Banco**: `npx drizzle-kit push` → aplicar `db/rls.sql` → `db/seed.sql`
+   (via `scripts/apply-sql.mjs`).
+5. **Qualidade**: `npx tsc --noEmit` && `npx eslint .` && `npm test` && `npm run build`.
+6. **Smoke**: `node --env-file=.env.local scripts/smoke-rls.mjs` e `...smoke-ledger.mjs`.
+7. **Rodar**: `npm run dev` (app em `/dashboard`; público em `/book`).
+
+Pontos de entrada úteis:
+- Multi-tenancy/RLS: `src/lib/db.ts`, `src/lib/tenant.ts`, `db/rls.sql`.
+- Auth: `src/lib/auth.ts`, `src/lib/session.ts`, `src/app/api/auth/[...all]/route.ts`.
+- Financeiro: `src/lib/ledger.ts`, `src/app/(app)/finance/*`.
+- Disponibilidade: `src/lib/availability.ts`, `src/lib/availability-data.ts`.
+- Booking público: `src/app/book/*`.
+
+Decisões em aberto (ver `docs/architecture.md`): provedor de **pagamento**,
+**e-mail** de verificação/convites, **storage**, e estratégia de **API** para o app
+mobile.
+
+## 7. Glossário
+- **Tenant**: empresa cliente do SaaS. **Branch**: filial.
 - **Membership**: vínculo usuário↔tenant com papel.
-- **Charge (cobrança)**: registro de valor a receber por um atendimento.
+- **Charge (cobrança)**: valor a receber por um atendimento.
 - **Ledger**: livro-razão de partidas dobradas (imutável).
 - **RLS**: Row Level Security (isolamento por linha no Postgres).

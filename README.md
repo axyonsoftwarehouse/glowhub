@@ -129,5 +129,6 @@ Acesse: http://localhost:3000/dashboard
 - [x] Website público / agendamento online (`/book`)
 - [x] Onboarding de tenant (cadastro cria empresa) + CI (lint/typecheck/test/build)
 - [x] Testes unitários (vitest) de dinheiro, disponibilidade e fuso
-- [ ] App mobile, notificações e gateway online
+- [x] Notificações por e-mail (caixa de saída em `/notifications`)
+- [ ] App mobile, gateway online e lembretes agendados
 - [ ] Notificações, website público e app do cliente

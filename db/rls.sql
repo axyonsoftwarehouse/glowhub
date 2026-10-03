@@ -94,7 +94,7 @@ begin
     'wallet_transactions',
     'packages', 'package_items', 'client_packages', 'package_redemptions',
     'subscription_plans', 'plan_items', 'client_subscriptions',
-    'coupons', 'coupon_redemptions'
+    'coupons', 'coupon_redemptions', 'notifications'
   ]
   loop
     execute format('alter table public.%I enable row level security', t);
@@ -190,7 +190,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['clients', 'appointments', 'charges', 'charge_items', 'payments', 'earnings', 'wallet_transactions', 'client_packages', 'package_redemptions', 'client_subscriptions', 'coupon_redemptions']
+  foreach t in array array['clients', 'appointments', 'charges', 'charge_items', 'payments', 'earnings', 'wallet_transactions', 'client_packages', 'package_redemptions', 'client_subscriptions', 'coupon_redemptions', 'notifications']
   loop
     execute format('drop policy if exists %I on public.%I', t || '_member_read', t);
     execute format(

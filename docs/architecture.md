@@ -140,6 +140,16 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
 - `pending` cai no painel para confirmação/check-in. Integração com pagamento
   online fica para a fase de gateway.
 
+## Notificações
+- **Caixa de saída** (`notifications`): canal (`email/sms/push`), destinatário,
+  assunto, corpo e `status` (pending/sent/failed). É **enfileirada** (ex.: e-mail
+  de confirmação no agendamento online) e processada por
+  `processNotificationsAction` (drena pendentes e marca enviado/falhou).
+- **Adapter portável** `src/lib/email.ts`: usa **Resend** se `RESEND_API_KEY`
+  existir, senão apenas registra no console (dev). Trocar de provedor = ajustar
+  só essa função. Falta um **agendador** (pg_cron/Inngest) para lembretes no
+  horário certo e canais push/SMS.
+
 ## Princípios do financeiro (contábil)
 1. **Livro-razão de partidas dobradas** (`ledger_accounts`, `journal_entries`,
    `journal_lines`) — **append-only**, nunca editar/apagar.
