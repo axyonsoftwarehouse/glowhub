@@ -219,12 +219,12 @@ Rotas implementadas:
 - [ ] **App mobile** do cliente.
 
 ### Transversal — **prioridade alta conforme o time**
-- [ ] **Testes automatizados** (unit + e2e dos fluxos críticos). Hoje só há
-      smoke scripts.
+- [x] **Testes automatizados**: unitários (vitest) de dinheiro/disponibilidade/
+      fuso; e2e pendente.
+- [x] **CI** (lint + typecheck + test + build) no GitHub Actions; deploy pendente.
 - [ ] **Observabilidade**: logs, métricas e **alertas de pagamento**.
 - [ ] **Segurança**: revisão de policies de RLS, **rate limiting** e proteção de
       rotas do Better Auth.
-- [ ] **CI/CD** (lint + typecheck + build em PR) e deploy na Vercel.
 - [ ] **Provedor de e-mail** (verificação de conta + convites + lembretes).
 - [ ] **Storage de arquivos** (avatar/logo/imagens por tenant; hoje só URL).
 
