@@ -82,8 +82,14 @@ e `BETTER_AUTH_URL`.
 ```bash
 npx drizzle-kit push          # cria as tabelas
 node --env-file=.env.local scripts/apply-sql.mjs db/rls.sql   # RLS, funções, grants
-node --env-file=.env.local scripts/apply-sql.mjs db/seed.sql  # dados de exemplo
+node --env-file=.env.local scripts/apply-sql.mjs db/seed.sql  # tenant/filial mínimo
+npm run seed:demo             # (opcional) cenário demo completo e financeiro
 ```
+
+O `npm run seed:demo` recria o tenant `demo` com catálogo, profissionais,
+horários, clientes, agendamentos e o financeiro completo (cobranças, pagamentos,
+comissões, gorjeta, repasse, carteira, pacotes, assinatura e cupons) — ideal para
+testar sem montar dados à mão. É idempotente (apaga e recria só o tenant `demo`).
 
 ### 4. Criar usuário e vinculá-lo ao tenant
 1. Cadastre-se pela tela `/login` (Better Auth cria o usuário).

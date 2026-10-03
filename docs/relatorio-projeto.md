@@ -154,6 +154,8 @@ Browser ──► Next (RSC + Server Actions)
    `npx drizzle-kit push`
    → `node --env-file=.env.local scripts/apply-sql.mjs db/rls.sql`
    → `... db/seed.sql`
+   → **`npm run seed:demo`** (cenário demo completo: catálogo, agenda,
+   financeiro com ledger balanceado, pacotes/assinatura/cupons, notificações).
 4. `npm run dev`; cadastrar em `/login`; criar a empresa em `/onboarding`.
 - Scripts: `scripts/apply-sql.mjs`, `scripts/smoke-rls.mjs`, `scripts/smoke-ledger.mjs`.
 
