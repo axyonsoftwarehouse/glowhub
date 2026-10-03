@@ -1,36 +1,125 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# GlowHub
 
-## Getting Started
+Plataforma **multi-tenant** de agendamento e gestão para salões, barbearias,
+clínicas de estética e spas. Base construída sobre **Next.js 16 (App Router)** +
+**Vercel** + **Neon (Postgres)** + **Better Auth** + **Drizzle**, pronta para
+evoluir com um **financeiro contábil** (partidas dobradas) e app do cliente.
 
-First, run the development server:
+> Este projeto é **clean-room**: não reutiliza código, layout ou assets de
+> terceiros licenciados.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Arquitetura
+
+- **Tenant (empresa)** → N **Branches (filiais)** → **Memberships** (usuário +
+  papel por tenant).
+- **Isolamento de dados**: `tenant_id` em todas as tabelas + **Row Level Security
+  (RLS)** no Postgres. O app conecta com uma role **sem `BYPASSRLS`** e injeta
+  `request.jwt.claims` (`{ sub }`) por transação; as policies usam
+  `public.auth_uid()`.
+- **Resolução de tenant**: por **subdomínio** (`<slug>.SEU_DOMINIO`) no
+  `src/proxy.ts`; em localhost, usa `DEFAULT_TENANT_SLUG` ou `?tenant=<slug>`. O
+  tenant ativo do usuário fica em `profiles.active_tenant_id`.
+- **Acesso a dados**: **Drizzle** em tudo (server-side). Conexão admin
+  (`DATABASE_URL`, owner) para auth/migrations; conexão `DATABASE_AUTHENTICATED_URL`
+  (role app) para queries do usuário, com RLS.
+- **Auth**: **Better Auth self-hosted** (`better-auth`) dentro do Next, tabelas no
+  próprio banco (schema `public`).
+
+## Estrutura
+
+```
+src/
+  proxy.ts                     # resolução de tenant por subdomínio
+  lib/
+    env.ts                     # leitura/validação de env
+    db.ts                      # getDb (admin) + withUser (RLS por transação)
+    auth.ts                    # Better Auth (server)
+    auth-client.ts             # Better Auth (client)
+    session.ts                 # getSession/getUser
+    tenant.ts                  # resolve o tenant atual
+  db/
+    schema/*.ts                # schema Drizzle (tenancy, catálogo, agenda...)
+  app/
+    api/auth/[...all]/route.ts # handler do Better Auth
+    page.tsx                   # landing
+    (auth)/login/              # login/cadastro
+    (app)/dashboard/           # shell autenticado + visão geral
+    (app)/branches|services|products|professionals/
+    (app)/schedule|appointments|clients|team|profile/
+    invite/[token]/            # aceite de convite
+db/
+  rls.sql                      # funções, triggers, RLS e grants
+  seed.sql                     # tenant/filial de exemplo
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Configuração
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 1. Criar o projeto Neon
+1. Crie um projeto em https://console.neon.tech (região AWS).
+2. Copie a connection string do **owner** (`neondb_owner`) → `DATABASE_URL`
+   (host **sem** `-pooler`, para migrations).
+3. Rode o SQL abaixo no **SQL Editor** para criar a role do app:
+```sql
+create role glowhub_app with login password 'TROQUE_ESTA_SENHA';
+grant usage on schema public to glowhub_app;
+grant select, insert, update, delete on all tables in schema public to glowhub_app;
+alter default privileges in schema public
+  grant select, insert, update, delete on tables to glowhub_app;
+grant usage, select on all sequences in schema public to glowhub_app;
+```
+4. Monte `DATABASE_AUTHENTICATED_URL` com a role `glowhub_app` (host **com**
+   `-pooler`).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 2. Variáveis de ambiente
+```bash
+cp .env.example .env.local
+```
+Preencha `DATABASE_URL`, `DATABASE_AUTHENTICATED_URL`, `BETTER_AUTH_SECRET`
+(`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`)
+e `BETTER_AUTH_URL`.
 
-## Learn More
+### 3. Aplicar o schema
+```bash
+npx drizzle-kit push          # cria as tabelas
+node --env-file=.env.local scripts/apply-sql.mjs db/rls.sql   # RLS, funções, grants
+node --env-file=.env.local scripts/apply-sql.mjs db/seed.sql  # dados de exemplo
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 4. Criar usuário e vinculá-lo ao tenant
+1. Cadastre-se pela tela `/login` (Better Auth cria o usuário).
+2. Vincule como `owner` do tenant de exemplo:
+```sql
+insert into public.memberships (tenant_id, user_id, role)
+select t.id, u.id, 'owner'
+from public.tenants t, public."user" u
+where t.slug = 'demo' and u.email = 'voce@exemplo.com'
+on conflict (tenant_id, user_id) do update set role = 'owner';
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 5. Rodar
+```bash
+npm run dev
+```
+Acesse: http://localhost:3000/dashboard
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Segurança (RLS)
+- O app usa a role `glowhub_app` (sem `BYPASSRLS`). `withUser(userId, cb)` abre
+  uma transação e faz `set_config('request.jwt.claims', '{"sub": userId}', true)`;
+  as policies usam `public.auth_uid()`.
+- `tenants`: leitura pública de ativos (branding); escrita `owner/admin`.
+- Demais tabelas de domínio: leitura por membros; escrita por papel (catálogo:
+  `owner/admin/manager`; agenda/clientes: também `staff`).
+- **Aceite de convite** via `SECURITY DEFINER` (`public.accept_invitation`).
+- A conexão admin (`DATABASE_URL`) ignora RLS — use só no servidor.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Status
+- [x] Projeto Next 16 + Tailwind + TypeScript + Neon + Drizzle + Better Auth
+- [x] Tenancy + RLS por `auth_uid()`
+- [x] Resolução de tenant por subdomínio
+- [x] Auth (login/cadastro/logout) + perfil e troca de tenant ativa
+- [x] Filiais, catálogo (serviços, produtos, profissionais) e agenda
+- [x] Agendamentos e clientes
+- [x] Financeiro: plano de contas + ledger de partidas dobradas (append-only)
+- [x] Financeiro: cobrança de atendimento (gera receita + contas a receber)
+- [ ] Financeiro: pagamentos idempotentes (gateway) + webhooks + relatórios
+- [ ] Notificações, website público e app do cliente

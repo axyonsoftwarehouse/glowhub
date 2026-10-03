@@ -1,0 +1,49 @@
+# Roadmap do GlowHub
+
+Construção incremental. Cada fase entrega algo utilizável e testável.
+
+## Fase 0 — Fundação (concluída)
+- [x] Projeto Next 16 + Tailwind + TypeScript + Supabase + Drizzle
+- [x] Tenancy: `tenants`, `branches`, `memberships`, `invitations`, `profiles`
+- [x] RLS por `tenant_id` com claim de JWT + hook de access token
+- [x] Resolução de tenant por subdomínio (`src/proxy.ts`)
+- [x] Login/cadastro + shell autenticado + lista de filiais
+
+## Fase 1 — Identidade & organização (concluída)
+- [x] Convites de equipe (token por link; envio de e-mail pendente)
+- [x] Troca de **tenant ativa** (atualizar `active_tenant_id` + refresh do JWT)
+- [x] Gestão de filiais (criar/editar/desativar)
+- [x] Perfil do usuário e preferências (nome, avatar, fuso, notificações)
+
+## Fase 2 — Catálogo (concluída)
+- [x] Categorias e serviços (duração, preço, imagem)
+- [x] Preço/duração por filial (override)
+- [x] Vínculo serviço ↔ profissional ↔ filial
+- [x] Produtos (variações, estoque básico)
+
+## Fase 3 — Agenda (concluída)
+- [x] Horário de funcionamento, intervalos, feriados
+- [x] Slots e disponibilidade por profissional/filial (com compromissos)
+- [x] Agendamento (painel) + status/check-in/checkout
+- [x] Clientes (histórico via agenda)
+
+## Fase 4 — Financeiro
+- [x] Chart of accounts + **ledger de partidas dobradas** (centavos)
+- [x] Cobrança de atendimento (`charges`/`charge_items`; serviços; produtos/pacotes via `kind`)
+- [ ] Pagamentos **idempotentes** (gateway) + webhooks + conciliação
+- [ ] Gorjeta, comissão e repasses; carteira
+- [ ] Relatórios e fechamento
+
+## Fase 5 — Recorrência & comercial
+- [ ] Pacotes e assinaturas
+- [ ] Cupons e promoções
+- [ ] Notificações (e-mail/push) e lembretes
+
+## Fase 6 — Canais
+- [ ] Website público / agendamento online
+- [ ] App do cliente (mobile)
+
+## Transversal (em todas as fases)
+- Testes (unit + e2e dos fluxos críticos)
+- Observabilidade (logs, métricas, alertas de pagamento)
+- Segurança (RLS, revisão de policies, rate limit)
