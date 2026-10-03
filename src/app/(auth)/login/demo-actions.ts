@@ -10,6 +10,10 @@ import { branches, memberships, profiles, tenants } from "@/db/schema";
 const DEMO_EMAIL = process.env.DEMO_EMAIL?.trim() || "demo@glowhub.app";
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "demo123456";
 const DEMO_TENANT_SLUG = process.env.DEMO_TENANT_SLUG?.trim() || "demo";
+const DEMO_EXTRA_SLUGS = (process.env.DEMO_EXTRA_TENANTS ?? "studio-bella")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
 
 export type DemoLoginResult = { error: string };
 
@@ -45,41 +49,52 @@ export async function demoLoginAction(): Promise<DemoLoginResult | void> {
 
   try {
     const db = getDb();
+    const slugs = [DEMO_TENANT_SLUG, ...DEMO_EXTRA_SLUGS];
 
-    let tenant: { id: string } | undefined;
-    [tenant] = await db
-      .select({ id: tenants.id })
-      .from(tenants)
-      .where(eq(tenants.slug, DEMO_TENANT_SLUG))
-      .limit(1);
+    let primaryTenantId: string | null = null;
 
-    if (!tenant) {
-      const created = await db
-        .insert(tenants)
-        .values({ slug: DEMO_TENANT_SLUG, name: "GlowHub Demo" })
-        .returning({ id: tenants.id });
-      tenant = created[0];
+    for (const slug of slugs) {
+      let [tenant] = await db
+        .select({ id: tenants.id })
+        .from(tenants)
+        .where(eq(tenants.slug, slug))
+        .limit(1);
+
+      // So cria automaticamente o tenant principal; os extras sao ignorados
+      // se nao existirem (ex.: antes de rodar o seed demo).
+      if (!tenant) {
+        if (slug !== DEMO_TENANT_SLUG) continue;
+        const created = await db
+          .insert(tenants)
+          .values({ slug: DEMO_TENANT_SLUG, name: "GlowHub Demo" })
+          .returning({ id: tenants.id });
+        tenant = created[0];
+        await db
+          .insert(branches)
+          .values({ tenantId: tenant.id, slug: "matriz", name: "Matriz" })
+          .onConflictDoNothing();
+      }
+
+      if (!primaryTenantId) primaryTenantId = tenant.id;
+
       await db
-        .insert(branches)
-        .values({ tenantId: tenant.id, slug: "matriz", name: "Matriz" })
-        .onConflictDoNothing();
+        .insert(memberships)
+        .values({ tenantId: tenant.id, userId, role: "owner" })
+        .onConflictDoUpdate({
+          target: [memberships.tenantId, memberships.userId],
+          set: { role: "owner" },
+        });
     }
 
-    await db
-      .insert(memberships)
-      .values({ tenantId: tenant.id, userId, role: "owner" })
-      .onConflictDoUpdate({
-        target: [memberships.tenantId, memberships.userId],
-        set: { role: "owner" },
-      });
-
-    await db
-      .insert(profiles)
-      .values({ id: userId, activeTenantId: tenant.id })
-      .onConflictDoUpdate({
-        target: profiles.id,
-        set: { activeTenantId: tenant.id },
-      });
+    if (primaryTenantId) {
+      await db
+        .insert(profiles)
+        .values({ id: userId, activeTenantId: primaryTenantId })
+        .onConflictDoUpdate({
+          target: profiles.id,
+          set: { activeTenantId: primaryTenantId },
+        });
+    }
   } catch {
     return { error: "Nao foi possivel preparar a conta demo." };
   }
