@@ -63,11 +63,11 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Agenda | Horários, intervalos, feriados, disponibilidade | ✅ |
 | Agendamentos | Reserva + status (pendente→confirmado→check-in→checkout→concluído) | ✅ |
 | Clientes | Cadastro; histórico via agenda | ✅ (página de histórico dedicada pendente) |
-| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, relatórios | ✅ (gateway online e fechamento pendentes) |
+| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **conciliação** | ✅ (gateway online e fechamento pendentes) |
 | Pacotes & Assinaturas | Pré-pago e recorrente, com ledger | ✅ (consumo por período pendente) |
 | Notificações | Caixa de saída + e-mail (adapter portável) | 🟡 (push/lembretes agendados pendentes) |
 | Canal cliente | Agendamento online `(/book)`; app mobile | 🟡 |
-| Relatórios | Balancete, resultado, recebimentos, comissões | ✅ (fechamento formal pendente) |
+| Relatórios | Balancete, resultado, receita/dia, recebimentos por forma, **ocupação por profissional** | ✅ (fechamento formal pendente) |
 
 Legenda: ✅ pronto · 🟡 parcial · ⛔ não iniciado.
 
@@ -161,10 +161,17 @@ Browser ──► Next (RSC + Server Actions)
 
 ### 2.8 Infra & deploy
 - **Vercel** + **Neon**; **CI** (lint/typecheck/test/build) no GitHub Actions.
-- **Produção:** https://glowhub-torinoorbit-dev.vercel.app (env de produção
-  configuradas; `DATABASE_URL` pooled). **Login demo:** botão *"Entrar com conta
-  demo"* na tela de login (cria/entra numa conta owner do tenant `demo`).
-  Desativável com `NEXT_PUBLIC_DEMO_LOGIN=false`.
+- **Produção:** https://glowhub-silk.vercel.app (também
+  `glowhub-torinoorbit-dev.vercel.app`). Env de produção configuradas
+  (`DATABASE_URL` pooled).
+- **Conta demo:** botão *"Entrar com conta demo"* na tela de login. Vincula o
+  usuário como **owner de 3 tenants** (`demo`, `studio-bella`, `clinica-lumina`)
+  → use o seletor **Empresa**. Desativável com `NEXT_PUBLIC_DEMO_LOGIN=false`.
+- **Dados demo:** `npm run seed:demo` recria os 3 tenants com cenário completo e
+  ledger balanceado (catálogo, agenda, financeiro, pacotes, assinatura, cupons,
+  gateway mock). Idempotente (não toca em outros dados).
+- **Conciliação:** `/reconciliation` casa cobrança ↔ pagamento ↔ gateway e permite
+  confirmar pagamentos pendentes (efeito de webhook).
 
 ---
 
@@ -172,8 +179,8 @@ Browser ──► Next (RSC + Server Actions)
 Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 `/branches`, `/services`, `/products`, `/professionals`, `/schedule`,
 `/appointments`, `/clients`, `/packages`, `/subscriptions`, `/coupons`,
-`/notifications`, `/finance`, `/reports`, `/book`, `/api/auth/[...all]`,
-`/api/webhooks/[provider]`.
+`/notifications`, `/finance`, `/reconciliation`, `/reports`, `/book`,
+`/api/auth/[...all]`, `/api/webhooks/[provider]`.
 
 - Auth/sessão, convites por link, troca de empresa, **onboarding**.
 - Catálogo completo com overrides por filial; agenda e **disponibilidade**;

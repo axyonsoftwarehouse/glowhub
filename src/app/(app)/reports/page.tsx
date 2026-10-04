@@ -1,11 +1,15 @@
-import { and, asc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, eq, gte, lte, ne } from "drizzle-orm";
 import {
+  appointments,
+  branchHours,
   charges,
   earnings,
   journalEntries,
   journalLines,
   ledgerAccounts,
   payments,
+  professionalBranches,
+  professionalHours,
   professionals,
 } from "@/db/schema";
 import { withUser } from "@/lib/db";
@@ -157,6 +161,51 @@ export default async function ReportsPage({
       .from(professionals)
       .where(eq(professionals.tenantId, tenant.id));
 
+    const proHourRows = await tx
+      .select({
+        professionalId: professionalHours.professionalId,
+        weekday: professionalHours.weekday,
+        startTime: professionalHours.startTime,
+        endTime: professionalHours.endTime,
+      })
+      .from(professionalHours)
+      .where(eq(professionalHours.tenantId, tenant.id));
+
+    const proBranchRows = await tx
+      .select({
+        professionalId: professionalBranches.professionalId,
+        branchId: professionalBranches.branchId,
+      })
+      .from(professionalBranches)
+      .where(eq(professionalBranches.tenantId, tenant.id));
+
+    const branchHourRows = await tx
+      .select({
+        branchId: branchHours.branchId,
+        weekday: branchHours.weekday,
+        startTime: branchHours.startTime,
+        endTime: branchHours.endTime,
+      })
+      .from(branchHours)
+      .where(eq(branchHours.tenantId, tenant.id));
+
+    const apptRows = await tx
+      .select({
+        professionalId: appointments.professionalId,
+        startsAt: appointments.startsAt,
+        endsAt: appointments.endsAt,
+        priceCents: appointments.priceCents,
+      })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.tenantId, tenant.id),
+          ne(appointments.status, "cancelled"),
+          gte(appointments.startsAt, start),
+          lte(appointments.startsAt, end),
+        ),
+      );
+
     return {
       accounts,
       lines,
@@ -165,6 +214,10 @@ export default async function ReportsPage({
       paidRows,
       earningRows,
       professionalRows,
+      proHourRows,
+      proBranchRows,
+      branchHourRows,
+      apptRows,
     };
   });
 
@@ -255,6 +308,72 @@ export default async function ReportsPage({
     else bucket.tip += row.amountCents;
     earningByProfessional.set(row.professionalId, bucket);
   }
+
+  // ocupacao por profissional = horas agendadas / capacidade (horario de trabalho)
+  const toMin = (t: string) => {
+    const [h, m] = t.split(":");
+    return Number(h) * 60 + Number(m);
+  };
+  const weekdayCount = [0, 0, 0, 0, 0, 0, 0];
+  for (let i = 0; i < dayCount; i += 1) {
+    const d = addDays(from, i);
+    weekdayCount[new Date(`${d}T00:00:00Z`).getUTCDay()] += 1;
+  }
+  const proOwnHours = new Map<string, number[]>();
+  for (const row of data.proHourRows) {
+    const arr = proOwnHours.get(row.professionalId) ?? [0, 0, 0, 0, 0, 0, 0];
+    arr[row.weekday] += toMin(row.endTime) - toMin(row.startTime);
+    proOwnHours.set(row.professionalId, arr);
+  }
+  const branchWeekly = new Map<string, number[]>();
+  for (const row of data.branchHourRows) {
+    const arr = branchWeekly.get(row.branchId) ?? [0, 0, 0, 0, 0, 0, 0];
+    arr[row.weekday] += toMin(row.endTime) - toMin(row.startTime);
+    branchWeekly.set(row.branchId, arr);
+  }
+  const proBranches = new Map<string, string[]>();
+  for (const row of data.proBranchRows) {
+    const list = proBranches.get(row.professionalId) ?? [];
+    list.push(row.branchId);
+    proBranches.set(row.professionalId, list);
+  }
+  const bookedMinutes = new Map<string, number>();
+  const revenueByPro = new Map<string, number>();
+  const apptCountByPro = new Map<string, number>();
+  for (const row of data.apptRows) {
+    const mins = (row.endsAt.getTime() - row.startsAt.getTime()) / 60000;
+    bookedMinutes.set(row.professionalId, (bookedMinutes.get(row.professionalId) ?? 0) + mins);
+    revenueByPro.set(row.professionalId, (revenueByPro.get(row.professionalId) ?? 0) + row.priceCents);
+    apptCountByPro.set(row.professionalId, (apptCountByPro.get(row.professionalId) ?? 0) + 1);
+  }
+  const occupancyRows = data.professionalRows
+    .map((pro) => {
+      let weekly = proOwnHours.get(pro.id);
+      if (!weekly || weekly.every((v) => v === 0)) {
+        const branches = proBranches.get(pro.id) ?? [];
+        weekly = [0, 0, 0, 0, 0, 0, 0];
+        for (let wd = 0; wd < 7; wd += 1) {
+          weekly[wd] = branches.reduce(
+            (max, b) => Math.max(max, branchWeekly.get(b)?.[wd] ?? 0),
+            0,
+          );
+        }
+      }
+      const available = weekly.reduce((sum, v, wd) => sum + v * weekdayCount[wd], 0);
+      const booked = bookedMinutes.get(pro.id) ?? 0;
+      return {
+        id: pro.id,
+        name: pro.name,
+        appointments: apptCountByPro.get(pro.id) ?? 0,
+        booked,
+        available,
+        occupancy: available > 0 ? booked / available : 0,
+        revenue: revenueByPro.get(pro.id) ?? 0,
+        commission: earningByProfessional.get(pro.id)?.commission ?? 0,
+      };
+    })
+    .sort((a, b) => b.occupancy - a.occupancy);
+  const fmtHours = (mins: number) => `${(mins / 60).toFixed(1)}h`;
 
   return (
     <div className="space-y-8">
@@ -414,6 +533,67 @@ export default async function ReportsPage({
                 <tr>
                   <td colSpan={5} className="px-3 py-4 text-sm text-foreground/60">
                     Sem movimentação no período.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
+          Ocupação por profissional
+        </h2>
+        <div className="mt-4 overflow-hidden rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/50">
+              <tr>
+                <th className="px-3 py-2">Profissional</th>
+                <th className="px-3 py-2 text-right">Agend.</th>
+                <th className="px-3 py-2 text-right">Horas</th>
+                <th className="px-3 py-2 text-right">Capacidade</th>
+                <th className="px-3 py-2">Ocupação</th>
+                <th className="px-3 py-2 text-right">Receita</th>
+                <th className="px-3 py-2 text-right">Comissão</th>
+              </tr>
+            </thead>
+            <tbody>
+              {occupancyRows.map((row) => (
+                <tr key={row.id} className="border-t border-border">
+                  <td className="px-3 py-2">{row.name}</td>
+                  <td className="px-3 py-2 text-right">{row.appointments}</td>
+                  <td className="px-3 py-2 text-right">{fmtHours(row.booked)}</td>
+                  <td className="px-3 py-2 text-right">
+                    {fmtHours(row.available)}
+                  </td>
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-24 rounded-full bg-muted">
+                        <div
+                          className="h-2 rounded-full bg-brand"
+                          style={{
+                            width: `${Math.min(100, Math.round(row.occupancy * 100))}%`,
+                          }}
+                        />
+                      </div>
+                      <span className="text-xs text-foreground/60">
+                        {Math.round(row.occupancy * 100)}%
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {formatCentsBRL(row.revenue)}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {formatCentsBRL(row.commission)}
+                  </td>
+                </tr>
+              ))}
+              {occupancyRows.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-3 py-4 text-sm text-foreground/60">
+                    Sem profissionais cadastrados.
                   </td>
                 </tr>
               )}

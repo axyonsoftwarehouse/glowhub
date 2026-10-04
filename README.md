@@ -136,5 +136,6 @@ Acesse: http://localhost:3000/dashboard
 - [x] Onboarding de tenant (cadastro cria empresa) + CI (lint/typecheck/test/build)
 - [x] Testes unitários (vitest) de dinheiro, disponibilidade e fuso
 - [x] Notificações por e-mail (caixa de saída em `/notifications`)
+- [x] Conciliação (`/reconciliation`) e relatórios visuais (receita/dia, ocupação)
 - [ ] App mobile, gateway online e lembretes agendados
 - [ ] Notificações, website público e app do cliente

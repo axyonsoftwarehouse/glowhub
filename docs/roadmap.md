@@ -30,10 +30,10 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 ## Fase 4 — Financeiro (concluída)
 - [x] Chart of accounts + **ledger de partidas dobradas** (centavos)
 - [x] Cobrança de atendimento (`charges`/`charge_items`; serviços; produtos/pacotes via `kind`)
-- [x] Pagamentos **idempotentes** + webhooks + conciliação (manual; gateway a integrar)
+- [x] Pagamentos **idempotentes** + webhooks + conciliação (tela `/reconciliation`; gateway real a integrar)
 - [x] Gorjeta, comissão e repasses
 - [x] Carteira do cliente (crédito pré-pago; pagamento por carteira)
-- [x] Relatórios (balancete, resultado, recebimentos, comissões/gorjetas) — fechamento formal pendente
+- [x] Relatórios (balancete, resultado, receita/dia, recebimentos por forma, ocupação por profissional, comissões) — fechamento formal pendente
 
 ## Fase 5 — Recorrência & comercial
 - [x] Pacotes (pré-pago) e assinaturas (planos recorrentes com cobrança no ledger)
