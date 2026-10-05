@@ -67,6 +67,9 @@ const TABLES = [
 ];
 
 async function wipeTenants(slugs) {
+  // webhook_events nao tem tenant_id; remove sempre os eventos mock do demo.
+  await sql`delete from public.webhook_events where provider = 'mock' and event_id like 'evt_demo_%'`;
+
   const rows = await sql`select id from public.tenants where slug = any(${slugs})`;
   const ids = rows.map((r) => r.id);
   if (ids.length === 0) return;
