@@ -63,11 +63,11 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Agenda | Horários, intervalos, feriados, disponibilidade; busca na agenda; políticas de cancelamento/no-show por tenant | ✅ |
 | Agendamentos | Reserva + status (pendente→confirmado→check-in→checkout→concluído) | ✅ |
 | Clientes | Cadastro, **busca**, **histórico dedicado** (atendimentos, cobranças/pagamentos, carteira) | ✅ |
-| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **conciliação** | ✅ (gateway online e fechamento pendentes) |
+| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **conciliação**, **fechamento contábil** | ✅ (gateway online pendente) |
 | Pacotes & Assinaturas | Pré-pago e recorrente, com ledger, **consumo/limites por período** e **renovação automática** (cron) | ✅ |
 | Notificações | Caixa de saída + e-mail (adapter portável) | 🟡 (push/lembretes agendados pendentes) |
 | Canal cliente | Agendamento online `(/book)`; app mobile | 🟡 |
-| Relatórios | Balancete, resultado, receita/dia, recebimentos por forma, **ocupação por profissional** | ✅ (fechamento formal pendente) |
+| Relatórios | Balancete, resultado, receita/dia, recebimentos por forma, **ocupação por profissional** | ✅ |
 
 Legenda: ✅ pronto · 🟡 parcial · ⛔ não iniciado.
 
@@ -122,8 +122,9 @@ Browser ──► Next (RSC + Server Actions)
 - **Agenda:** `branch_hours`, `professional_hours`, `branch_closures`.
 - **Atendimento:** `clients`, `appointments` (status + *exclusion constraint*).
 - **Financeiro:** `ledger_accounts`, `journal_entries`, `journal_lines`,
-  `charges`, `charge_items`, `payments`, `webhook_events`, `earnings`, `payouts`,
-  `wallet_transactions`.
+  `accounting_periods` (fechamento), `charges`, `charge_items`, `payments`,
+  `webhook_events`, `earnings`, `payouts`, `wallet_transactions`.
+- **Infra:** `rate_limits` (rate limiting interno).
 - **Comercial:** `packages`/`package_items`/`client_packages`/`package_redemptions`,
   `subscription_plans`/`plan_items`/`client_subscriptions`/`subscription_redemptions`,
   `coupons`/`coupon_redemptions`.
@@ -139,8 +140,11 @@ Browser ──► Next (RSC + Server Actions)
   carteira (D Caixa / C Carteira; pagamento com carteira), cupom (D Descontos /
   C Receber), pacote (D Caixa / C Pacotes a Resgatar; resgate D Pacotes / C Receita),
   assinatura (D Caixa / C Receita de Assinaturas).
+- **Fechamento contábil:** períodos fechados (`accounting_periods`) bloqueiam
+  novos lançamentos com data dentro do intervalo (checado em `postEntry`);
+  snapshot do balancete guardado no fechamento (`/closing`).
 - **Falta:** gateway online + webhooks assinados + conciliação automática,
-  estorno/void formal, fechamento contábil e reconhecimento diferido de receita.
+  estorno/void formal e reconhecimento diferido de receita.
 
 ### 2.6 Convenções
 - Schema Drizzle em `src/db/schema` é a **fonte de verdade**; funções, triggers,
@@ -192,8 +196,8 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 `/branches`, `/services`, `/products`, `/professionals`, `/schedule`,
 `/appointments`, `/my-schedule`, `/clients`, `/clients/[id]`, `/packages`,
 `/subscriptions`, `/coupons`, `/notifications`, `/finance`, `/reconciliation`,
-`/reports`, `/settings`, `/book`, `/api/auth/[...all]`, `/api/webhooks/[provider]`,
-`/api/cron/subscriptions`, `/api/health`.
+`/reports`, `/closing`, `/settings`, `/book`, `/api/auth/[...all]`,
+`/api/webhooks/[provider]`, `/api/cron/subscriptions`, `/api/health`.
 
 - Auth/sessão, convites por link, **edição/remoção de membros**, troca de empresa,
   **onboarding**.
@@ -221,7 +225,9 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 - [x] **Recorrência automática de assinaturas** (`/api/cron/subscriptions`,
       cron diário na Vercel + botão manual) e **consumo/limites** por período
       (assinaturas via `subscription_redemptions`; pacotes já por quantidade).
-- [ ] **Fechamento** contábil e reconhecimento de receita diferida.
+- [x] **Fechamento** contábil: travar período (bloqueia lançamentos no intervalo)
+      e snapshot do balancete (`/closing`). Reconhecimento de receita diferida
+      ainda pendente.
 
 ### Comunicação
 - [ ] **Agendador** (pg_cron/Inngest) para **lembretes** de agendamento.
@@ -286,6 +292,8 @@ Pontos de entrada úteis:
   `src/app/api/auth/[...all]/route.ts`, `src/app/api/health/route.ts`.
 - Auth: `src/lib/auth.ts`, `src/lib/session.ts`, `src/app/api/auth/[...all]/route.ts`.
 - Financeiro: `src/lib/ledger.ts`, `src/app/(app)/finance/*`.
+- Fechamento contábil: `src/lib/accounting.ts`, `src/app/(app)/closing/*`,
+  `src/db/schema/accounting.ts` (bloqueio em `postEntry`).
 - Disponibilidade: `src/lib/availability.ts`, `src/lib/availability-data.ts`.
 - Booking público: `src/app/book/*`.
 - Visão do profissional: `src/app/(app)/my-schedule/*` + vínculo em

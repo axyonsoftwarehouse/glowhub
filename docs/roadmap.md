@@ -37,7 +37,8 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Pagamentos **idempotentes** + webhooks + conciliação (tela `/reconciliation`; gateway real a integrar)
 - [x] Gorjeta, comissão e repasses
 - [x] Carteira do cliente (crédito pré-pago; pagamento por carteira)
-- [x] Relatórios (balancete, resultado, receita/dia, recebimentos por forma, ocupação por profissional, comissões) — fechamento formal pendente
+- [x] Relatórios (balancete, resultado, receita/dia, recebimentos por forma, ocupação por profissional, comissões)
+- [x] Fechamento contábil (trava de período + snapshot do balancete; `/closing`)
 
 ## Fase 5 — Recorrência & comercial
 - [x] Pacotes (pré-pago) e assinaturas (planos recorrentes com cobrança no ledger)

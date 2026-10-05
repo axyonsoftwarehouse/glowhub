@@ -89,7 +89,7 @@ begin
     'products', 'product_variants',
     'branch_hours', 'professional_hours', 'branch_closures',
     'clients', 'appointments',
-    'ledger_accounts', 'journal_entries', 'journal_lines',
+    'ledger_accounts', 'journal_entries', 'journal_lines', 'accounting_periods',
     'charges', 'charge_items', 'payments', 'earnings', 'payouts',
     'wallet_transactions',
     'packages', 'package_items', 'client_packages', 'package_redemptions',
@@ -221,6 +221,15 @@ create policy journal_lines_member_read on public.journal_lines
 drop policy if exists journal_lines_member_insert on public.journal_lines;
 create policy journal_lines_member_insert on public.journal_lines
   for insert with check (public.has_tenant_role(tenant_id, array['owner', 'admin', 'manager', 'staff']::public.tenant_role[]));
+
+-- accounting_periods (fechamento contabil): leitura por membros, escrita owner/admin.
+drop policy if exists accounting_periods_member_read on public.accounting_periods;
+create policy accounting_periods_member_read on public.accounting_periods
+  for select using (public.is_tenant_member(tenant_id));
+drop policy if exists accounting_periods_admin_write on public.accounting_periods;
+create policy accounting_periods_admin_write on public.accounting_periods
+  for all using (public.has_tenant_role(tenant_id, array['owner', 'admin']::public.tenant_role[]))
+  with check (public.has_tenant_role(tenant_id, array['owner', 'admin']::public.tenant_role[]));
 
 -- Ledger e append-only: nunca editar/apagar lancamentos.
 create or replace function public.prevent_ledger_mutation()

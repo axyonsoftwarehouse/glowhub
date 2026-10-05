@@ -1,5 +1,10 @@
-import { and, eq } from "drizzle-orm";
-import { journalEntries, journalLines, ledgerAccounts } from "@/db/schema";
+import { and, eq, sql } from "drizzle-orm";
+import {
+  accountingPeriods,
+  journalEntries,
+  journalLines,
+  ledgerAccounts,
+} from "@/db/schema";
 import type { AppTx } from "@/lib/db";
 
 export type LedgerLineInput = {
@@ -41,11 +46,28 @@ export async function postEntry(
     reversesEntryId?: string | null;
   },
 ): Promise<string> {
+  const occurredAt = params.occurredAt ?? new Date();
+
+  const [closedPeriod] = await tx
+    .select({ id: accountingPeriods.id })
+    .from(accountingPeriods)
+    .where(
+      and(
+        eq(accountingPeriods.tenantId, params.tenantId),
+        eq(accountingPeriods.status, "closed"),
+        sql`(${occurredAt} at time zone 'UTC')::date between ${accountingPeriods.periodStart} and ${accountingPeriods.periodEnd}`,
+      ),
+    )
+    .limit(1);
+  if (closedPeriod) {
+    throw new Error("accounting_period_closed");
+  }
+
   const [entry] = await tx
     .insert(journalEntries)
     .values({
       tenantId: params.tenantId,
-      occurredAt: params.occurredAt ?? new Date(),
+      occurredAt,
       description: params.description,
       referenceType: params.referenceType ?? null,
       referenceId: params.referenceId ?? null,

@@ -54,6 +54,7 @@ async function postEntry(tx, { tenantId, description, idem, refType = null, refI
 }
 
 const TABLES = [
+  "accounting_periods",
   "journal_lines", "journal_entries", "coupon_redemptions", "coupons",
   "wallet_transactions", "package_redemptions", "client_packages",
   "earnings", "payouts", "payments", "charge_items", "charges",

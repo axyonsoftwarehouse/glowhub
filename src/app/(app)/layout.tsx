@@ -126,6 +126,14 @@ export default async function AppLayout({
           </Link>
           {canManageTenant && (
             <Link
+              href="/closing"
+              className="rounded-lg px-3 py-2 hover:bg-muted"
+            >
+              Fechamento
+            </Link>
+          )}
+          {canManageTenant && (
+            <Link
               href="/settings"
               className="rounded-lg px-3 py-2 hover:bg-muted"
             >
