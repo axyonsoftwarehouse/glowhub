@@ -4,6 +4,7 @@ import {
   branches,
   charges,
   clients,
+  memberships,
   services,
 } from "@/db/schema";
 import { withUser } from "@/lib/db";
@@ -21,6 +22,7 @@ import type { AppointmentStatus } from "@/app/(app)/appointments/types";
 export const dynamic = "force-dynamic";
 
 const TZ = "America/Sao_Paulo";
+const WRITE_ROLES = ["owner", "admin", "manager", "staff"];
 
 function first(value: string | string[] | undefined): string | undefined {
   return typeof value === "string" ? value : undefined;
@@ -138,7 +140,22 @@ export default async function MySchedulePage({
         .map((row) => [row.appointmentId as string, row.status]),
     );
 
-    return { appointmentRows, chargeByAppointment: chargeMap };
+    const [membership] = await tx
+      .select({ role: memberships.role })
+      .from(memberships)
+      .where(
+        and(
+          eq(memberships.tenantId, tenant.id),
+          eq(memberships.userId, userId),
+        ),
+      )
+      .limit(1);
+
+    return {
+      appointmentRows,
+      chargeByAppointment: chargeMap,
+      canChange: WRITE_ROLES.includes(membership?.role ?? ""),
+    };
   });
 
   const items: Array<{ dayKey: string; item: ScheduleItemData }> =
@@ -236,7 +253,11 @@ export default async function MySchedulePage({
             </h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {group.items.map((item) => (
-                <ScheduleItem key={item.id} item={item} />
+                <ScheduleItem
+                  key={item.id}
+                  item={item}
+                  canChange={rows.canChange}
+                />
               ))}
             </div>
           </div>

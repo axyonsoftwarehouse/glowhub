@@ -46,7 +46,7 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Dono (owner) | Configura empresa, preços, equipe, vê financeiro e relatórios. |
 | Gerente (manager) | Opera filiais, catálogo, agenda e equipe. |
 | Recepção / staff | Agenda, check-in/checkout, cobrança, clientes. |
-| Profissional | **Minha agenda** (`/my-schedule`): própria agenda do dia/semana (somente leitura). |
+| Profissional | **Minha agenda** (`/my-schedule`): agenda do dia/semana e confirma/inicia/conclui os próprios atendimentos. |
 | Cliente final | **Agendamento online** em `/book`; app mobile pendente. |
 
 ### 1.6 Escopo funcional (módulos)
@@ -213,8 +213,9 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 - [ ] Canais **push/SMS**.
 
 ### Produto
-- [x] **Visão do profissional** (agenda própria, `/my-schedule`) e **histórico por
-      cliente** (`/clients/[id]`).
+- [x] **Visão do profissional** (agenda própria `/my-schedule`, com mudança de
+      status dos próprios atendimentos) e **histórico por cliente**
+      (`/clients/[id]`).
 - [ ] **Paginação/busca** nas listas.
 - [ ] **Edição/remoção de membros** da equipe.
 - [ ] Políticas de **cancelamento/no-show** por tenant.

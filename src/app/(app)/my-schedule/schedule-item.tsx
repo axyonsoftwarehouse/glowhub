@@ -1,8 +1,15 @@
+"use client";
+
+import { useState, useTransition } from "react";
 import { formatCentsBRL } from "@/lib/money";
 import {
+  ALLOWED_TRANSITIONS,
+  initialAppointmentActionState,
   STATUS_LABELS,
+  type AppointmentActionState,
   type AppointmentStatus,
 } from "@/app/(app)/appointments/types";
+import { setMyAppointmentStatusAction } from "./actions";
 
 const STATUS_STYLES: Record<AppointmentStatus, string> = {
   pending: "bg-amber-100 text-amber-700",
@@ -12,6 +19,16 @@ const STATUS_STYLES: Record<AppointmentStatus, string> = {
   completed: "bg-emerald-100 text-emerald-700",
   cancelled: "bg-zinc-100 text-zinc-600",
   no_show: "bg-red-100 text-red-700",
+};
+
+const ACTION_LABELS: Record<AppointmentStatus, string> = {
+  pending: "Reabrir",
+  confirmed: "Confirmar",
+  check_in: "Check-in",
+  checkout: "Checkout",
+  completed: "Concluir",
+  cancelled: "Cancelar",
+  no_show: "Não compareceu",
 };
 
 export type ScheduleItemData = {
@@ -25,7 +42,34 @@ export type ScheduleItemData = {
   chargeStatus: "none" | "open" | "paid" | "void";
 };
 
-export function ScheduleItem({ item }: { item: ScheduleItemData }) {
+export function ScheduleItem({
+  item,
+  canChange,
+}: {
+  item: ScheduleItemData;
+  canChange: boolean;
+}) {
+  const [result, setResult] = useState<AppointmentActionState>(
+    initialAppointmentActionState,
+  );
+  const [pending, startTransition] = useTransition();
+
+  function change(status: AppointmentStatus) {
+    const formData = new FormData();
+    formData.set("id", item.id);
+    formData.set("status", status);
+    startTransition(async () => {
+      setResult(
+        await setMyAppointmentStatusAction(
+          initialAppointmentActionState,
+          formData,
+        ),
+      );
+    });
+  }
+
+  const nextStatuses = ALLOWED_TRANSITIONS[item.status];
+
   return (
     <article className="rounded-xl border border-border bg-white/70 p-4">
       <div className="flex items-start justify-between gap-3">
@@ -59,6 +103,30 @@ export function ScheduleItem({ item }: { item: ScheduleItemData }) {
           </span>
         )}
       </div>
+
+      {canChange && nextStatuses.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {nextStatuses.map((status) => (
+            <button
+              key={status}
+              type="button"
+              onClick={() => change(status)}
+              disabled={pending}
+              className={`rounded-full border px-3 py-1 text-xs font-medium disabled:opacity-60 ${
+                status === "cancelled" || status === "no_show"
+                  ? "border-border text-red-600 hover:bg-muted"
+                  : "border-border hover:bg-muted"
+              }`}
+            >
+              {ACTION_LABELS[status]}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {result.status === "error" && result.message && (
+        <p className="mt-2 text-xs text-red-600">{result.message}</p>
+      )}
     </article>
   );
 }

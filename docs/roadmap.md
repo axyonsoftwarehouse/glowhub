@@ -26,7 +26,7 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Slots e disponibilidade por profissional/filial (com compromissos)
 - [x] Agendamento (painel) + status/check-in/checkout
 - [x] Clientes (histórico dedicado: atendimentos, cobranças/pagamentos, carteira)
-- [x] Visão do profissional: "Minha agenda" (vínculo `professionals.user_id`)
+- [x] Visão do profissional: "Minha agenda" (vínculo `professionals.user_id`) + status dos próprios atendimentos
 
 ## Fase 4 — Financeiro (concluída)
 - [x] Chart of accounts + **ledger de partidas dobradas** (centavos)
