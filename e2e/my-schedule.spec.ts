@@ -49,12 +49,19 @@ test.describe("Minha agenda (visão do profissional)", () => {
     }
 
     const card = cards.first();
+    // Referência estável: o card pode deixar de ter botões após a transição
+    // (ex.: "Concluir" -> sem próximas ações), então localizamos por texto.
+    const headerText = await card.locator("p").first().innerText();
     const actionButton = card.getByRole("button").first();
     const action = ((await actionButton.textContent()) ?? "").trim();
     const expectedStatus = ACTION_TO_STATUS[action];
     expect(expectedStatus, `ação desconhecida: ${action}`).toBeTruthy();
 
     await actionButton.click();
-    await expect(card.getByText(expectedStatus, { exact: true })).toBeVisible();
+
+    const stableCard = page.locator("article").filter({ hasText: headerText });
+    await expect(
+      stableCard.getByText(expectedStatus, { exact: true }),
+    ).toBeVisible();
   });
 });

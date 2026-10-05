@@ -108,6 +108,9 @@ Browser ──► Next (RSC + Server Actions)
 - **Canal público** (`/book`, `/api/webhooks/*`) usa `getDb()` (owner) com
   **escopo explícito por `tenant_id`** — decisão consciente.
 - Convites: `SECURITY DEFINER` (`accept_invitation`).
+- **Rate limiting**: fixed-window em `rate_limits` (tabela interna, role do app
+  revogada) aplicado ao sign-in/sign-up via `src/app/api/auth/[...all]`;
+  fail-open. Logger estruturado em `src/lib/logger.ts`; `/api/health`.
 
 ### 2.4 Modelo de dados (por domínio)
 - **Auth:** `user`, `session`, `account`, `verification`.
@@ -190,7 +193,7 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 `/appointments`, `/my-schedule`, `/clients`, `/clients/[id]`, `/packages`,
 `/subscriptions`, `/coupons`, `/notifications`, `/finance`, `/reconciliation`,
 `/reports`, `/settings`, `/book`, `/api/auth/[...all]`, `/api/webhooks/[provider]`,
-`/api/cron/subscriptions`.
+`/api/cron/subscriptions`, `/api/health`.
 
 - Auth/sessão, convites por link, **edição/remoção de membros**, troca de empresa,
   **onboarding**.
@@ -241,10 +244,13 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 - [x] **e2e** (Playwright) dos fluxos críticos: login demo, minha agenda
       (vínculo + status), histórico do cliente e booking público. Workflow
       `e2e.yml` manual (usa secrets de banco).
-- [ ] **Observabilidade** (logs, métricas, alertas de pagamento).
+- [x] **Observabilidade in-app**: logger estruturado (JSON), `/api/health`
+      (checa banco) e logs de webhook/rate-limit. Métricas agregadas e alertas
+      externos (e-mail/Slack) pendentes.
 - [ ] **Deploy na Vercel** + env de produção + domínio/subdomínios.
-- [ ] **Segurança**: revisão de policies, **rate limiting**, proteção das rotas
-      do Better Auth.
+- [x] **Segurança**: **rate limiting** no sign-in/sign-up do Better Auth
+      (fixed-window em banco, tabela interna `rate_limits`, fail-open); revisão
+      contínua de policies.
 - [ ] Revisão de **acessibilidade** e i18n (hoje só pt-BR).
 
 ---
@@ -276,6 +282,8 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 
 Pontos de entrada úteis:
 - Multi-tenancy/RLS: `src/lib/db.ts`, `src/lib/tenant.ts`, `db/rls.sql`.
+- Rate limit / logs / health: `src/lib/rate-limit.ts`, `src/lib/logger.ts`,
+  `src/app/api/auth/[...all]/route.ts`, `src/app/api/health/route.ts`.
 - Auth: `src/lib/auth.ts`, `src/lib/session.ts`, `src/app/api/auth/[...all]/route.ts`.
 - Financeiro: `src/lib/ledger.ts`, `src/app/(app)/finance/*`.
 - Disponibilidade: `src/lib/availability.ts`, `src/lib/availability-data.ts`.

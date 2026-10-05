@@ -53,7 +53,7 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Onboarding de tenant (cadastro cria empresa + filial + owner)
 - [x] CI (lint + typecheck + build no GitHub Actions)
 - [x] Testes unitários (vitest) + e2e (Playwright: login demo, minha agenda, histórico do cliente, booking)
-- [ ] Observabilidade (logs, métricas, alertas de pagamento)
-- [ ] Segurança (revisão de policies, rate limit)
+- [x] Observabilidade in-app (logger estruturado, `/api/health`, logs de webhook); métricas/alertas externos pendentes
+- [x] Segurança (rate limiting no Better Auth, tabela interna `rate_limits`; revisão contínua de policies)
 - [ ] Provedor de e-mail (verificação, convites, lembretes)
 - [ ] Gateway de pagamento online e fechamento formal

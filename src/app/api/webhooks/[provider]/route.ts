@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { webhookEvents } from "@/db/schema";
 import { getDb } from "@/lib/db";
+import { logger } from "@/lib/logger";
 
 /**
  * Endpoint generico de webhook de pagamento.
@@ -39,6 +40,7 @@ export async function POST(
       .returning({ id: webhookEvents.id });
 
     if (inserted.length === 0) {
+      logger.info("webhook_duplicate", { provider, eventId });
       return Response.json({ received: true, duplicate: true }, { status: 200 });
     }
 
@@ -49,8 +51,10 @@ export async function POST(
       .set({ processedAt: new Date() })
       .where(eq(webhookEvents.id, inserted[0].id));
 
+    logger.info("webhook_received", { provider, eventId });
     return Response.json({ received: true }, { status: 200 });
   } catch (cause) {
+    logger.error("webhook_failed", { provider, eventId, error: String(cause) });
     return Response.json(
       { error: "Falha ao processar webhook.", detail: String(cause) },
       { status: 500 },
