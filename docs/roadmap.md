@@ -48,7 +48,7 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 ## Transversal (em todas as fases)
 - [x] Onboarding de tenant (cadastro cria empresa + filial + owner)
 - [x] CI (lint + typecheck + build no GitHub Actions)
-- [x] Testes unitários (vitest: dinheiro, disponibilidade, fuso); e2e pendente
+- [x] Testes unitários (vitest) + e2e (Playwright: login demo, minha agenda, histórico do cliente, booking)
 - [ ] Observabilidade (logs, métricas, alertas de pagamento)
 - [ ] Segurança (revisão de policies, rate limit)
 - [ ] Provedor de e-mail (verificação, convites, lembretes)

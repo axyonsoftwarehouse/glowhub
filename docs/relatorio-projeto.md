@@ -82,7 +82,8 @@ Legenda: ✅ pronto · 🟡 parcial · ⛔ não iniciado.
 - **Better Auth self-hosted** (tabelas `user`/`session`/`account`/`verification`
   no banco) — escolhido por **portabilidade**.
 - **Drizzle ORM** (schema e queries) + **Zod** (validação) + **Tailwind v4**.
-- **Vitest** para testes unitários; **GitHub Actions** para CI.
+- **Vitest** (unitários) e **Playwright** (e2e) para testes; **GitHub Actions**
+  para CI.
 
 ### 2.2 Arquitetura
 ```
@@ -144,6 +145,9 @@ Browser ──► Next (RSC + Server Actions)
   `db/rls.sql`.
 - Dinheiro sempre em centavos; sem lógica de dinheiro no client.
 - Quality gate: `npx tsc --noEmit`, `npx eslint .`, `npm test`, `npm run build`.
+- e2e: `npm run test:e2e` (Playwright; sobe o dev server e exige `.env.local`
+  configurado e `npm run seed:demo` executado). Instale o navegador uma vez com
+  `npm run test:e2e:install`.
 
 ### 2.7 Setup de desenvolvimento (onboarding do dev)
 1. `npm install`
@@ -190,7 +194,9 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 - **Financeiro** completo no núcleo: ledger, cobrança, pagamentos idempotentes,
   comissão/gorjeta/repasse, carteira, cupons, pacotes, assinaturas, relatórios.
 - **Agendamento online** e **notificações por e-mail** (caixa de saída).
-- **CI** + **23 testes unitários**; `tsc`/`eslint`/`build` verdes.
+- **CI** + **23 testes unitários** e **5 testes e2e** (Playwright: login demo,
+  minha agenda + mudança de status, histórico do cliente, booking); `tsc`/`eslint`/
+  `build` verdes.
 
 ---
 
@@ -223,7 +229,9 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 
 ### Transversal / produção
 - [x] Onboarding de tenant; CI; testes unitários; e-mail (caixa de saída).
-- [ ] **e2e** (Playwright) dos fluxos críticos.
+- [x] **e2e** (Playwright) dos fluxos críticos: login demo, minha agenda
+      (vínculo + status), histórico do cliente e booking público. Workflow
+      `e2e.yml` manual (usa secrets de banco).
 - [ ] **Observabilidade** (logs, métricas, alertas de pagamento).
 - [ ] **Deploy na Vercel** + env de produção + domínio/subdomínios.
 - [ ] **Segurança**: revisão de policies, **rate limiting**, proteção das rotas
@@ -250,10 +258,12 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 3. **Env**: criar `.env.local` a partir de `.env.example` (Neon owner + role do
    app + `BETTER_AUTH_SECRET`). Ver `docs/neon-migration.md` para o setup do Neon.
 4. **Banco**: `npx drizzle-kit push` → aplicar `db/rls.sql` → `db/seed.sql`
-   (via `scripts/apply-sql.mjs`).
+   (via `scripts/apply-sql.mjs`) → `npm run seed:demo` (cenário demo).
 5. **Qualidade**: `npx tsc --noEmit` && `npx eslint .` && `npm test` && `npm run build`.
-6. **Smoke**: `node --env-file=.env.local scripts/smoke-rls.mjs` e `...smoke-ledger.mjs`.
-7. **Rodar**: `npm run dev` (app em `/dashboard`; público em `/book`).
+6. **e2e** (opcional): `npm run test:e2e:install` uma vez; depois `npm run test:e2e`
+   (sobe o dev server; exige `.env.local` e seed demo).
+7. **Smoke**: `node --env-file=.env.local scripts/smoke-rls.mjs` e `...smoke-ledger.mjs`.
+8. **Rodar**: `npm run dev` (app em `/dashboard`; público em `/book`).
 
 Pontos de entrada úteis:
 - Multi-tenancy/RLS: `src/lib/db.ts`, `src/lib/tenant.ts`, `db/rls.sql`.
@@ -264,6 +274,7 @@ Pontos de entrada úteis:
 - Visão do profissional: `src/app/(app)/my-schedule/*` + vínculo em
   `src/app/(app)/professionals/*` (`professionals.user_id`).
 - Histórico do cliente: `src/app/(app)/clients/[id]/page.tsx`.
+- e2e: `e2e/*.spec.ts`, `e2e/auth.setup.ts`, `playwright.config.ts`.
 
 Decisões em aberto (ver `docs/architecture.md`): provedor de **pagamento**,
 **e-mail** de verificação/convites, **storage**, e estratégia de **API** para o app
