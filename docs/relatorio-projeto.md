@@ -46,7 +46,7 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Dono (owner) | Configura empresa, preços, equipe, vê financeiro e relatórios. |
 | Gerente (manager) | Opera filiais, catálogo, agenda e equipe. |
 | Recepção / staff | Agenda, check-in/checkout, cobrança, clientes. |
-| Profissional | (Visão dedicada da própria agenda ainda **não**.) |
+| Profissional | **Minha agenda** (`/my-schedule`): própria agenda do dia/semana (somente leitura). |
 | Cliente final | **Agendamento online** em `/book`; app mobile pendente. |
 
 ### 1.6 Escopo funcional (módulos)
@@ -62,7 +62,7 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Preços por filial | Override de preço/duração e disponibilidade | ✅ |
 | Agenda | Horários, intervalos, feriados, disponibilidade | ✅ |
 | Agendamentos | Reserva + status (pendente→confirmado→check-in→checkout→concluído) | ✅ |
-| Clientes | Cadastro; histórico via agenda | ✅ (página de histórico dedicada pendente) |
+| Clientes | Cadastro + **histórico dedicado** (atendimentos, cobranças/pagamentos, carteira) | ✅ |
 | Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **conciliação** | ✅ (gateway online e fechamento pendentes) |
 | Pacotes & Assinaturas | Pré-pago e recorrente, com ledger | ✅ (consumo por período pendente) |
 | Notificações | Caixa de saída + e-mail (adapter portável) | 🟡 (push/lembretes agendados pendentes) |
@@ -166,7 +166,9 @@ Browser ──► Next (RSC + Server Actions)
   (`DATABASE_URL` pooled).
 - **Conta demo:** botão *"Entrar com conta demo"* na tela de login. Vincula o
   usuário como **owner de 3 tenants** (`demo`, `studio-bella`, `clinica-lumina`)
-  → use o seletor **Empresa**. Desativável com `NEXT_PUBLIC_DEMO_LOGIN=false`.
+  → use o seletor **Empresa**. Também vincula a um profissional de `demo`,
+  habilitando a visão **Minha agenda**. Desativável com
+  `NEXT_PUBLIC_DEMO_LOGIN=false`.
 - **Dados demo:** `npm run seed:demo` recria os 3 tenants com cenário completo e
   ledger balanceado (catálogo, agenda, financeiro, pacotes, assinatura, cupons,
   gateway mock). Idempotente (não toca em outros dados).
@@ -178,9 +180,9 @@ Browser ──► Next (RSC + Server Actions)
 ## 3. Status atual (o que está pronto)
 Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 `/branches`, `/services`, `/products`, `/professionals`, `/schedule`,
-`/appointments`, `/clients`, `/packages`, `/subscriptions`, `/coupons`,
-`/notifications`, `/finance`, `/reconciliation`, `/reports`, `/book`,
-`/api/auth/[...all]`, `/api/webhooks/[provider]`.
+`/appointments`, `/my-schedule`, `/clients`, `/clients/[id]`, `/packages`,
+`/subscriptions`, `/coupons`, `/notifications`, `/finance`, `/reconciliation`,
+`/reports`, `/book`, `/api/auth/[...all]`, `/api/webhooks/[provider]`.
 
 - Auth/sessão, convites por link, troca de empresa, **onboarding**.
 - Catálogo completo com overrides por filial; agenda e **disponibilidade**;
@@ -211,7 +213,8 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 - [ ] Canais **push/SMS**.
 
 ### Produto
-- [ ] **Visão do profissional** (agenda própria) e **histórico por cliente**.
+- [x] **Visão do profissional** (agenda própria, `/my-schedule`) e **histórico por
+      cliente** (`/clients/[id]`).
 - [ ] **Paginação/busca** nas listas.
 - [ ] **Edição/remoção de membros** da equipe.
 - [ ] Políticas de **cancelamento/no-show** por tenant.
@@ -257,6 +260,9 @@ Pontos de entrada úteis:
 - Financeiro: `src/lib/ledger.ts`, `src/app/(app)/finance/*`.
 - Disponibilidade: `src/lib/availability.ts`, `src/lib/availability-data.ts`.
 - Booking público: `src/app/book/*`.
+- Visão do profissional: `src/app/(app)/my-schedule/*` + vínculo em
+  `src/app/(app)/professionals/*` (`professionals.user_id`).
+- Histórico do cliente: `src/app/(app)/clients/[id]/page.tsx`.
 
 Decisões em aberto (ver `docs/architecture.md`): provedor de **pagamento**,
 **e-mail** de verificação/convites, **storage**, e estratégia de **API** para o app

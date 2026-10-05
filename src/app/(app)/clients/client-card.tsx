@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { setClientActiveAction, updateClientAction } from "./actions";
 import {
@@ -46,7 +47,14 @@ export function ClientCard({ client }: { client: Client }) {
     <article className="rounded-2xl border border-border bg-white/70 p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h3 className="font-medium">{client.name}</h3>
+          <h3 className="font-medium">
+            <Link
+              href={`/clients/${client.id}`}
+              className="hover:text-brand hover:underline"
+            >
+              {client.name}
+            </Link>
+          </h3>
           <p className="mt-0.5 text-xs text-foreground/50">
             {client.phone ?? "sem telefone"}
             {client.email ? ` · ${client.email}` : ""}

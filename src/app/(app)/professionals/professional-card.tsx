@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import {
+  linkProfessionalUserAction,
   setProfessionalActiveAction,
   updateProfessionalAction,
 } from "./actions";
@@ -9,6 +10,7 @@ import { ProfessionalLinksForm } from "./professional-links-form";
 import {
   initialProfessionalActionState,
   type BranchOption,
+  type MemberOption,
   type Professional,
   type ProfessionalActionState,
   type ServiceOption,
@@ -18,11 +20,13 @@ export function ProfessionalCard({
   professional,
   branches,
   services,
+  members,
   canManage,
 }: {
   professional: Professional;
   branches: BranchOption[];
   services: ServiceOption[];
+  members: MemberOption[];
   canManage: boolean;
 }) {
   const [editing, setEditing] = useState(false);
@@ -32,8 +36,14 @@ export function ProfessionalCard({
   const [toggleResult, setToggleResult] = useState<ProfessionalActionState>(
     initialProfessionalActionState,
   );
+  const [linkResult, setLinkResult] = useState<ProfessionalActionState>(
+    initialProfessionalActionState,
+  );
   const [updating, startUpdate] = useTransition();
   const [toggling, startToggle] = useTransition();
+  const [linking, startLink] = useTransition();
+
+  const linkedMember = members.find((m) => m.userId === professional.userId);
 
   const linkedBranchNames = branches
     .filter((branch) => professional.branchIds.includes(branch.id))
@@ -57,6 +67,16 @@ export function ProfessionalCard({
         formData,
       );
       setToggleResult(next);
+    });
+  }
+
+  function handleLink(formData: FormData) {
+    startLink(async () => {
+      const next = await linkProfessionalUserAction(
+        initialProfessionalActionState,
+        formData,
+      );
+      setLinkResult(next);
     });
   }
 
@@ -91,6 +111,53 @@ export function ProfessionalCard({
         <p className="mt-3 text-sm text-foreground/70">
           {linkedBranchNames.join(", ")}
         </p>
+      )}
+
+      {canManage ? (
+        <form
+          action={handleLink}
+          className="mt-3 flex flex-wrap items-center gap-2"
+        >
+          <input
+            type="hidden"
+            name="professionalId"
+            value={professional.id}
+          />
+          <span className="text-xs font-medium uppercase tracking-wide text-foreground/50">
+            Acesso
+          </span>
+          <select
+            name="userId"
+            defaultValue={professional.userId ?? ""}
+            className="rounded-lg border border-border bg-white px-2 py-1.5 text-xs outline-none focus:border-brand"
+          >
+            <option value="">Sem acesso vinculado</option>
+            {members.map((member) => (
+              <option key={member.userId} value={member.userId}>
+                {member.name}
+              </option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            disabled={linking}
+            className="rounded-full border border-border px-3 py-1.5 text-xs font-medium hover:bg-muted disabled:opacity-60"
+          >
+            {linking ? "Salvando..." : "Vincular"}
+          </button>
+          {linkResult.status === "error" && linkResult.message && (
+            <span className="text-xs text-red-600">{linkResult.message}</span>
+          )}
+          {linkResult.status === "success" && (
+            <span className="text-xs text-emerald-700">Vinculado.</span>
+          )}
+        </form>
+      ) : (
+        linkedMember && (
+          <p className="mt-3 text-xs text-foreground/50">
+            Acesso: {linkedMember.name}
+          </p>
+        )
       )}
 
       {editing && (

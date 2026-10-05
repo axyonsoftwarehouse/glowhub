@@ -5,6 +5,7 @@ import {
   professionalBranches,
   professionalServices,
   professionals,
+  profiles,
   services,
 } from "@/db/schema";
 import { withUser } from "@/lib/db";
@@ -12,7 +13,12 @@ import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import { ProfessionalCard } from "./professional-card";
 import { ProfessionalCreateForm } from "./professional-create-form";
-import type { BranchOption, Professional, ServiceOption } from "./types";
+import type {
+  BranchOption,
+  MemberOption,
+  Professional,
+  ServiceOption,
+} from "./types";
 
 export const dynamic = "force-dynamic";
 
@@ -35,15 +41,15 @@ export default async function ProfessionalsPage() {
   const session = await getSession();
   const userId = session?.user?.id ?? "";
 
-  const { professionalList, branchList, serviceList, canManage } = await withUser(
-    userId,
-    async (tx) => {
+  const { professionalList, branchList, serviceList, memberList, canManage } =
+    await withUser(userId, async (tx) => {
       const proRows = await tx
         .select({
           id: professionals.id,
           name: professionals.name,
           commissionBp: professionals.commissionBp,
           isActive: professionals.isActive,
+          userId: professionals.userId,
         })
         .from(professionals)
         .where(eq(professionals.tenantId, tenant.id))
@@ -96,6 +102,20 @@ export default async function ProfessionalsPage() {
         )
         .limit(1);
 
+      const canManage = MANAGE_ROLES.includes(membership?.role ?? "");
+
+      const memberRows = canManage
+        ? await tx
+            .select({
+              userId: memberships.userId,
+              fullName: profiles.fullName,
+            })
+            .from(memberships)
+            .leftJoin(profiles, eq(profiles.id, memberships.userId))
+            .where(eq(memberships.tenantId, tenant.id))
+            .orderBy(asc(profiles.fullName))
+        : [];
+
       const branchMap = new Map<string, string[]>();
       for (const row of branchLinks) {
         const list = branchMap.get(row.professionalId) ?? [];
@@ -114,15 +134,22 @@ export default async function ProfessionalsPage() {
         name: row.name,
         commissionBp: row.commissionBp,
         isActive: row.isActive,
+        userId: row.userId,
         branchIds: branchMap.get(row.id) ?? [],
         serviceIds: serviceMap.get(row.id) ?? [],
+      }));
+
+      const members: MemberOption[] = memberRows.map((row) => ({
+        userId: row.userId,
+        name: row.fullName ?? "Usuário sem nome",
       }));
 
       return {
         professionalList: list,
         branchList: branchRows as BranchOption[],
         serviceList: serviceRows as ServiceOption[],
-        canManage: MANAGE_ROLES.includes(membership?.role ?? ""),
+        memberList: members,
+        canManage,
       };
     },
   );
@@ -158,6 +185,7 @@ export default async function ProfessionalsPage() {
               professional={professional}
               branches={branchList}
               services={serviceList}
+              members={memberList}
               canManage={canManage}
             />
           ))}

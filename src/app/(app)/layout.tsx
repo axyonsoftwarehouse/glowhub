@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isConfigured } from "@/lib/env";
-import { getCurrentTenant, getUserTenants } from "@/lib/tenant";
+import { getCurrentTenant, getMyProfessional, getUserTenants } from "@/lib/tenant";
 import { getSession } from "@/lib/session";
 import { SetupNotice } from "@/components/setup-notice";
 import { SignOutButton } from "./sign-out-button";
@@ -26,9 +26,10 @@ export default async function AppLayout({
   if (!session?.user) redirect("/login");
   const user = session.user;
 
-  const [tenant, tenants] = await Promise.all([
+  const [tenant, tenants, myProfessional] = await Promise.all([
     getCurrentTenant(),
     getUserTenants(),
+    getMyProfessional(),
   ]);
 
   return (
@@ -82,6 +83,14 @@ export default async function AppLayout({
           <Link href="/appointments" className="rounded-lg px-3 py-2 hover:bg-muted">
             Agenda
           </Link>
+          {myProfessional && (
+            <Link
+              href="/my-schedule"
+              className="rounded-lg px-3 py-2 hover:bg-muted"
+            >
+              Minha agenda
+            </Link>
+          )}
           <Link href="/clients" className="rounded-lg px-3 py-2 hover:bg-muted">
             Clientes
           </Link>

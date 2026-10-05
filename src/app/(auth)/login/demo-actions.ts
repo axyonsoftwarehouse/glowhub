@@ -2,10 +2,16 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
-import { branches, memberships, profiles, tenants } from "@/db/schema";
+import {
+  branches,
+  memberships,
+  professionals,
+  profiles,
+  tenants,
+} from "@/db/schema";
 
 const DEMO_EMAIL = process.env.DEMO_EMAIL?.trim() || "demo@glowhub.app";
 const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "demo123456";
@@ -94,6 +100,39 @@ export async function demoLoginAction(): Promise<DemoLoginResult | void> {
           target: profiles.id,
           set: { activeTenantId: primaryTenantId },
         });
+
+      // Vincula a conta demo a um profissional (visão "Minha agenda").
+      // Idempotente: só vincula se ainda não houver profissional ligado.
+      const [alreadyLinked] = await db
+        .select({ id: professionals.id })
+        .from(professionals)
+        .where(
+          and(
+            eq(professionals.tenantId, primaryTenantId),
+            eq(professionals.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      if (!alreadyLinked) {
+        const [candidate] = await db
+          .select({ id: professionals.id })
+          .from(professionals)
+          .where(
+            and(
+              eq(professionals.tenantId, primaryTenantId),
+              isNull(professionals.userId),
+            ),
+          )
+          .orderBy(asc(professionals.createdAt))
+          .limit(1);
+        if (candidate) {
+          await db
+            .update(professionals)
+            .set({ userId })
+            .where(eq(professionals.id, candidate.id));
+        }
+      }
     }
   } catch {
     return { error: "Nao foi possivel preparar a conta demo." };

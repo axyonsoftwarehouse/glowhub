@@ -15,6 +15,7 @@ const sql = postgres(process.env.DATABASE_URL, {
 const DEMO_SLUG = "demo";
 const BELLA_SLUG = "studio-bella";
 const CLINICA_SLUG = "clinica-lumina";
+const DEMO_EMAIL = process.env.DEMO_EMAIL?.trim() || "demo@glowhub.app";
 
 // ---------- helpers ----------
 function spToday() {
@@ -566,12 +567,35 @@ async function seedClinica(tx) {
   return { tenantId };
 }
 
+// Vincula a conta demo (se já existir) a um profissional do tenant demo,
+// habilitando a visão "Minha agenda". No primeiro login demo, a vinculação
+// também é garantida por src/app/(auth)/login/demo-actions.ts.
+async function linkDemoAccount(tenantId) {
+  const [user] = await sql`
+    select id from public."user" where lower(email) = lower(${DEMO_EMAIL}) limit 1
+  `;
+  if (!user) return null;
+  const [pro] = await sql`
+    update public.professionals set user_id = ${user.id}
+    where id = (
+      select id from public.professionals
+      where tenant_id = ${tenantId} and user_id is null
+      order by created_at
+      limit 1
+    )
+    returning name
+  `;
+  return pro?.name ?? null;
+}
+
 async function main() {
   await wipeTenants([DEMO_SLUG, BELLA_SLUG, CLINICA_SLUG]);
 
   const demo = await sql.begin((tx) => seedDemo(tx));
   const bella = await sql.begin((tx) => seedBella(tx));
   const clinica = await sql.begin((tx) => seedClinica(tx));
+
+  const linkedProfessional = await linkDemoAccount(demo.tenantId);
 
   const [counts] = await sql`
     select
@@ -589,6 +613,10 @@ async function main() {
   `;
   console.log("Seed demo concluído:", counts);
   console.log("Balancete:", tb.debits.toString(), "=", tb.credits.toString(), "->", tb.debits.toString() === tb.credits.toString() ? "OK" : "DESBALANCEADO");
+  console.log(
+    "Conta demo vinculada a:",
+    linkedProfessional ?? "(usuário demo ainda não existe; vínculo será feito no login demo)",
+  );
 }
 
 try {

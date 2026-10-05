@@ -13,8 +13,14 @@ export type Professional = {
   name: string;
   commissionBp: number;
   isActive: boolean;
+  userId: string | null;
   branchIds: string[];
   serviceIds: string[];
+};
+
+export type MemberOption = {
+  userId: string;
+  name: string;
 };
 
 export type BranchOption = {

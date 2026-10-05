@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { and, asc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
-import { memberships, profiles, tenants } from "@/db/schema";
+import { memberships, professionals, profiles, tenants } from "@/db/schema";
 import { getDb, withUser, type AppTx } from "@/lib/db";
 import { getEnv, isConfigured } from "@/lib/env";
 import { getSession } from "@/lib/session";
@@ -105,6 +105,42 @@ export const getCurrentTenant = cache(async (): Promise<CurrentTenant | null> =>
   if (!slug) return null;
   return loadTenantBySlug(slug);
 });
+
+export type MyProfessional = {
+  id: string;
+  name: string;
+};
+
+/**
+ * Profissional vinculado ao usuário logado no tenant ativo.
+ * Usado para a visão "Minha agenda" (agenda própria, somente leitura).
+ */
+export const getMyProfessional = cache(
+  async (): Promise<MyProfessional | null> => {
+    if (!isConfigured()) return null;
+
+    const session = await getSession();
+    const userId = session?.user?.id;
+    if (!userId) return null;
+
+    const tenant = await getCurrentTenant();
+    if (!tenant) return null;
+
+    return withUser(userId, async (tx) => {
+      const [row] = await tx
+        .select({ id: professionals.id, name: professionals.name })
+        .from(professionals)
+        .where(
+          and(
+            eq(professionals.tenantId, tenant.id),
+            eq(professionals.userId, userId),
+          ),
+        )
+        .limit(1);
+      return row ?? null;
+    });
+  },
+);
 
 export const getUserTenants = cache(async (): Promise<UserTenant[]> => {
   if (!isConfigured()) return [];

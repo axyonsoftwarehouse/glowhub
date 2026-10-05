@@ -5,6 +5,7 @@ import { and, eq, inArray, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   branches,
+  memberships,
   professionalBranches,
   professionalServices,
   professionals,
@@ -176,6 +177,73 @@ export async function setProfessionalActiveAction(
 
   revalidatePath("/professionals");
   return { status: "success" };
+}
+
+export async function linkProfessionalUserAction(
+  _prev: ProfessionalActionState,
+  formData: FormData,
+): Promise<ProfessionalActionState> {
+  const professionalId = String(formData.get("professionalId") ?? "");
+  const rawUserId = String(formData.get("userId") ?? "");
+  const userId = rawUserId === "" ? null : rawUserId;
+  if (!professionalId) {
+    return { status: "error", message: "Profissional inválido." };
+  }
+
+  const ctx = await context();
+  if ("error" in ctx) return { status: "error", message: ctx.error };
+
+  try {
+    const updated = await withUser(ctx.userId, async (tx) => {
+      if (userId) {
+        const [member] = await tx
+          .select({ userId: memberships.userId })
+          .from(memberships)
+          .where(
+            and(
+              eq(memberships.tenantId, ctx.tenant.id),
+              eq(memberships.userId, userId),
+            ),
+          )
+          .limit(1);
+        if (!member) throw new Error("Usuário não é membro desta empresa.");
+
+        const [linked] = await tx
+          .select({ id: professionals.id })
+          .from(professionals)
+          .where(
+            and(
+              eq(professionals.tenantId, ctx.tenant.id),
+              eq(professionals.userId, userId),
+            ),
+          )
+          .limit(1);
+        if (linked && linked.id !== professionalId) {
+          throw new Error("Esse usuário já está vinculado a outro profissional.");
+        }
+      }
+
+      return tx
+        .update(professionals)
+        .set({ userId })
+        .where(
+          and(
+            eq(professionals.id, professionalId),
+            eq(professionals.tenantId, ctx.tenant.id),
+          ),
+        )
+        .returning({ id: professionals.id });
+    });
+
+    if (updated.length === 0) {
+      return { status: "error", message: "Sem permissão para editar este profissional." };
+    }
+  } catch (cause) {
+    return { status: "error", message: String(cause) };
+  }
+
+  revalidatePath("/professionals");
+  return { status: "success", message: "Vínculo de acesso atualizado." };
 }
 
 async function validIds(
