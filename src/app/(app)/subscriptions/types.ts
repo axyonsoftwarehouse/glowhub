@@ -27,6 +27,13 @@ export type SubscriptionPlan = {
 export type ServiceOption = { id: string; name: string };
 export type ClientOption = { id: string; name: string };
 
+export type SubscriptionUsage = {
+  serviceId: string;
+  serviceName: string;
+  limit: number;
+  used: number;
+};
+
 export type ClientSubscription = {
   id: string;
   clientName: string;
@@ -34,5 +41,7 @@ export type ClientSubscription = {
   status: "active" | "cancelled" | "past_due";
   priceCents: number;
   interval: "month" | "year";
+  currentPeriodStart: string;
   currentPeriodEnd: string;
+  usage: SubscriptionUsage[];
 };

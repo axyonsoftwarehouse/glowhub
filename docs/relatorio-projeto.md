@@ -64,7 +64,7 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Agendamentos | Reserva + status (pendente→confirmado→check-in→checkout→concluído) | ✅ |
 | Clientes | Cadastro, **busca**, **histórico dedicado** (atendimentos, cobranças/pagamentos, carteira) | ✅ |
 | Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **conciliação** | ✅ (gateway online e fechamento pendentes) |
-| Pacotes & Assinaturas | Pré-pago e recorrente, com ledger | ✅ (consumo por período pendente) |
+| Pacotes & Assinaturas | Pré-pago e recorrente, com ledger, **consumo/limites por período** e **renovação automática** (cron) | ✅ |
 | Notificações | Caixa de saída + e-mail (adapter portável) | 🟡 (push/lembretes agendados pendentes) |
 | Canal cliente | Agendamento online `(/book)`; app mobile | 🟡 |
 | Relatórios | Balancete, resultado, receita/dia, recebimentos por forma, **ocupação por profissional** | ✅ (fechamento formal pendente) |
@@ -122,7 +122,7 @@ Browser ──► Next (RSC + Server Actions)
   `charges`, `charge_items`, `payments`, `webhook_events`, `earnings`, `payouts`,
   `wallet_transactions`.
 - **Comercial:** `packages`/`package_items`/`client_packages`/`package_redemptions`,
-  `subscription_plans`/`plan_items`/`client_subscriptions`,
+  `subscription_plans`/`plan_items`/`client_subscriptions`/`subscription_redemptions`,
   `coupons`/`coupon_redemptions`.
 - **Comunicação:** `notifications` (caixa de saída).
 
@@ -154,7 +154,7 @@ Browser ──► Next (RSC + Server Actions)
 1. `npm install`
 2. `.env.local` a partir de `.env.example`:
    `DATABASE_URL`, `DATABASE_AUTHENTICATED_URL`, `BETTER_AUTH_SECRET`,
-   `BETTER_AUTH_URL` (opcional: `RESEND_API_KEY`, `EMAIL_FROM`).
+   `BETTER_AUTH_URL` (opcional: `RESEND_API_KEY`, `EMAIL_FROM`, `CRON_SECRET`).
 3. Aplicar schema/RLS/seed:
    `npx drizzle-kit push`
    → `node --env-file=.env.local scripts/apply-sql.mjs db/rls.sql`
@@ -166,6 +166,8 @@ Browser ──► Next (RSC + Server Actions)
 
 ### 2.8 Infra & deploy
 - **Vercel** + **Neon**; **CI** (lint/typecheck/test/build) no GitHub Actions.
+- **Cron** (`vercel.json`): `/api/cron/subscriptions` (diário, renova assinaturas
+  vencidas); protegido por `CRON_SECRET`.
 - **Produção:** https://glowhub-silk.vercel.app (também
   `glowhub-torinoorbit-dev.vercel.app`). Env de produção configuradas
   (`DATABASE_URL` pooled).
@@ -187,7 +189,8 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 `/branches`, `/services`, `/products`, `/professionals`, `/schedule`,
 `/appointments`, `/my-schedule`, `/clients`, `/clients/[id]`, `/packages`,
 `/subscriptions`, `/coupons`, `/notifications`, `/finance`, `/reconciliation`,
-`/reports`, `/settings`, `/book`, `/api/auth/[...all]`, `/api/webhooks/[provider]`.
+`/reports`, `/settings`, `/book`, `/api/auth/[...all]`, `/api/webhooks/[provider]`,
+`/api/cron/subscriptions`.
 
 - Auth/sessão, convites por link, **edição/remoção de membros**, troca de empresa,
   **onboarding**.
@@ -212,8 +215,9 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 ### Financeiro / comercial
 - [ ] **Gateway online** (Stripe/Mercado Pago/Pagar.me) + webhooks assinados +
       conciliação automática; estorno/void.
-- [ ] **Recorrência automática de assinaturas** (agendador) e **consumo/limites**
-      por período (pacotes e assinaturas).
+- [x] **Recorrência automática de assinaturas** (`/api/cron/subscriptions`,
+      cron diário na Vercel + botão manual) e **consumo/limites** por período
+      (assinaturas via `subscription_redemptions`; pacotes já por quantidade).
 - [ ] **Fechamento** contábil e reconhecimento de receita diferida.
 
 ### Comunicação

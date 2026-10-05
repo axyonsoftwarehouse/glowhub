@@ -57,7 +57,7 @@ const TABLES = [
   "journal_lines", "journal_entries", "coupon_redemptions", "coupons",
   "wallet_transactions", "package_redemptions", "client_packages",
   "earnings", "payouts", "payments", "charge_items", "charges",
-  "client_subscriptions", "plan_items", "subscription_plans",
+  "subscription_redemptions", "client_subscriptions", "plan_items", "subscription_plans",
   "package_items", "packages", "appointments", "notifications",
   "product_variants", "products",
   "professional_branches", "professional_services", "professional_hours", "professionals",
@@ -372,11 +372,17 @@ async function seedDemo(tx) {
     const [plan] = await tx`insert into public.subscription_plans ${tx({ tenant_id: tenantId, name: "Clube Cabelo", description: "Mensalidade com cortes e escovas.", price_cents: money(180), interval: "month" })} returning id`;
     await tx`insert into public.plan_items ${tx({ tenant_id: tenantId, plan_id: plan.id, service_id: services["Corte feminino"], quantity_per_period: 2 })}`;
     await tx`insert into public.plan_items ${tx({ tenant_id: tenantId, plan_id: plan.id, service_id: services["Escova"], quantity_per_period: 2 })}`;
-    const [sub] = await tx`insert into public.client_subscriptions ${tx({ tenant_id: tenantId, client_id: clients["Camila Dias"], plan_id: plan.id, status: "active", price_cents: money(180), current_period_end: new Date(Date.now() + 30 * 86400000) })} returning id`;
+    // Periodo ja vencido (-5 dias) para demonstrar a cobranca recorrente.
+    const subPeriodStart = new Date(Date.now() - 35 * 86400000);
+    const subPeriodEnd = new Date(Date.now() - 5 * 86400000);
+    const [sub] = await tx`insert into public.client_subscriptions ${tx({ tenant_id: tenantId, client_id: clients["Camila Dias"], plan_id: plan.id, status: "active", price_cents: money(180), current_period_start: subPeriodStart, current_period_end: subPeriodEnd })} returning id`;
     await postEntry(tx, { tenantId, description: "Assinatura: Clube Cabelo", idem: `demo-sub-${sub.id}`, refType: "subscription", refId: sub.id, lines: [
       { accountId: accounts.bank, direction: "debit", amount: money(180) },
       { accountId: accounts.revenue_subscription, direction: "credit", amount: money(180) },
     ] });
+    // Consumo dentro do periodo (limite de 2 por servico).
+    await tx`insert into public.subscription_redemptions ${tx({ tenant_id: tenantId, subscription_id: sub.id, service_id: services["Corte feminino"], amount_cents: money(80), redeemed_at: new Date(Date.now() - 20 * 86400000) })}`;
+    await tx`insert into public.subscription_redemptions ${tx({ tenant_id: tenantId, subscription_id: sub.id, service_id: services["Escova"], amount_cents: money(70), redeemed_at: new Date(Date.now() - 10 * 86400000) })}`;
   }
 
   // cupons

@@ -2,18 +2,24 @@
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 import {
   clientSubscriptions,
   clients,
   planItems,
+  services,
   subscriptionPlans,
+  subscriptionRedemptions,
 } from "@/db/schema";
 import { withUser, type AppTx } from "@/lib/db";
 import { getSystemAccountId, postEntry } from "@/lib/ledger";
 import { parsePriceToCents } from "@/lib/money";
 import { getSession } from "@/lib/session";
+import {
+  addInterval,
+  billDueSubscriptions,
+} from "@/lib/subscription-billing";
 import { getCurrentTenant } from "@/lib/tenant";
 import type { SubscriptionActionState } from "./types";
 
@@ -54,13 +60,6 @@ async function context() {
   const session = await getSession();
   if (!session?.user) return { error: "Sessão expirada." as const };
   return { tenant, userId: session.user.id };
-}
-
-function addInterval(date: Date, interval: "month" | "year"): Date {
-  const next = new Date(date);
-  if (interval === "year") next.setFullYear(next.getFullYear() + 1);
-  else next.setMonth(next.getMonth() + 1);
-  return next;
 }
 
 export async function createPlanAction(payload: {
@@ -376,4 +375,130 @@ export async function cancelSubscriptionAction(
 
   revalidatePath("/subscriptions");
   return { status: "success", message: "Assinatura cancelada." };
+}
+
+export async function runSubscriptionBillingAction(): Promise<SubscriptionActionState> {
+  const ctx = await context();
+  if ("error" in ctx) return { status: "error", message: ctx.error };
+
+  try {
+    const billed = await withUser(ctx.userId, (tx) =>
+      billDueSubscriptions(tx, {
+        tenantId: ctx.tenant.id,
+        userId: ctx.userId,
+      }),
+    );
+    revalidatePath("/subscriptions");
+    revalidatePath("/finance");
+    return {
+      status: "success",
+      message:
+        billed > 0
+          ? `${billed} assinatura(s) faturada(s).`
+          : "Nenhuma assinatura vencida.",
+    };
+  } catch (cause) {
+    return { status: "error", message: String(cause) };
+  }
+}
+
+export async function redeemSubscriptionServiceAction(
+  _prev: SubscriptionActionState,
+  formData: FormData,
+): Promise<SubscriptionActionState> {
+  const subscriptionId = String(formData.get("subscriptionId") ?? "");
+  const serviceId = String(formData.get("serviceId") ?? "");
+  if (!subscriptionId || !serviceId) {
+    return { status: "error", message: "Dados incompletos." };
+  }
+
+  const ctx = await context();
+  if ("error" in ctx) return { status: "error", message: ctx.error };
+
+  try {
+    const result = await withUser(ctx.userId, async (tx) => {
+      const [subscription] = await tx
+        .select({
+          id: clientSubscriptions.id,
+          planId: clientSubscriptions.planId,
+          status: clientSubscriptions.status,
+          currentPeriodStart: clientSubscriptions.currentPeriodStart,
+          currentPeriodEnd: clientSubscriptions.currentPeriodEnd,
+        })
+        .from(clientSubscriptions)
+        .where(
+          and(
+            eq(clientSubscriptions.id, subscriptionId),
+            eq(clientSubscriptions.tenantId, ctx.tenant.id),
+          ),
+        )
+        .limit(1);
+      if (!subscription) return { error: "Assinatura não encontrada." };
+      if (subscription.status !== "active") {
+        return { error: "Assinatura não está ativa." };
+      }
+
+      const [item] = await tx
+        .select({ quantityPerPeriod: planItems.quantityPerPeriod })
+        .from(planItems)
+        .where(
+          and(
+            eq(planItems.tenantId, ctx.tenant.id),
+            eq(planItems.planId, subscription.planId),
+            eq(planItems.serviceId, serviceId),
+          ),
+        )
+        .limit(1);
+      if (!item) return { error: "Serviço não incluído no plano." };
+
+      const used = await tx
+        .select({ id: subscriptionRedemptions.id })
+        .from(subscriptionRedemptions)
+        .where(
+          and(
+            eq(subscriptionRedemptions.tenantId, ctx.tenant.id),
+            eq(subscriptionRedemptions.subscriptionId, subscriptionId),
+            eq(subscriptionRedemptions.serviceId, serviceId),
+            gte(
+              subscriptionRedemptions.redeemedAt,
+              subscription.currentPeriodStart,
+            ),
+            lte(
+              subscriptionRedemptions.redeemedAt,
+              subscription.currentPeriodEnd,
+            ),
+          ),
+        );
+      if (used.length >= item.quantityPerPeriod) {
+        return { error: "Limite do período atingido para este serviço." };
+      }
+
+      const [service] = await tx
+        .select({ priceCents: services.priceCents })
+        .from(services)
+        .where(
+          and(
+            eq(services.id, serviceId),
+            eq(services.tenantId, ctx.tenant.id),
+          ),
+        )
+        .limit(1);
+
+      await tx.insert(subscriptionRedemptions).values({
+        tenantId: ctx.tenant.id,
+        subscriptionId,
+        serviceId,
+        amountCents: service?.priceCents ?? 0,
+        createdBy: ctx.userId,
+      });
+
+      return { ok: true as const };
+    });
+
+    if ("error" in result) return { status: "error", message: result.error };
+    revalidatePath("/subscriptions");
+    return { status: "success", message: "Consumo registrado." };
+  } catch (cause) {
+    return { status: "error", message: String(cause) };
+  }
 }

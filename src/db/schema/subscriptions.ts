@@ -12,8 +12,9 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import { clients } from "./appointments";
+import { appointments, clients } from "./appointments";
 import { services } from "./catalog";
+import { journalEntries } from "./ledger";
 import { tenants } from "./tenancy";
 
 export const billingInterval = pgEnum("billing_interval", ["month", "year"]);
@@ -98,5 +99,35 @@ export const clientSubscriptions = pgTable(
   (t) => [
     index("client_subscriptions_tenant_idx").on(t.tenantId),
     index("client_subscriptions_client_idx").on(t.clientId),
+  ],
+);
+
+export const subscriptionRedemptions = pgTable(
+  "subscription_redemptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tenantId: uuid("tenant_id")
+      .notNull()
+      .references(() => tenants.id, { onDelete: "cascade" }),
+    subscriptionId: uuid("subscription_id")
+      .notNull()
+      .references(() => clientSubscriptions.id, { onDelete: "cascade" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "restrict" }),
+    appointmentId: uuid("appointment_id").references(() => appointments.id, {
+      onDelete: "set null",
+    }),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull().default(0),
+    entryId: uuid("entry_id").references(() => journalEntries.id, {
+      onDelete: "set null",
+    }),
+    createdBy: text("created_by"),
+    redeemedAt: timestamp("redeemed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("subscription_redemptions_tenant_idx").on(t.tenantId),
+    index("subscription_redemptions_subscription_idx").on(t.subscriptionId),
+    check("subscription_redemptions_amount_non_negative", sql`${t.amountCents} >= 0`),
   ],
 );

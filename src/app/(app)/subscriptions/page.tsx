@@ -6,6 +6,7 @@ import {
   planItems,
   services,
   subscriptionPlans,
+  subscriptionRedemptions,
 } from "@/db/schema";
 import { withUser } from "@/lib/db";
 import { getSession } from "@/lib/session";
@@ -82,10 +83,20 @@ export default async function SubscriptionsPage() {
         planId: clientSubscriptions.planId,
         status: clientSubscriptions.status,
         priceCents: clientSubscriptions.priceCents,
+        currentPeriodStart: clientSubscriptions.currentPeriodStart,
         currentPeriodEnd: clientSubscriptions.currentPeriodEnd,
       })
       .from(clientSubscriptions)
       .where(eq(clientSubscriptions.tenantId, tenant.id));
+
+    const redemptionRows = await tx
+      .select({
+        subscriptionId: subscriptionRedemptions.subscriptionId,
+        serviceId: subscriptionRedemptions.serviceId,
+        redeemedAt: subscriptionRedemptions.redeemedAt,
+      })
+      .from(subscriptionRedemptions)
+      .where(eq(subscriptionRedemptions.tenantId, tenant.id));
 
     const [membership] = await tx
       .select({ role: memberships.role })
@@ -104,6 +115,7 @@ export default async function SubscriptionsPage() {
       serviceRows,
       clientRows,
       subscriptionRows,
+      redemptionRows,
       canManage: MANAGE_ROLES.includes(membership?.role ?? ""),
     };
   });
@@ -136,8 +148,34 @@ export default async function SubscriptionsPage() {
   }));
 
   const planById = new Map(plans.map((plan) => [plan.id, plan]));
+
+  const redemptionsBySubscription = new Map<
+    string,
+    { serviceId: string; redeemedAt: Date }[]
+  >();
+  for (const row of data.redemptionRows) {
+    const list = redemptionsBySubscription.get(row.subscriptionId) ?? [];
+    list.push({ serviceId: row.serviceId, redeemedAt: row.redeemedAt });
+    redemptionsBySubscription.set(row.subscriptionId, list);
+  }
+
   const subscriptions: ClientSubscription[] = data.subscriptionRows.map((row) => {
     const plan = planById.get(row.planId);
+    const periodStart = row.currentPeriodStart.getTime();
+    const periodEnd = row.currentPeriodEnd.getTime();
+    const redemptions = redemptionsBySubscription.get(row.id) ?? [];
+    const usage = (plan?.items ?? []).map((item) => ({
+      serviceId: item.serviceId,
+      serviceName: item.serviceName,
+      limit: item.quantityPerPeriod,
+      used: redemptions.filter(
+        (redemption) =>
+          redemption.serviceId === item.serviceId &&
+          redemption.redeemedAt.getTime() >= periodStart &&
+          redemption.redeemedAt.getTime() <= periodEnd,
+      ).length,
+    }));
+
     return {
       id: row.id,
       clientName: clientName.get(row.clientId) ?? "Cliente",
@@ -145,7 +183,9 @@ export default async function SubscriptionsPage() {
       status: row.status,
       priceCents: row.priceCents,
       interval: plan?.interval ?? "month",
+      currentPeriodStart: row.currentPeriodStart.toISOString(),
       currentPeriodEnd: row.currentPeriodEnd.toISOString(),
+      usage,
     };
   });
 

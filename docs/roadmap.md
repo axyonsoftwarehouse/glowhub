@@ -41,6 +41,7 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 
 ## Fase 5 — Recorrência & comercial
 - [x] Pacotes (pré-pago) e assinaturas (planos recorrentes com cobrança no ledger)
+- [x] Renovação automática de assinaturas (cron `/api/cron/subscriptions`) e consumo/limites por período
 - [x] Cupons e promoções (percentual/fixo, validade, limite de uso)
 - [x] Notificações por e-mail (caixa de saída + adapter portável); push e lembretes agendados pendentes
 

@@ -4,7 +4,9 @@ import { useState, useTransition } from "react";
 import { formatCentsBRL } from "@/lib/money";
 import {
   cancelSubscriptionAction,
+  redeemSubscriptionServiceAction,
   renewSubscriptionAction,
+  runSubscriptionBillingAction,
   subscribeAction,
 } from "./actions";
 import {
@@ -63,6 +65,8 @@ export function SubscriptionManager({
   const subscribe = run(subscribeAction);
   const renew = run(renewSubscriptionAction);
   const cancel = run(cancelSubscriptionAction);
+  const redeem = run(redeemSubscriptionServiceAction);
+  const bill = run(runSubscriptionBillingAction);
 
   return (
     <div className="space-y-6">
@@ -108,6 +112,29 @@ export function SubscriptionManager({
         </section>
       )}
 
+      {canManage && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-white/70 p-5">
+          <div>
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
+              Cobrança recorrente
+            </h2>
+            <p className="mt-1 text-xs text-foreground/50">
+              Fatura assinaturas ativas com período vencido (também roda no cron
+              diário `/api/cron/subscriptions`).
+            </p>
+          </div>
+          <form action={bill}>
+            <button
+              type="submit"
+              disabled={pending}
+              className="rounded-full border border-border px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-60"
+            >
+              Faturar vencidas
+            </button>
+          </form>
+        </section>
+      )}
+
       <section>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
           Assinaturas
@@ -126,11 +153,55 @@ export function SubscriptionManager({
                   <p className="text-xs text-foreground/50">
                     {STATUS_LABELS[sub.status]} ·{" "}
                     {formatCentsBRL(sub.priceCents)}/
-                    {sub.interval === "month" ? "mês" : "ano"} · próx. período{" "}
+                    {sub.interval === "month" ? "mês" : "ano"} · período{" "}
+                    {sub.currentPeriodStart.slice(0, 10)}–
                     {sub.currentPeriodEnd.slice(0, 10)}
                   </p>
                 </div>
               </div>
+
+              {sub.usage.length > 0 && (
+                <ul className="mt-3 space-y-1 border-t border-border pt-3">
+                  {sub.usage.map((usage) => {
+                    const full = usage.used >= usage.limit;
+                    return (
+                      <li
+                        key={usage.serviceId}
+                        className="flex items-center justify-between gap-2 text-xs text-foreground/60"
+                      >
+                        <span>
+                          {usage.serviceName} ·{" "}
+                          <span className={full ? "text-red-600" : ""}>
+                            {usage.used}/{usage.limit}
+                          </span>{" "}
+                          no período
+                        </span>
+                        {canManage && sub.status === "active" && (
+                          <form action={redeem}>
+                            <input
+                              type="hidden"
+                              name="subscriptionId"
+                              value={sub.id}
+                            />
+                            <input
+                              type="hidden"
+                              name="serviceId"
+                              value={usage.serviceId}
+                            />
+                            <button
+                              type="submit"
+                              disabled={pending || full}
+                              className="rounded-full border border-border px-3 py-1 text-xs font-medium hover:bg-muted disabled:opacity-60"
+                            >
+                              Resgatar
+                            </button>
+                          </form>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
 
               {canManage && sub.status !== "cancelled" && (
                 <div className="mt-2 flex flex-wrap items-center gap-2">
