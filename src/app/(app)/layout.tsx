@@ -32,6 +32,9 @@ export default async function AppLayout({
     getMyProfessional(),
   ]);
 
+  const activeRole = tenants.find((t) => t.id === tenant?.id)?.role ?? "";
+  const canManageTenant = activeRole === "owner" || activeRole === "admin";
+
   return (
     <div className="flex min-h-screen w-full">
       <aside className="hidden w-64 flex-col border-r border-border bg-white/60 p-5 sm:flex">
@@ -121,6 +124,14 @@ export default async function AppLayout({
           <Link href="/reports" className="rounded-lg px-3 py-2 hover:bg-muted">
             Relatórios
           </Link>
+          {canManageTenant && (
+            <Link
+              href="/settings"
+              className="rounded-lg px-3 py-2 hover:bg-muted"
+            >
+              Configurações
+            </Link>
+          )}
           <Link href="/profile" className="rounded-lg px-3 py-2 hover:bg-muted">
             Perfil
           </Link>

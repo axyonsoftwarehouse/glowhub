@@ -4,13 +4,21 @@ import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { invitations } from "@/db/schema";
+import { invitations, memberships } from "@/db/schema";
 import { withUser } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import type { TeamActionState } from "./types";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+const memberRoleInput = z.enum([
+  "owner",
+  "admin",
+  "manager",
+  "staff",
+  "viewer",
+]);
 
 const inviteInput = z.object({
   email: z
@@ -127,4 +135,147 @@ export async function revokeInvitationAction(
 
   revalidatePath("/team");
   return { status: "success", message: "Convite revogado." };
+}
+
+export async function updateMemberRoleAction(
+  _prev: TeamActionState,
+  formData: FormData,
+): Promise<TeamActionState> {
+  const memberUserId = String(formData.get("userId") ?? "");
+  if (!memberUserId) return { status: "error", message: "Membro inválido." };
+
+  const parsed = memberRoleInput.safeParse(formData.get("role") ?? "");
+  if (!parsed.success) return { status: "error", message: "Papel inválido." };
+  const role = parsed.data;
+
+  const ctx = await context();
+  if ("error" in ctx) return { status: "error", message: ctx.error };
+  if (memberUserId === ctx.userId) {
+    return { status: "error", message: "Você não pode alterar o próprio papel." };
+  }
+
+  try {
+    const result = await withUser(ctx.userId, async (tx) => {
+      const [target] = await tx
+        .select({ role: memberships.role })
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.tenantId, ctx.tenant.id),
+            eq(memberships.userId, memberUserId),
+          ),
+        )
+        .limit(1);
+      if (!target) return { error: "Membro não encontrado." };
+
+      if (target.role === "owner" && role !== "owner") {
+        const owners = await tx
+          .select({ userId: memberships.userId })
+          .from(memberships)
+          .where(
+            and(
+              eq(memberships.tenantId, ctx.tenant.id),
+              eq(memberships.role, "owner"),
+            ),
+          );
+        if (owners.length <= 1) {
+          return { error: "É preciso manter ao menos um proprietário." };
+        }
+      }
+
+      const updated = await tx
+        .update(memberships)
+        .set({ role })
+        .where(
+          and(
+            eq(memberships.tenantId, ctx.tenant.id),
+            eq(memberships.userId, memberUserId),
+          ),
+        )
+        .returning({ userId: memberships.userId });
+      if (updated.length === 0) {
+        return { error: "Sem permissão para alterar papéis." };
+      }
+      return { ok: true as const };
+    });
+
+    if ("error" in result) return { status: "error", message: result.error };
+  } catch (cause) {
+    if (errorCode(cause) === "42501") {
+      return { status: "error", message: "Seu papel não permite alterar papéis." };
+    }
+    return { status: "error", message: String(cause) };
+  }
+
+  revalidatePath("/team");
+  return { status: "success", message: "Papel atualizado." };
+}
+
+export async function removeMemberAction(
+  _prev: TeamActionState,
+  formData: FormData,
+): Promise<TeamActionState> {
+  const memberUserId = String(formData.get("userId") ?? "");
+  if (!memberUserId) return { status: "error", message: "Membro inválido." };
+
+  const ctx = await context();
+  if ("error" in ctx) return { status: "error", message: ctx.error };
+  if (memberUserId === ctx.userId) {
+    return { status: "error", message: "Você não pode remover a si mesmo." };
+  }
+
+  try {
+    const result = await withUser(ctx.userId, async (tx) => {
+      const [target] = await tx
+        .select({ role: memberships.role })
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.tenantId, ctx.tenant.id),
+            eq(memberships.userId, memberUserId),
+          ),
+        )
+        .limit(1);
+      if (!target) return { error: "Membro não encontrado." };
+
+      if (target.role === "owner") {
+        const owners = await tx
+          .select({ userId: memberships.userId })
+          .from(memberships)
+          .where(
+            and(
+              eq(memberships.tenantId, ctx.tenant.id),
+              eq(memberships.role, "owner"),
+            ),
+          );
+        if (owners.length <= 1) {
+          return { error: "É preciso manter ao menos um proprietário." };
+        }
+      }
+
+      const removed = await tx
+        .delete(memberships)
+        .where(
+          and(
+            eq(memberships.tenantId, ctx.tenant.id),
+            eq(memberships.userId, memberUserId),
+          ),
+        )
+        .returning({ userId: memberships.userId });
+      if (removed.length === 0) {
+        return { error: "Sem permissão para remover membros." };
+      }
+      return { ok: true as const };
+    });
+
+    if ("error" in result) return { status: "error", message: result.error };
+  } catch (cause) {
+    if (errorCode(cause) === "42501") {
+      return { status: "error", message: "Seu papel não permite remover membros." };
+    }
+    return { status: "error", message: String(cause) };
+  }
+
+  revalidatePath("/team");
+  return { status: "success", message: "Membro removido." };
 }

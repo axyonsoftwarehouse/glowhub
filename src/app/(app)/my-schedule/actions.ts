@@ -2,10 +2,20 @@
 
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
-import { appointments, professionals } from "@/db/schema";
+import {
+  appointments,
+  memberships,
+  professionals,
+  tenants,
+} from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { applyNoShowFee } from "@/lib/no-show-fee";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
+import {
+  isWithinCancellationWindow,
+  OVERRIDE_ROLES,
+} from "@/lib/tenant-policy";
 import {
   ALLOWED_TRANSITIONS,
   type AppointmentActionState,
@@ -62,7 +72,14 @@ export async function setMyAppointmentStatusAction(
       }
 
       const [appointment] = await tx
-        .select({ status: appointments.status })
+        .select({
+          id: appointments.id,
+          status: appointments.status,
+          startsAt: appointments.startsAt,
+          clientId: appointments.clientId,
+          serviceId: appointments.serviceId,
+          priceCents: appointments.priceCents,
+        })
         .from(appointments)
         .where(
           and(
@@ -79,6 +96,37 @@ export async function setMyAppointmentStatusAction(
         return { error: "Transição de status inválida." };
       }
 
+      const [policy] = await tx
+        .select({
+          cancellationWindowHours: tenants.cancellationWindowHours,
+          noShowFeePercent: tenants.noShowFeePercent,
+        })
+        .from(tenants)
+        .where(eq(tenants.id, tenant.id))
+        .limit(1);
+      const windowHours = policy?.cancellationWindowHours ?? 0;
+
+      if (
+        status === "cancelled" &&
+        isWithinCancellationWindow(appointment.startsAt, windowHours)
+      ) {
+        const [membership] = await tx
+          .select({ role: memberships.role })
+          .from(memberships)
+          .where(
+            and(
+              eq(memberships.tenantId, tenant.id),
+              eq(memberships.userId, userId),
+            ),
+          )
+          .limit(1);
+        if (!OVERRIDE_ROLES.includes(membership?.role ?? "")) {
+          return {
+            error: `Cancelamento dentro da janela mínima de ${windowHours}h. Peça a um gerente.`,
+          };
+        }
+      }
+
       const updated = await tx
         .update(appointments)
         .set({ status })
@@ -92,6 +140,18 @@ export async function setMyAppointmentStatusAction(
         .returning({ id: appointments.id });
       if (updated.length === 0) {
         return { error: "Sem permissão para alterar este agendamento." };
+      }
+
+      if (status === "no_show") {
+        await applyNoShowFee(tx, {
+          tenantId: tenant.id,
+          userId,
+          appointmentId: appointment.id,
+          clientId: appointment.clientId,
+          serviceId: appointment.serviceId,
+          priceCents: appointment.priceCents,
+          percent: policy?.noShowFeePercent ?? 0,
+        });
       }
 
       return { ok: true as const };

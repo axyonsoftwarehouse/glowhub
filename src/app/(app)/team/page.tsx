@@ -5,7 +5,8 @@ import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import { InviteForm } from "./invite-form";
 import { InvitationRow } from "./invitation-row";
-import { ROLE_LABELS, type Invitation, type Member } from "./types";
+import { MemberRow } from "./member-row";
+import type { Invitation, Member } from "./types";
 
 export const dynamic = "force-dynamic";
 
@@ -153,17 +154,12 @@ export default async function TeamPage() {
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {result.members.map((member) => (
-            <article
+            <MemberRow
               key={member.userId}
-              className="rounded-xl border border-border bg-white/70 p-4"
-            >
-              <p className="truncate text-sm font-medium">
-                {member.fullName || "Sem nome"}
-              </p>
-              <p className="mt-0.5 text-xs text-foreground/50">
-                {ROLE_LABELS[member.role] ?? member.role}
-              </p>
-            </article>
+              member={member}
+              canManage={canManage}
+              isSelf={member.userId === userId}
+            />
           ))}
         </div>
       </section>

@@ -11,6 +11,7 @@ import {
   professionals,
   services,
 } from "@/db/schema";
+import { SearchForm } from "@/components/search-form";
 import { withUser } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
@@ -261,6 +262,16 @@ export default async function AppointmentsPage({
     return { appointment, timeLabel, chargeStatus };
   });
 
+  const searchQuery = first(sp.q)?.trim().toLowerCase();
+  const visibleList = searchQuery
+    ? list.filter(
+        ({ appointment }) =>
+          appointment.clientName.toLowerCase().includes(searchQuery) ||
+          appointment.serviceName.toLowerCase().includes(searchQuery) ||
+          appointment.professionalName.toLowerCase().includes(searchQuery),
+      )
+    : list;
+
   const query = (params: Record<string, string>) =>
     `/appointments?${new URLSearchParams(params).toString()}`;
 
@@ -331,12 +342,21 @@ export default async function AppointmentsPage({
             {date}
           </h2>
           <span className="text-xs text-foreground/50">
-            {list.length} agendamento(s)
+            {visibleList.length} agendamento(s)
           </span>
         </div>
 
+        <div className="mt-4">
+          <SearchForm
+            action="/appointments"
+            defaultValue={first(sp.q)}
+            placeholder="Buscar por cliente, serviço ou profissional"
+            hidden={{ branch: selectedBranch.id, date }}
+          />
+        </div>
+
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {list.map(({ appointment, timeLabel, chargeStatus }) => (
+          {visibleList.map(({ appointment, timeLabel, chargeStatus }) => (
             <AppointmentRow
               key={appointment.id}
               appointment={appointment}
@@ -345,9 +365,11 @@ export default async function AppointmentsPage({
             />
           ))}
 
-          {list.length === 0 && (
+          {visibleList.length === 0 && (
             <p className="text-sm text-foreground/60">
-              Nenhum agendamento para esta data.
+              {searchQuery
+                ? `Nenhum agendamento encontrado para "${first(sp.q)}".`
+                : "Nenhum agendamento para esta data."}
             </p>
           )}
         </div>

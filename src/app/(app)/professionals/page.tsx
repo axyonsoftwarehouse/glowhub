@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq, ilike } from "drizzle-orm";
 import {
   branches,
   memberships,
@@ -8,7 +8,15 @@ import {
   profiles,
   services,
 } from "@/db/schema";
+import { Pagination } from "@/components/pagination";
+import { SearchForm } from "@/components/search-form";
 import { withUser } from "@/lib/db";
+import {
+  PAGE_SIZE,
+  pageCount as getPageCount,
+  pageOffset,
+  parsePage,
+} from "@/lib/pagination";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import { ProfessionalCard } from "./professional-card";
@@ -24,7 +32,16 @@ export const dynamic = "force-dynamic";
 
 const MANAGE_ROLES = ["owner", "admin", "manager"];
 
-export default async function ProfessionalsPage() {
+function first(value: string | string[] | undefined): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+export default async function ProfessionalsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
   const tenant = await getCurrentTenant();
 
   if (!tenant) {
@@ -41,8 +58,23 @@ export default async function ProfessionalsPage() {
   const session = await getSession();
   const userId = session?.user?.id ?? "";
 
-  const { professionalList, branchList, serviceList, memberList, canManage } =
+  const q = first(sp.q)?.trim() || undefined;
+  const page = parsePage(first(sp.page));
+
+  const { professionalList, branchList, serviceList, memberList, total, canManage } =
     await withUser(userId, async (tx) => {
+      const proWhere = q
+        ? and(
+            eq(professionals.tenantId, tenant.id),
+            ilike(professionals.name, `%${q}%`),
+          )
+        : eq(professionals.tenantId, tenant.id);
+
+      const [proTotals] = await tx
+        .select({ value: count() })
+        .from(professionals)
+        .where(proWhere);
+
       const proRows = await tx
         .select({
           id: professionals.id,
@@ -52,8 +84,10 @@ export default async function ProfessionalsPage() {
           userId: professionals.userId,
         })
         .from(professionals)
-        .where(eq(professionals.tenantId, tenant.id))
-        .orderBy(asc(professionals.name));
+        .where(proWhere)
+        .orderBy(asc(professionals.name))
+        .limit(PAGE_SIZE)
+        .offset(pageOffset(page));
 
       const branchRows = await tx
         .select({
@@ -149,10 +183,20 @@ export default async function ProfessionalsPage() {
         branchList: branchRows as BranchOption[],
         serviceList: serviceRows as ServiceOption[],
         memberList: members,
+        total: Number(proTotals?.value ?? 0),
         canManage,
       };
     },
   );
+
+  const totalPages = getPageCount(total);
+  const makeHref = (targetPage: number) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (targetPage > 1) params.set("page", String(targetPage));
+    const query = params.toString();
+    return query ? `/professionals?${query}` : "/professionals";
+  };
 
   return (
     <div className="space-y-8">
@@ -174,8 +218,16 @@ export default async function ProfessionalsPage() {
             Equipe
           </h2>
           <span className="text-xs text-foreground/50">
-            {professionalList.length} profissional(is)
+            {total} profissional(is)
           </span>
+        </div>
+
+        <div className="mt-4">
+          <SearchForm
+            action="/professionals"
+            defaultValue={q}
+            placeholder="Buscar por nome do profissional"
+          />
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -192,10 +244,14 @@ export default async function ProfessionalsPage() {
 
           {professionalList.length === 0 && (
             <p className="text-sm text-foreground/60">
-              Nenhum profissional cadastrado ainda.
+              {q
+                ? `Nenhum profissional encontrado para "${q}".`
+                : "Nenhum profissional cadastrado ainda."}
             </p>
           )}
         </div>
+
+        <Pagination page={page} pageCount={totalPages} makeHref={makeHref} />
       </section>
     </div>
   );

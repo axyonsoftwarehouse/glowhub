@@ -56,13 +56,13 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Fundação & Tenancy | Empresas, filiais, vínculos, papéis | ✅ |
 | Autenticação | Login/cadastro, sessão, logout, aceite de convite | ✅ (verificação de e-mail pendente) |
 | Onboarding | Cadastro cria empresa + filial + owner | ✅ |
-| Equipe & Convites | Convidar por link, papéis, troca de empresa ativa | ✅ (envio de e-mail pendente) |
+| Equipe & Convites | Convidar por link, papéis, editar papel/remover membro, revogar convite, troca de empresa ativa | ✅ (envio de e-mail pendente) |
 | Filiais | Criar/editar/ativar-desativar | ✅ |
 | Catálogo | Categorias, serviços, produtos (variações/estoque), profissionais | ✅ |
 | Preços por filial | Override de preço/duração e disponibilidade | ✅ |
-| Agenda | Horários, intervalos, feriados, disponibilidade | ✅ |
+| Agenda | Horários, intervalos, feriados, disponibilidade; busca na agenda; políticas de cancelamento/no-show por tenant | ✅ |
 | Agendamentos | Reserva + status (pendente→confirmado→check-in→checkout→concluído) | ✅ |
-| Clientes | Cadastro + **histórico dedicado** (atendimentos, cobranças/pagamentos, carteira) | ✅ |
+| Clientes | Cadastro, **busca**, **histórico dedicado** (atendimentos, cobranças/pagamentos, carteira) | ✅ |
 | Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **conciliação** | ✅ (gateway online e fechamento pendentes) |
 | Pacotes & Assinaturas | Pré-pago e recorrente, com ledger | ✅ (consumo por período pendente) |
 | Notificações | Caixa de saída + e-mail (adapter portável) | 🟡 (push/lembretes agendados pendentes) |
@@ -111,7 +111,8 @@ Browser ──► Next (RSC + Server Actions)
 
 ### 2.4 Modelo de dados (por domínio)
 - **Auth:** `user`, `session`, `account`, `verification`.
-- **Tenancy:** `tenants`, `branches`, `memberships`, `invitations`, `profiles`.
+- **Tenancy:** `tenants` (inclui políticas de cancelamento/no-show), `branches`,
+  `memberships`, `invitations`, `profiles`.
 - **Catálogo:** `categories`, `services`, `service_branches`, `professionals`,
   `professional_branches`, `professional_services`.
 - **Produtos:** `products`, `product_variants`.
@@ -186,11 +187,13 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 `/branches`, `/services`, `/products`, `/professionals`, `/schedule`,
 `/appointments`, `/my-schedule`, `/clients`, `/clients/[id]`, `/packages`,
 `/subscriptions`, `/coupons`, `/notifications`, `/finance`, `/reconciliation`,
-`/reports`, `/book`, `/api/auth/[...all]`, `/api/webhooks/[provider]`.
+`/reports`, `/settings`, `/book`, `/api/auth/[...all]`, `/api/webhooks/[provider]`.
 
-- Auth/sessão, convites por link, troca de empresa, **onboarding**.
+- Auth/sessão, convites por link, **edição/remoção de membros**, troca de empresa,
+  **onboarding**.
 - Catálogo completo com overrides por filial; agenda e **disponibilidade**;
-  **agendamentos**; **clientes**.
+  **agendamentos** e **clientes** com **busca** e **paginação**; políticas de
+  **cancelamento/no-show** por tenant (`/settings`).
 - **Financeiro** completo no núcleo: ledger, cobrança, pagamentos idempotentes,
   comissão/gorjeta/repasse, carteira, cupons, pacotes, assinaturas, relatórios.
 - **Agendamento online** e **notificações por e-mail** (caixa de saída).
@@ -222,9 +225,11 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 - [x] **Visão do profissional** (agenda própria `/my-schedule`, com mudança de
       status dos próprios atendimentos) e **histórico por cliente**
       (`/clients/[id]`).
-- [ ] **Paginação/busca** nas listas.
-- [ ] **Edição/remoção de membros** da equipe.
-- [ ] Políticas de **cancelamento/no-show** por tenant.
+- [x] **Busca** (`?q=`) e **paginação** (`?page=`) nas listas de clientes,
+      serviços, produtos, profissionais (e busca na agenda).
+- [x] **Edição/remoção de membros** da equipe (papel + remover; revogar convite).
+- [x] Políticas de **cancelamento/no-show** por tenant (`/settings`): janela
+      mínima de cancelamento e taxa de no-show lançada no ledger.
 - [ ] **Storage de arquivos** (logo/imagens por tenant; hoje só URL).
 
 ### Transversal / produção

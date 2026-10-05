@@ -1,11 +1,19 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, count, eq, ilike, isNull } from "drizzle-orm";
 import {
   categories,
   memberships,
   productVariants,
   products,
 } from "@/db/schema";
+import { Pagination } from "@/components/pagination";
+import { SearchForm } from "@/components/search-form";
 import { withUser } from "@/lib/db";
+import {
+  PAGE_SIZE,
+  pageCount as getPageCount,
+  pageOffset,
+  parsePage,
+} from "@/lib/pagination";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import { CategoryManager } from "../services/category-manager";
@@ -17,7 +25,16 @@ export const dynamic = "force-dynamic";
 
 const MANAGE_ROLES = ["owner", "admin", "manager"];
 
-export default async function ProductsPage() {
+function first(value: string | string[] | undefined): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
   const tenant = await getCurrentTenant();
 
   if (!tenant) {
@@ -34,7 +51,10 @@ export default async function ProductsPage() {
   const session = await getSession();
   const userId = session?.user?.id ?? "";
 
-  const { categories: categoryList, products: productList, canManage } =
+  const q = first(sp.q)?.trim() || undefined;
+  const page = parsePage(first(sp.page));
+
+  const { categories: categoryList, products: productList, total, canManage } =
     await withUser(userId, async (tx) => {
       const categoryRows = await tx
         .select({
@@ -53,6 +73,18 @@ export default async function ProductsPage() {
         )
         .orderBy(asc(categories.name));
 
+      const productWhere = q
+        ? and(
+            eq(products.tenantId, tenant.id),
+            ilike(products.name, `%${q}%`),
+          )
+        : eq(products.tenantId, tenant.id);
+
+      const [productTotals] = await tx
+        .select({ value: count() })
+        .from(products)
+        .where(productWhere);
+
       const productRows = await tx
         .select({
           id: products.id,
@@ -63,8 +95,10 @@ export default async function ProductsPage() {
           isActive: products.isActive,
         })
         .from(products)
-        .where(eq(products.tenantId, tenant.id))
-        .orderBy(asc(products.name));
+        .where(productWhere)
+        .orderBy(asc(products.name))
+        .limit(PAGE_SIZE)
+        .offset(pageOffset(page));
 
       const variantRows = await tx
         .select({
@@ -118,9 +152,19 @@ export default async function ProductsPage() {
       return {
         categories: categoryRows,
         products: list,
+        total: Number(productTotals?.value ?? 0),
         canManage: MANAGE_ROLES.includes(membership?.role ?? ""),
       };
     });
+
+  const totalPages = getPageCount(total);
+  const makeHref = (targetPage: number) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (targetPage > 1) params.set("page", String(targetPage));
+    const query = params.toString();
+    return query ? `/products?${query}` : "/products";
+  };
 
   return (
     <div className="space-y-8">
@@ -146,8 +190,16 @@ export default async function ProductsPage() {
             Produtos
           </h2>
           <span className="text-xs text-foreground/50">
-            {productList.length} produto(s)
+            {total} produto(s)
           </span>
+        </div>
+
+        <div className="mt-4">
+          <SearchForm
+            action="/products"
+            defaultValue={q}
+            placeholder="Buscar por nome do produto"
+          />
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -162,10 +214,14 @@ export default async function ProductsPage() {
 
           {productList.length === 0 && (
             <p className="text-sm text-foreground/60">
-              Nenhum produto cadastrado ainda.
+              {q
+                ? `Nenhum produto encontrado para "${q}".`
+                : "Nenhum produto cadastrado ainda."}
             </p>
           )}
         </div>
+
+        <Pagination page={page} pageCount={totalPages} makeHref={makeHref} />
       </section>
     </div>
   );

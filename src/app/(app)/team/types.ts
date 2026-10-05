@@ -21,6 +21,14 @@ export const INVITE_ROLES = [
   { value: "viewer", label: ROLE_LABELS.viewer },
 ] as const;
 
+export const MEMBER_ROLES = [
+  { value: "owner", label: ROLE_LABELS.owner },
+  { value: "admin", label: ROLE_LABELS.admin },
+  { value: "manager", label: ROLE_LABELS.manager },
+  { value: "staff", label: ROLE_LABELS.staff },
+  { value: "viewer", label: ROLE_LABELS.viewer },
+] as const;
+
 export type Member = {
   userId: string;
   role: string;

@@ -1,6 +1,9 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
+  integer,
   pgEnum,
   pgTable,
   text,
@@ -26,10 +29,24 @@ export const tenants = pgTable(
     name: text("name").notNull(),
     logoUrl: text("logo_url"),
     isActive: boolean("is_active").notNull().default(true),
+    cancellationWindowHours: integer("cancellation_window_hours")
+      .notNull()
+      .default(0),
+    noShowFeePercent: integer("no_show_fee_percent").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("tenants_slug_key").on(t.slug)],
+  (t) => [
+    uniqueIndex("tenants_slug_key").on(t.slug),
+    check(
+      "tenants_cancellation_window_range",
+      sql`${t.cancellationWindowHours} between 0 and 168`,
+    ),
+    check(
+      "tenants_no_show_fee_range",
+      sql`${t.noShowFeePercent} between 0 and 100`,
+    ),
+  ],
 );
 
 export const branches = pgTable(

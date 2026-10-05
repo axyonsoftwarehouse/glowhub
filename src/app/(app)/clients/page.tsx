@@ -1,6 +1,14 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq, ilike, or } from "drizzle-orm";
 import { clients, memberships, walletTransactions } from "@/db/schema";
+import { Pagination } from "@/components/pagination";
+import { SearchForm } from "@/components/search-form";
 import { withUser } from "@/lib/db";
+import {
+  PAGE_SIZE,
+  pageCount as getPageCount,
+  pageOffset,
+  parsePage,
+} from "@/lib/pagination";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import { ClientCard } from "./client-card";
@@ -12,7 +20,16 @@ export const dynamic = "force-dynamic";
 
 const MANAGE_ROLES = ["owner", "admin", "manager", "staff"];
 
-export default async function ClientsPage() {
+function first(value: string | string[] | undefined): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+export default async function ClientsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = await searchParams;
   const tenant = await getCurrentTenant();
 
   if (!tenant) {
@@ -29,59 +46,99 @@ export default async function ClientsPage() {
   const session = await getSession();
   const userId = session?.user?.id ?? "";
 
-  const { clientList, balanceByClient, canManage } = await withUser(userId, async (tx) => {
-    const rows = await tx
-      .select({
-        id: clients.id,
-        name: clients.name,
-        email: clients.email,
-        phone: clients.phone,
-        notes: clients.notes,
-        isActive: clients.isActive,
-      })
-      .from(clients)
-      .where(eq(clients.tenantId, tenant.id))
-      .orderBy(asc(clients.name));
+  const q = first(sp.q)?.trim() || undefined;
+  const page = parsePage(first(sp.page));
 
-    const walletRows = await tx
-      .select({
-        clientId: walletTransactions.clientId,
-        amountCents: walletTransactions.amountCents,
-      })
-      .from(walletTransactions)
-      .where(eq(walletTransactions.tenantId, tenant.id));
+  const { clientList, total, walletClients, canManage } = await withUser(
+    userId,
+    async (tx) => {
+      const where = q
+        ? and(
+            eq(clients.tenantId, tenant.id),
+            or(
+              ilike(clients.name, `%${q}%`),
+              ilike(clients.email, `%${q}%`),
+              ilike(clients.phone, `%${q}%`),
+            ),
+          )
+        : eq(clients.tenantId, tenant.id);
 
-    const [membership] = await tx
-      .select({ role: memberships.role })
-      .from(memberships)
-      .where(
-        and(
-          eq(memberships.tenantId, tenant.id),
-          eq(memberships.userId, userId),
-        ),
-      )
-      .limit(1);
+      const [totals] = await tx
+        .select({ value: count() })
+        .from(clients)
+        .where(where);
 
-    const balanceByClient = new Map<string, number>();
-    for (const row of walletRows) {
-      balanceByClient.set(
-        row.clientId,
-        (balanceByClient.get(row.clientId) ?? 0) + row.amountCents,
-      );
-    }
+      const rows = await tx
+        .select({
+          id: clients.id,
+          name: clients.name,
+          email: clients.email,
+          phone: clients.phone,
+          notes: clients.notes,
+          isActive: clients.isActive,
+        })
+        .from(clients)
+        .where(where)
+        .orderBy(asc(clients.name))
+        .limit(PAGE_SIZE)
+        .offset(pageOffset(page));
 
-    return {
-      clientList: rows as Client[],
-      balanceByClient,
-      canManage: MANAGE_ROLES.includes(membership?.role ?? ""),
-    };
-  });
+      const walletRows = await tx
+        .select({
+          clientId: walletTransactions.clientId,
+          amountCents: walletTransactions.amountCents,
+        })
+        .from(walletTransactions)
+        .where(eq(walletTransactions.tenantId, tenant.id));
 
-  const walletClients = clientList.map((client) => ({
-    id: client.id,
-    name: client.name,
-    balanceCents: balanceByClient.get(client.id) ?? 0,
-  }));
+      const allClientRows = await tx
+        .select({ id: clients.id, name: clients.name })
+        .from(clients)
+        .where(eq(clients.tenantId, tenant.id))
+        .orderBy(asc(clients.name));
+
+      const [membership] = await tx
+        .select({ role: memberships.role })
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.tenantId, tenant.id),
+            eq(memberships.userId, userId),
+          ),
+        )
+        .limit(1);
+
+      const balanceByClient = new Map<string, number>();
+      for (const row of walletRows) {
+        balanceByClient.set(
+          row.clientId,
+          (balanceByClient.get(row.clientId) ?? 0) + row.amountCents,
+        );
+      }
+
+      return {
+        clientList: rows as Client[],
+        total: Number(totals?.value ?? 0),
+        walletClients: allClientRows
+          .map((client) => ({
+            id: client.id,
+            name: client.name,
+            balanceCents: balanceByClient.get(client.id) ?? 0,
+          }))
+          .filter((client) => client.balanceCents !== 0),
+        canManage: MANAGE_ROLES.includes(membership?.role ?? ""),
+      };
+    },
+  );
+
+  const totalPages = getPageCount(total);
+  const makeHref = (targetPage: number) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (targetPage > 1) params.set("page", String(targetPage));
+    const query = params.toString();
+    return query ? `/clients?${query}` : "/clients";
+  };
 
   return (
     <div className="space-y-8">
@@ -96,13 +153,21 @@ export default async function ClientsPage() {
       {canManage && <ClientCreateForm />}
 
       <section>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
             Clientes
           </h2>
           <span className="text-xs text-foreground/50">
-            {clientList.length} cliente(s)
+            {total} cliente(s)
           </span>
+        </div>
+
+        <div className="mt-4">
+          <SearchForm
+            action="/clients"
+            defaultValue={q}
+            placeholder="Buscar por nome, e-mail ou telefone"
+          />
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -112,10 +177,18 @@ export default async function ClientsPage() {
 
           {clientList.length === 0 && (
             <p className="text-sm text-foreground/60">
-              Nenhum cliente cadastrado ainda.
+              {q
+                ? `Nenhum cliente encontrado para "${q}".`
+                : "Nenhum cliente cadastrado ainda."}
             </p>
           )}
         </div>
+
+        <Pagination
+          page={page}
+          pageCount={totalPages}
+          makeHref={makeHref}
+        />
       </section>
 
       <section>

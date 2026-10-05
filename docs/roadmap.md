@@ -11,6 +11,7 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 
 ## Fase 1 — Identidade & organização (concluída)
 - [x] Convites de equipe (token por link; envio de e-mail pendente)
+- [x] Edição/remoção de membros (papel + remover; revogar convite)
 - [x] Troca de **tenant ativa** (atualizar `active_tenant_id` + refresh do JWT)
 - [x] Gestão de filiais (criar/editar/desativar)
 - [x] Perfil do usuário e preferências (nome, avatar, fuso, notificações)
@@ -27,6 +28,8 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Agendamento (painel) + status/check-in/checkout
 - [x] Clientes (histórico dedicado: atendimentos, cobranças/pagamentos, carteira)
 - [x] Visão do profissional: "Minha agenda" (vínculo `professionals.user_id`) + status dos próprios atendimentos
+- [x] Busca (`?q=`) e paginação nas listas (clientes, serviços, produtos, profissionais) + busca na agenda
+- [x] Políticas de cancelamento/no-show por tenant (`/settings`)
 
 ## Fase 4 — Financeiro (concluída)
 - [x] Chart of accounts + **ledger de partidas dobradas** (centavos)
