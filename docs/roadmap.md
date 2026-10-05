@@ -43,6 +43,7 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 ## Fase 5 — Recorrência & comercial
 - [x] Pacotes (pré-pago) e assinaturas (planos recorrentes com cobrança no ledger)
 - [x] Renovação automática de assinaturas (cron `/api/cron/subscriptions`) e consumo/limites por período
+- [x] Receita diferida de assinaturas (faturamento em "Receitas a Apropriar", reconhecimento ao fim do período)
 - [x] Cupons e promoções (percentual/fixo, validade, limite de uso)
 - [x] Notificações por e-mail (caixa de saída + adapter portável); push e lembretes agendados pendentes
 
@@ -58,4 +59,4 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Segurança (rate limiting no Better Auth, tabela interna `rate_limits`; revisão contínua de policies)
 - [x] Acessibilidade (foco visível, skip link, labels/aria, contraste AA, axe e2e). Projeto **somente pt-BR** (sem i18n)
 - [ ] Provedor de e-mail (verificação, convites, lembretes)
-- [ ] Gateway de pagamento online e fechamento formal
+- [ ] Gateway de pagamento online

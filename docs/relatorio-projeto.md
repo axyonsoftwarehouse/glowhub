@@ -63,7 +63,7 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Agenda | Horários, intervalos, feriados, disponibilidade; busca na agenda; políticas de cancelamento/no-show por tenant | ✅ |
 | Agendamentos | Reserva + status (pendente→confirmado→check-in→checkout→concluído) | ✅ |
 | Clientes | Cadastro, **busca**, **histórico dedicado** (atendimentos, cobranças/pagamentos, carteira) | ✅ |
-| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **conciliação**, **fechamento contábil** | ✅ (gateway online pendente) |
+| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **receita diferida**, conciliação, **fechamento contábil** | ✅ (gateway online pendente) |
 | Pacotes & Assinaturas | Pré-pago e recorrente, com ledger, **consumo/limites por período** e **renovação automática** (cron) | ✅ |
 | Notificações | Caixa de saída + e-mail (adapter portável) | 🟡 (push/lembretes agendados pendentes) |
 | Canal cliente | Agendamento online `(/book)`; app mobile | 🟡 |
@@ -139,12 +139,13 @@ Browser ──► Next (RSC + Server Actions)
   gorjeta (C Gorjetas a Pagar), repasse (D Comissão+Gorjeta a Pagar / C Caixa),
   carteira (D Caixa / C Carteira; pagamento com carteira), cupom (D Descontos /
   C Receber), pacote (D Caixa / C Pacotes a Resgatar; resgate D Pacotes / C Receita),
-  assinatura (D Caixa / C Receita de Assinaturas).
+  assinatura (faturamento D Caixa/Banco / C **Receitas a Apropriar**; ao fim do
+  período, reconhecimento D Receitas a Apropriar / C Receita de Assinaturas).
 - **Fechamento contábil:** períodos fechados (`accounting_periods`) bloqueiam
   novos lançamentos com data dentro do intervalo (checado em `postEntry`);
   snapshot do balancete guardado no fechamento (`/closing`).
-- **Falta:** gateway online + webhooks assinados + conciliação automática,
-  estorno/void formal e reconhecimento diferido de receita.
+- **Falta:** gateway online + webhooks assinados + conciliação automática e
+  estorno/void formal.
 
 ### 2.6 Convenções
 - Schema Drizzle em `src/db/schema` é a **fonte de verdade**; funções, triggers,
@@ -205,10 +206,12 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
   **agendamentos** e **clientes** com **busca** e **paginação**; políticas de
   **cancelamento/no-show** por tenant (`/settings`).
 - **Financeiro** completo no núcleo: ledger, cobrança, pagamentos idempotentes,
-  comissão/gorjeta/repasse, carteira, cupons, pacotes, assinaturas, relatórios.
+  comissão/gorjeta/repasse, carteira, cupons, pacotes, assinaturas (com
+  **receita diferida**), conciliação, relatórios e **fechamento contábil**.
 - **Agendamento online** e **notificações por e-mail** (caixa de saída).
-- **CI** + **23 testes unitários** e **5 testes e2e** (Playwright: login demo,
-  minha agenda + mudança de status, histórico do cliente, booking); `tsc`/`eslint`/
+- **CI** + **23 testes unitários** e **13 testes e2e** (+ setup; Playwright:
+  login demo, minha agenda + status, histórico do cliente, booking, assinaturas,
+  fechamento e **7 verificações de acessibilidade com axe**); `tsc`/`eslint`/
   `build` verdes.
 
 ---
@@ -226,8 +229,9 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
       cron diário na Vercel + botão manual) e **consumo/limites** por período
       (assinaturas via `subscription_redemptions`; pacotes já por quantidade).
 - [x] **Fechamento** contábil: travar período (bloqueia lançamentos no intervalo)
-      e snapshot do balancete (`/closing`). Reconhecimento de receita diferida
-      ainda pendente.
+      e snapshot do balancete (`/closing`).
+- [x] **Receita diferida**: assinaturas creditam "Receitas a Apropriar" no
+      faturamento e reconhecem a receita ao fim do período (renovação/cron).
 
 ### Comunicação
 - [ ] **Agendador** (pg_cron/Inngest) para **lembretes** de agendamento.
@@ -253,7 +257,8 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 - [x] **Observabilidade in-app**: logger estruturado (JSON), `/api/health`
       (checa banco) e logs de webhook/rate-limit. Métricas agregadas e alertas
       externos (e-mail/Slack) pendentes.
-- [ ] **Deploy na Vercel** + env de produção + domínio/subdomínios.
+- [x] **Deploy na Vercel**: produção em `glowhub-silk.vercel.app`; domínio
+      raiz/subdomínios customizados ainda pendentes.
 - [x] **Segurança**: **rate limiting** no sign-in/sign-up do Better Auth
       (fixed-window em banco, tabela interna `rate_limits`, fail-open); revisão
       contínua de policies.

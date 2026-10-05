@@ -89,6 +89,7 @@ const CHART = [
   ["2.3", "Gorjetas a Pagar", "liability", "liability_tip"],
   ["2.4", "Carteira de Clientes", "liability", "liability_wallet"],
   ["2.5", "Pacotes a Resgatar", "liability", "liability_package"],
+  ["2.6", "Receitas a Apropriar", "liability", "liability_deferred_revenue"],
   ["3.1", "Capital / Resultados", "equity", null],
   ["4.1", "Receita de Serviços", "revenue", "revenue_service"],
   ["4.2", "Receita de Produtos", "revenue", "revenue_product"],
@@ -377,9 +378,9 @@ async function seedDemo(tx) {
     const subPeriodStart = new Date(Date.now() - 35 * 86400000);
     const subPeriodEnd = new Date(Date.now() - 5 * 86400000);
     const [sub] = await tx`insert into public.client_subscriptions ${tx({ tenant_id: tenantId, client_id: clients["Camila Dias"], plan_id: plan.id, status: "active", price_cents: money(180), current_period_start: subPeriodStart, current_period_end: subPeriodEnd })} returning id`;
-    await postEntry(tx, { tenantId, description: "Assinatura: Clube Cabelo", idem: `demo-sub-${sub.id}`, refType: "subscription", refId: sub.id, lines: [
+    await postEntry(tx, { tenantId, description: "Assinatura: Clube Cabelo (diferida)", idem: `demo-sub-${sub.id}`, refType: "subscription", refId: sub.id, lines: [
       { accountId: accounts.bank, direction: "debit", amount: money(180) },
-      { accountId: accounts.revenue_subscription, direction: "credit", amount: money(180) },
+      { accountId: accounts.liability_deferred_revenue, direction: "credit", amount: money(180) },
     ] });
     // Consumo dentro do periodo (limite de 2 por servico).
     await tx`insert into public.subscription_redemptions ${tx({ tenant_id: tenantId, subscription_id: sub.id, service_id: services["Corte feminino"], amount_cents: money(80), redeemed_at: new Date(Date.now() - 20 * 86400000) })}`;

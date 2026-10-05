@@ -49,6 +49,11 @@ export async function billDueSubscriptions(
     params.tenantId,
     "revenue_subscription",
   );
+  const deferred = await getSystemAccountId(
+    tx,
+    params.tenantId,
+    "liability_deferred_revenue",
+  );
   const bank = await getSystemAccountId(tx, params.tenantId, "bank");
   const cash = await getSystemAccountId(tx, params.tenantId, "cash");
   const debitAccount = bank ?? cash;
@@ -57,18 +62,36 @@ export async function billDueSubscriptions(
   for (const sub of due) {
     const newStart = sub.currentPeriodEnd;
     const newEnd = addInterval(newStart, sub.interval);
+    const periodKey = newStart.toISOString();
 
-    if (sub.priceCents > 0 && revenue && debitAccount) {
+    // Reconhece a receita do periodo que acabou (D Diferida / C Receita).
+    if (sub.priceCents > 0 && deferred && revenue) {
+      await postEntry(tx, {
+        tenantId: params.tenantId,
+        userId: params.userId ?? "system",
+        description: `Reconhecimento de receita: ${sub.planName}`,
+        idempotencyKey: `subscription-recog-${sub.id}-${periodKey}`,
+        referenceType: "subscription",
+        referenceId: sub.id,
+        lines: [
+          { accountId: deferred, direction: "debit", amountCents: sub.priceCents },
+          { accountId: revenue, direction: "credit", amountCents: sub.priceCents },
+        ],
+      });
+    }
+
+    // Fatura o novo periodo, diferindo a receita (D Caixa/Banco / C Diferida).
+    if (sub.priceCents > 0 && deferred && debitAccount) {
       await postEntry(tx, {
         tenantId: params.tenantId,
         userId: params.userId ?? "system",
         description: `Renovação automática: ${sub.planName}`,
-        idempotencyKey: `subscription-${sub.id}-${newStart.toISOString()}`,
+        idempotencyKey: `subscription-${sub.id}-${periodKey}`,
         referenceType: "subscription",
         referenceId: sub.id,
         lines: [
           { accountId: debitAccount, direction: "debit", amountCents: sub.priceCents },
-          { accountId: revenue, direction: "credit", amountCents: sub.priceCents },
+          { accountId: deferred, direction: "credit", amountCents: sub.priceCents },
         ],
       });
     }

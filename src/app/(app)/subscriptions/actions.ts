@@ -154,6 +154,10 @@ export async function setPlanActiveAction(
   return { status: "success" };
 }
 
+/**
+ * Fatura um periodo: D Caixa/Banco / C Receitas a Apropriar (diferida).
+ * A receita e reconhecida depois, ao final do periodo (recognizeSubscriptionRevenue).
+ */
 async function bill(
   tx: AppTx,
   ctx: { tenant: { id: string }; userId: string },
@@ -165,17 +169,17 @@ async function bill(
     method: PaymentMethod;
   },
 ): Promise<string | null> {
-  const revenue = await getSystemAccountId(
+  const deferred = await getSystemAccountId(
     tx,
     ctx.tenant.id,
-    "revenue_subscription",
+    "liability_deferred_revenue",
   );
   const debitAccount = await getSystemAccountId(
     tx,
     ctx.tenant.id,
     params.method === "cash" ? "cash" : "bank",
   );
-  if (!revenue || !debitAccount) return null;
+  if (!deferred || !debitAccount) return null;
 
   return postEntry(tx, {
     tenantId: ctx.tenant.id,
@@ -186,6 +190,47 @@ async function bill(
     referenceId: params.subscriptionId,
     lines: [
       { accountId: debitAccount, direction: "debit", amountCents: params.priceCents },
+      { accountId: deferred, direction: "credit", amountCents: params.priceCents },
+    ],
+  });
+}
+
+/**
+ * Reconhece a receita diferida de um periodo vencido:
+ * D Receitas a Apropriar / C Receita de Assinaturas.
+ */
+async function recognizeSubscriptionRevenue(
+  tx: AppTx,
+  ctx: { tenant: { id: string }; userId: string },
+  params: {
+    subscriptionId: string;
+    planName: string;
+    priceCents: number;
+    periodKey: string;
+  },
+): Promise<void> {
+  if (params.priceCents <= 0) return;
+  const deferred = await getSystemAccountId(
+    tx,
+    ctx.tenant.id,
+    "liability_deferred_revenue",
+  );
+  const revenue = await getSystemAccountId(
+    tx,
+    ctx.tenant.id,
+    "revenue_subscription",
+  );
+  if (!deferred || !revenue) return;
+
+  await postEntry(tx, {
+    tenantId: ctx.tenant.id,
+    userId: ctx.userId,
+    description: `Reconhecimento de receita: ${params.planName}`,
+    idempotencyKey: `subscription-recog-${params.subscriptionId}-${params.periodKey}`,
+    referenceType: "subscription",
+    referenceId: params.subscriptionId,
+    lines: [
+      { accountId: deferred, direction: "debit", amountCents: params.priceCents },
       { accountId: revenue, direction: "credit", amountCents: params.priceCents },
     ],
   });
@@ -310,6 +355,13 @@ export async function renewSubscriptionAction(
 
       const newStart = subscription.currentPeriodEnd;
       const newEnd = addInterval(newStart, subscription.interval);
+
+      await recognizeSubscriptionRevenue(tx, ctx, {
+        subscriptionId: subscription.id,
+        planName: subscription.planName,
+        priceCents: subscription.priceCents,
+        periodKey: newStart.toISOString(),
+      });
 
       const entryId = await bill(tx, ctx, {
         description: `Renovação: ${subscription.planName}`,

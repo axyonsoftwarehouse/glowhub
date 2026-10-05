@@ -80,6 +80,7 @@ const DEFAULT_CHART: {
   { code: "2.3", name: "Gorjetas a Pagar", type: "liability", systemKey: "liability_tip" },
   { code: "2.4", name: "Carteira de Clientes", type: "liability", systemKey: "liability_wallet" },
   { code: "2.5", name: "Pacotes a Resgatar", type: "liability", systemKey: "liability_package" },
+  { code: "2.6", name: "Receitas a Apropriar", type: "liability", systemKey: "liability_deferred_revenue" },
   { code: "3.1", name: "Capital / Resultados", type: "equity" },
   { code: "4.1", name: "Receita de Serviços", type: "revenue", systemKey: "revenue_service" },
   { code: "4.2", name: "Receita de Produtos", type: "revenue", systemKey: "revenue_product" },
