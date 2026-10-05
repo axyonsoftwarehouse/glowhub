@@ -90,7 +90,7 @@ export function ChargeList({
                   {formatCentsBRL(charge.totalCents)}
                 </p>
                 {charge.paidCents > 0 && charge.paidCents < charge.totalCents && (
-                  <p className="text-[11px] text-foreground/50">
+                  <p className="text-[11px] text-foreground/70">
                     pago {formatCentsBRL(charge.paidCents)} · saldo{" "}
                     {formatCentsBRL(remaining)}
                   </p>

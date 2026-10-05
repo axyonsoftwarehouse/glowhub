@@ -49,7 +49,7 @@ export function WalletList({
         >
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{client.name}</p>
-            <p className="text-xs text-foreground/50">
+            <p className="text-xs text-foreground/70">
               saldo {formatCentsBRL(client.balanceCents)}
             </p>
           </div>
@@ -58,6 +58,7 @@ export function WalletList({
               <input type="hidden" name="clientId" value={client.id} />
               <select
                 name="method"
+                aria-label="Forma de pagamento"
                 defaultValue="cash"
                 className="rounded-lg border border-border bg-white px-2 py-1.5 text-xs outline-none focus:border-brand"
               >

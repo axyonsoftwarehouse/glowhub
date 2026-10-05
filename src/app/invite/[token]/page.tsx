@@ -15,7 +15,7 @@ export default async function InvitePage({
 
   if (!isConfigured()) {
     return (
-      <main className="mx-auto w-full max-w-md flex-1 px-6 py-16">
+      <main id="conteudo" className="mx-auto w-full max-w-md flex-1 px-6 py-16">
         <SetupNotice />
       </main>
     );
@@ -25,7 +25,10 @@ export default async function InvitePage({
   const user = session?.user ?? null;
 
   return (
-    <main className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-16">
+    <main
+      id="conteudo"
+      className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-16"
+    >
       <div className="mb-8 text-center">
         <span className="text-lg font-semibold tracking-tight">
           Glow<span className="text-brand">Hub</span>

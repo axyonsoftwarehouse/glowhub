@@ -72,7 +72,7 @@ export function ServiceCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-medium">{service.name}</h3>
-          <p className="mt-0.5 text-xs text-foreground/50">
+          <p className="mt-0.5 text-xs text-foreground/70">
             {categoryName ?? "Sem categoria"} · {service.durationMinutes} min
           </p>
         </div>
@@ -96,7 +96,7 @@ export function ServiceCard({
             <p className="text-sm text-foreground/70">{service.description}</p>
           )}
           {service.imageUrl && (
-            <p className="truncate text-xs text-foreground/40">
+            <p className="truncate text-xs text-foreground/70">
               {service.imageUrl}
             </p>
           )}

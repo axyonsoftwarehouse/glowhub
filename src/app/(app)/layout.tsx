@@ -49,19 +49,22 @@ export default async function AppLayout({
           />
         ) : (
           <div className="mt-6 rounded-xl bg-muted p-3 text-sm">
-            <p className="text-xs uppercase tracking-wide text-foreground/50">
+            <p className="text-xs uppercase tracking-wide text-foreground/70">
               Empresa
             </p>
             <p className="mt-1 font-medium">
               {tenant ? tenant.name : "Nenhum tenant"}
             </p>
             {tenant && (
-              <p className="text-xs text-foreground/50">/{tenant.slug}</p>
+              <p className="text-xs text-foreground/70">/{tenant.slug}</p>
             )}
           </div>
         )}
 
-        <nav className="mt-6 flex flex-col gap-1 text-sm">
+        <nav
+          aria-label="Navegação principal"
+          className="mt-6 flex flex-col gap-1 text-sm"
+        >
           <Link href="/dashboard" className="rounded-lg px-3 py-2 hover:bg-muted">
             Visão geral
           </Link>
@@ -146,7 +149,7 @@ export default async function AppLayout({
         </nav>
 
         <div className="mt-auto space-y-3">
-          <p className="truncate text-xs text-foreground/50">{user.email}</p>
+          <p className="truncate text-xs text-foreground/70">{user.email}</p>
           <SignOutButton />
         </div>
       </aside>
@@ -158,7 +161,9 @@ export default async function AppLayout({
           </Link>
           <SignOutButton />
         </header>
-        <main className="flex-1 px-6 py-8">{children}</main>
+        <main id="conteudo" className="flex-1 px-6 py-8">
+          {children}
+        </main>
       </div>
     </div>
   );

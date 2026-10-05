@@ -189,7 +189,7 @@ export default async function ProductsPage({
           <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
             Produtos
           </h2>
-          <span className="text-xs text-foreground/50">
+          <span className="text-xs text-foreground/70">
             {total} produto(s)
           </span>
         </div>

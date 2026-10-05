@@ -22,7 +22,10 @@ export default async function PublicBookingPage() {
 
   if (!tenant) {
     return (
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 py-16 text-center">
+      <main
+        id="conteudo"
+        className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 py-16 text-center"
+      >
         <h1 className="text-2xl font-semibold">Agendamento</h1>
         <p className="mt-2 text-sm text-foreground/60">
           Nenhuma empresa foi identificada. Acesse pelo endereço da sua empresa.
@@ -95,7 +98,10 @@ export default async function PublicBookingPage() {
   }));
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 px-6 py-12">
+    <main
+      id="conteudo"
+      className="mx-auto w-full max-w-2xl flex-1 px-6 py-12"
+    >
       <header className="text-center">
         <p className="text-xs uppercase tracking-widest text-brand">
           Agendamento online

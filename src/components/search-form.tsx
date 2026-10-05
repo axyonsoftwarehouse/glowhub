@@ -30,6 +30,7 @@ export function SearchForm({
         <input
           type="search"
           name="q"
+          aria-label={placeholder}
           defaultValue={defaultValue ?? ""}
           placeholder={placeholder}
           className={inputClass}
@@ -44,7 +45,7 @@ export function SearchForm({
       {defaultValue ? (
         <Link
           href={clearHref}
-          className="text-xs text-foreground/50 hover:text-brand hover:underline"
+          className="text-xs text-foreground/70 hover:text-brand hover:underline"
         >
           Limpar
         </Link>

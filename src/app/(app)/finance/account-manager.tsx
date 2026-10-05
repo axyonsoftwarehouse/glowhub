@@ -150,7 +150,7 @@ export function AccountManager({
       <div className="mt-4 space-y-4">
         {grouped.map((group) => (
           <div key={group.value}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-foreground/50">
+            <p className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
               {group.label}
             </p>
             <div className="mt-2 space-y-1">
@@ -165,7 +165,7 @@ export function AccountManager({
                     className="flex items-center justify-between gap-3 rounded-lg border border-border bg-white/60 px-3 py-2"
                   >
                     <span className="min-w-0 truncate text-sm">
-                      <span className="font-mono text-xs text-foreground/50">
+                      <span className="font-mono text-xs text-foreground/70">
                         {account.code}
                       </span>{" "}
                       {account.name}
@@ -191,7 +191,7 @@ export function AccountManager({
                 );
               })}
               {group.items.length === 0 && (
-                <p className="text-xs text-foreground/40">
+                <p className="text-xs text-foreground/70">
                   Nenhuma conta de {ACCOUNT_TYPE_LABELS[group.value].toLowerCase()}.
                 </p>
               )}

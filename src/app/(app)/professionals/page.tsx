@@ -217,7 +217,7 @@ export default async function ProfessionalsPage({
           <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
             Equipe
           </h2>
-          <span className="text-xs text-foreground/50">
+          <span className="text-xs text-foreground/70">
             {total} profissional(is)
           </span>
         </div>

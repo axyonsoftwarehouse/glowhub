@@ -146,7 +146,7 @@ export function CouponForm({
                 </span>
               </div>
               <p className="mt-1 text-sm text-brand">{describe(coupon)}</p>
-              <p className="mt-1 text-xs text-foreground/50">
+              <p className="mt-1 text-xs text-foreground/70">
                 {coupon.usedCount} uso(s)
                 {coupon.maxUses != null ? ` / ${coupon.maxUses}` : ""}
               </p>

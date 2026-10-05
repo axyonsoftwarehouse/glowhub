@@ -55,7 +55,7 @@ export function ClientCard({ client }: { client: Client }) {
               {client.name}
             </Link>
           </h3>
-          <p className="mt-0.5 text-xs text-foreground/50">
+          <p className="mt-0.5 text-xs text-foreground/70">
             {client.phone ?? "sem telefone"}
             {client.email ? ` · ${client.email}` : ""}
           </p>

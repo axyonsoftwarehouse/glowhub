@@ -80,7 +80,7 @@ export function AppointmentRow({
           <p className="text-sm font-medium">
             {timeLabel} · {appointment.clientName}
           </p>
-          <p className="mt-0.5 text-xs text-foreground/50">
+          <p className="mt-0.5 text-xs text-foreground/70">
             {appointment.serviceName} · {appointment.professionalName}
           </p>
         </div>

@@ -25,7 +25,7 @@ export function JournalList({ entries }: { entries: JournalEntry[] }) {
         >
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium">{entry.description}</p>
-            <span className="text-xs text-foreground/50">
+            <span className="text-xs text-foreground/70">
               {formatDate(entry.occurredAt)}
             </span>
           </div>
@@ -39,7 +39,7 @@ export function JournalList({ entries }: { entries: JournalEntry[] }) {
                   <span
                     className={
                       line.direction === "debit"
-                        ? "text-foreground/50"
+                        ? "text-foreground/70"
                         : "text-brand"
                     }
                   >

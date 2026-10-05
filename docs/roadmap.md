@@ -53,8 +53,9 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 ## Transversal (em todas as fases)
 - [x] Onboarding de tenant (cadastro cria empresa + filial + owner)
 - [x] CI (lint + typecheck + build no GitHub Actions)
-- [x] Testes unitários (vitest) + e2e (Playwright: login demo, minha agenda, histórico do cliente, booking)
+- [x] Testes unitários (vitest) + e2e (Playwright: login demo, minha agenda, histórico do cliente, booking, assinaturas, fechamento, axe/a11y)
 - [x] Observabilidade in-app (logger estruturado, `/api/health`, logs de webhook); métricas/alertas externos pendentes
 - [x] Segurança (rate limiting no Better Auth, tabela interna `rate_limits`; revisão contínua de policies)
+- [x] Acessibilidade (foco visível, skip link, labels/aria, contraste AA, axe e2e). Projeto **somente pt-BR** (sem i18n)
 - [ ] Provedor de e-mail (verificação, convites, lembretes)
 - [ ] Gateway de pagamento online e fechamento formal

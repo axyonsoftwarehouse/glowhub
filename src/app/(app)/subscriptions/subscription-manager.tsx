@@ -76,7 +76,12 @@ export function SubscriptionManager({
             Assinar cliente
           </h2>
           <form action={subscribe} className="mt-4 flex flex-wrap items-end gap-2">
-            <select name="clientId" defaultValue="" className={inputClass}>
+            <select
+              name="clientId"
+              aria-label="Cliente"
+              defaultValue=""
+              className={inputClass}
+            >
               <option value="">Cliente...</option>
               {clients.map((client) => (
                 <option key={client.id} value={client.id}>
@@ -84,7 +89,12 @@ export function SubscriptionManager({
                 </option>
               ))}
             </select>
-            <select name="planId" defaultValue="" className={inputClass}>
+            <select
+              name="planId"
+              aria-label="Plano"
+              defaultValue=""
+              className={inputClass}
+            >
               <option value="">Plano...</option>
               {plans
                 .filter((plan) => plan.isActive)
@@ -94,7 +104,12 @@ export function SubscriptionManager({
                   </option>
                 ))}
             </select>
-            <select name="method" defaultValue="cash" className={inputClass}>
+            <select
+              name="method"
+              aria-label="Forma de pagamento"
+              defaultValue="cash"
+              className={inputClass}
+            >
               {METHODS.map((method) => (
                 <option key={method.value} value={method.value}>
                   {method.label}
@@ -118,7 +133,7 @@ export function SubscriptionManager({
             <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
               Cobrança recorrente
             </h2>
-            <p className="mt-1 text-xs text-foreground/50">
+            <p className="mt-1 text-xs text-foreground/70">
               Fatura assinaturas ativas com período vencido (também roda no cron
               diário `/api/cron/subscriptions`).
             </p>
@@ -150,7 +165,7 @@ export function SubscriptionManager({
                   <p className="text-sm font-medium">
                     {sub.planName} · {sub.clientName}
                   </p>
-                  <p className="text-xs text-foreground/50">
+                  <p className="text-xs text-foreground/70">
                     {STATUS_LABELS[sub.status]} ·{" "}
                     {formatCentsBRL(sub.priceCents)}/
                     {sub.interval === "month" ? "mês" : "ano"} · período{" "}
@@ -207,7 +222,12 @@ export function SubscriptionManager({
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <form action={renew} className="flex items-center gap-2">
                     <input type="hidden" name="id" value={sub.id} />
-                    <select name="method" defaultValue="cash" className={inputClass}>
+                    <select
+                      name="method"
+                      aria-label="Forma de pagamento"
+                      defaultValue="cash"
+                      className={inputClass}
+                    >
                       {METHODS.map((method) => (
                         <option key={method.value} value={method.value}>
                           {method.label}

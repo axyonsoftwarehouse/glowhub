@@ -194,7 +194,7 @@ export default async function ServicesPage({
           <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
             Serviços
           </h2>
-          <span className="text-xs text-foreground/50">
+          <span className="text-xs text-foreground/70">
             {total} serviço(s)
           </span>
         </div>

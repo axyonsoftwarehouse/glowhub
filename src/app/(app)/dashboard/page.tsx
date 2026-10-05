@@ -102,7 +102,7 @@ export default async function DashboardPage() {
             Filiais
           </h2>
           <div className="flex items-center gap-3">
-            <span className="text-xs text-foreground/50">
+            <span className="text-xs text-foreground/70">
               {branchList.length} unidade(s)
             </span>
             <Link
@@ -132,7 +132,7 @@ export default async function DashboardPage() {
                   {branch.isActive ? "Ativa" : "Inativa"}
                 </span>
               </div>
-              <p className="mt-1 text-xs text-foreground/50">/{branch.slug}</p>
+              <p className="mt-1 text-xs text-foreground/70">/{branch.slug}</p>
               {branch.address && (
                 <p className="mt-3 text-sm text-foreground/70">{branch.address}</p>
               )}

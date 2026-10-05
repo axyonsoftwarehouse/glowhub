@@ -34,7 +34,7 @@ export function InviteForm() {
       className="rounded-2xl border border-border bg-white/70 p-5"
     >
       <h2 className="text-sm font-semibold">Convidar pessoa</h2>
-      <p className="mt-1 text-xs text-foreground/50">
+      <p className="mt-1 text-xs text-foreground/70">
         Gere um link de convite e envie para a pessoa. O link expira em 7 dias.
       </p>
 

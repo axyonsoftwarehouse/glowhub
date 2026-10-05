@@ -157,7 +157,7 @@ export default async function ClientsPage({
           <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
             Clientes
           </h2>
-          <span className="text-xs text-foreground/50">
+          <span className="text-xs text-foreground/70">
             {total} cliente(s)
           </span>
         </div>

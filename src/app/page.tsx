@@ -76,7 +76,7 @@ export default function Home() {
         ))}
       </section>
 
-      <footer className="mt-20 border-t border-border pt-6 text-sm text-foreground/50">
+      <footer className="mt-20 border-t border-border pt-6 text-sm text-foreground/70">
         GlowHub — fundação multi-tenant. Documentação em{" "}
         <code className="font-mono">README.md</code>.
       </footer>

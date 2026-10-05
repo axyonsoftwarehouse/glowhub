@@ -114,7 +114,7 @@ export default async function NotificationsPage() {
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{item.subject}</p>
-                <p className="truncate text-xs text-foreground/50">
+                <p className="truncate text-xs text-foreground/70">
                   {item.channel} · {item.recipient} · {formatDate(item.createdAt)}
                 </p>
               </div>

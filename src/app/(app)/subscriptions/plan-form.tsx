@@ -88,6 +88,7 @@ export function PlanForm({
             <div className="sm:col-span-2">
               <label className="text-xs font-medium text-foreground/60">Nome</label>
               <input
+                aria-label="Nome"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Assinatura Premium"
@@ -97,6 +98,7 @@ export function PlanForm({
             <div>
               <label className="text-xs font-medium text-foreground/60">Preço (R$)</label>
               <input
+                aria-label="Preço (R$)"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="199,00"
@@ -110,6 +112,7 @@ export function PlanForm({
                 Periodicidade
               </label>
               <select
+                aria-label="Periodicidade"
                 value={interval}
                 onChange={(e) => setInterval(e.target.value as "month" | "year")}
                 className={`mt-1 w-full ${inputClass}`}
@@ -123,6 +126,7 @@ export function PlanForm({
                 Descrição (opcional)
               </label>
               <input
+                aria-label="Descrição (opcional)"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className={`mt-1 w-full ${inputClass}`}
@@ -137,6 +141,7 @@ export function PlanForm({
             {items.map((item, index) => (
               <div key={index} className="flex flex-wrap items-center gap-2">
                 <select
+                  aria-label="Serviço"
                   value={item.serviceId}
                   onChange={(e) =>
                     setItems((prev) =>
@@ -155,6 +160,7 @@ export function PlanForm({
                   ))}
                 </select>
                 <input
+                  aria-label="Quantidade por período"
                   value={item.quantityPerPeriod}
                   onChange={(e) =>
                     setItems((prev) =>

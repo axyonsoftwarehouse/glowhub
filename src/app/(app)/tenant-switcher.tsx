@@ -31,7 +31,7 @@ export function TenantSwitcher({
     <div className="mt-6 rounded-xl bg-muted p-3 text-sm">
       <label
         htmlFor="tenant-switcher"
-        className="text-xs uppercase tracking-wide text-foreground/50"
+        className="text-xs uppercase tracking-wide text-foreground/70"
       >
         Empresa
       </label>
@@ -50,11 +50,11 @@ export function TenantSwitcher({
         ))}
       </select>
       {active && (
-        <p className="mt-1 text-xs text-foreground/50">
+        <p className="mt-1 text-xs text-foreground/70">
           /{active.slug} · {active.role}
         </p>
       )}
-      {pending && <p className="mt-1 text-xs text-foreground/50">Trocando...</p>}
+      {pending && <p className="mt-1 text-xs text-foreground/70">Trocando...</p>}
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
   );

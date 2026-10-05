@@ -25,7 +25,7 @@ export function Pagination({
           Anterior
         </span>
       )}
-      <span className="text-xs text-foreground/50">
+      <span className="text-xs text-foreground/70">
         Página {page} de {pageCount}
       </span>
       {page < pageCount ? (

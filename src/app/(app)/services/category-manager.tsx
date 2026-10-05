@@ -95,7 +95,7 @@ export function CategoryManager({
             className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs ${
               category.isActive
                 ? "border-border bg-white"
-                : "border-border bg-muted text-foreground/40"
+                : "border-border bg-muted text-foreground/70"
             }`}
           >
             {category.name}

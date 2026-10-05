@@ -127,7 +127,7 @@ export function PackageSales({
                   <p className="text-sm font-medium">
                     {item.packageName} · {item.clientName}
                   </p>
-                  <p className="text-xs text-foreground/50">
+                  <p className="text-xs text-foreground/70">
                     {STATUS_LABELS[item.status]}
                     {item.expiresAt
                       ? ` · expira ${item.expiresAt.slice(0, 10)}`

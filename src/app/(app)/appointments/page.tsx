@@ -287,7 +287,7 @@ export default async function AppointmentsPage({
 
       <section className="flex flex-wrap items-end gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-foreground/50">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground/70">
             Filial
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -341,7 +341,7 @@ export default async function AppointmentsPage({
           <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
             {date}
           </h2>
-          <span className="text-xs text-foreground/50">
+          <span className="text-xs text-foreground/70">
             {visibleList.length} agendamento(s)
           </span>
         </div>

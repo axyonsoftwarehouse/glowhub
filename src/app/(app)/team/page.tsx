@@ -147,7 +147,7 @@ export default async function TeamPage() {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
             Membros
           </h2>
-          <span className="text-xs text-foreground/50">
+          <span className="text-xs text-foreground/70">
             {result.members.length} pessoa(s)
           </span>
         </div>

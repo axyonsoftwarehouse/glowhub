@@ -59,11 +59,11 @@ export function MemberRow({
           <p className="truncate text-sm font-medium">
             {member.fullName || "Sem nome"}
             {isSelf && (
-              <span className="ml-2 text-xs text-foreground/50">(você)</span>
+              <span className="ml-2 text-xs text-foreground/70">(você)</span>
             )}
           </p>
           {!editable && (
-            <p className="mt-0.5 text-xs text-foreground/50">
+            <p className="mt-0.5 text-xs text-foreground/70">
               {ROLE_LABELS[member.role] ?? member.role}
             </p>
           )}

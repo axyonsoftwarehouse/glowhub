@@ -42,7 +42,7 @@ export function ProfessionalLinksForm({
         <input type="hidden" name="professionalId" value={professional.id} />
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/50">
+          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
             Filiais
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -62,7 +62,7 @@ export function ProfessionalLinksForm({
               </label>
             ))}
             {branches.length === 0 && (
-              <p className="text-xs text-foreground/50">
+              <p className="text-xs text-foreground/70">
                 Nenhuma filial cadastrada.
               </p>
             )}
@@ -70,7 +70,7 @@ export function ProfessionalLinksForm({
         </div>
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/50">
+          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/70">
             Serviços
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -90,7 +90,7 @@ export function ProfessionalLinksForm({
               </label>
             ))}
             {services.length === 0 && (
-              <p className="text-xs text-foreground/50">
+              <p className="text-xs text-foreground/70">
                 Nenhum serviço cadastrado.
               </p>
             )}

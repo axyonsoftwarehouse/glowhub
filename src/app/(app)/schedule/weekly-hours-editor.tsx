@@ -104,7 +104,7 @@ export function WeeklyHoursEditor({
             </span>
             <div className="flex-1 space-y-2">
               {days[weekday].length === 0 && (
-                <p className="pt-1.5 text-xs text-foreground/40">Fechado</p>
+                <p className="pt-1.5 text-xs text-foreground/70">Fechado</p>
               )}
               {days[weekday].map((interval, index) => (
                 <div key={index} className="flex items-center gap-2">
@@ -117,7 +117,7 @@ export function WeeklyHoursEditor({
                     }
                     className="rounded-lg border border-border bg-white px-2 py-1.5 text-sm outline-none focus:border-brand disabled:opacity-60"
                   />
-                  <span className="text-xs text-foreground/40">até</span>
+                  <span className="text-xs text-foreground/70">até</span>
                   <input
                     type="time"
                     value={interval.end}

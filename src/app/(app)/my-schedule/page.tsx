@@ -232,6 +232,7 @@ export default async function MySchedulePage({
             <input
               type="date"
               name="date"
+              aria-label="Data"
               defaultValue={date}
               className="mt-1 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
             />

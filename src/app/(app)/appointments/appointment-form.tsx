@@ -203,7 +203,7 @@ export function AppointmentForm({
           {loadingSlots ? "Buscando..." : "Buscar horários"}
         </button>
         {selectedProfessional && professionalServices.length === 0 && (
-          <p className="text-xs text-foreground/50">
+          <p className="text-xs text-foreground/70">
             Este profissional não realiza serviços ainda.
           </p>
         )}
@@ -211,7 +211,7 @@ export function AppointmentForm({
 
       {slots !== null && (
         <div className="mt-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-foreground/50">
+          <p className="text-xs font-medium uppercase tracking-wide text-foreground/70">
             Horários disponíveis
           </p>
           <div className="mt-2 flex flex-wrap gap-2">

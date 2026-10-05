@@ -304,7 +304,7 @@ export default async function FinancePage() {
                 {payment.chargeDescription}
               </span>
               <span className="flex shrink-0 items-center gap-3">
-                <span className="text-xs text-foreground/50">
+                <span className="text-xs text-foreground/70">
                   {METHOD_LABELS[payment.method] ?? payment.method}
                 </span>
                 <span className="font-medium">

@@ -79,7 +79,7 @@ export default async function BranchesPage() {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
             Unidades
           </h2>
-          <span className="text-xs text-foreground/50">
+          <span className="text-xs text-foreground/70">
             {branchList.length} unidade(s)
           </span>
         </div>

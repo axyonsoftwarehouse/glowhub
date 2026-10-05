@@ -299,7 +299,7 @@ export default async function ClientHistoryPage({
             key={card.label}
             className="rounded-2xl border border-border bg-white/70 p-4"
           >
-            <p className="text-xs uppercase tracking-wide text-foreground/50">
+            <p className="text-xs uppercase tracking-wide text-foreground/70">
               {card.label}
             </p>
             <p className="mt-1 text-lg font-semibold">
@@ -328,7 +328,7 @@ export default async function ClientHistoryPage({
                     {formatDateTime(startsAt, timezone)} ·{" "}
                     {row.serviceName ?? "—"}
                   </p>
-                  <p className="text-xs text-foreground/50">
+                  <p className="text-xs text-foreground/70">
                     {row.professionalName ?? "—"} · {row.branchName ?? "—"} ·{" "}
                     {formatInTimeZone(startsAt, timezone)}–
                     {formatInTimeZone(endsAt, timezone)}
@@ -375,12 +375,12 @@ export default async function ClientHistoryPage({
                   <div>
                     <p className="text-sm font-medium">
                       {formatCentsBRL(charge.totalCents)}
-                      <span className="ml-2 text-xs text-foreground/50">
+                      <span className="ml-2 text-xs text-foreground/70">
                         {formatDateTime(charge.createdAt.toISOString(), TZ)}
                       </span>
                     </p>
                     {charge.status === "paid" && paid !== charge.totalCents && (
-                      <p className="text-xs text-foreground/50">
+                      <p className="text-xs text-foreground/70">
                         Pago {formatCentsBRL(paid)}
                       </p>
                     )}

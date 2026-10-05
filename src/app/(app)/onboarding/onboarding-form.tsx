@@ -80,7 +80,7 @@ export function OnboardingForm() {
             placeholder="bela-vida"
             className={`mt-1 font-mono ${inputClass}`}
           />
-          <p className="mt-1 text-xs text-foreground/50">
+          <p className="mt-1 text-xs text-foreground/70">
             Usado no endereço público: <span className="font-mono">{slug || "..."}</span>
             .SEU_DOMINIO
           </p>

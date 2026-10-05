@@ -57,7 +57,7 @@ export function BranchCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-medium">{branch.name}</h3>
-          <p className="mt-0.5 font-mono text-xs text-foreground/50">
+          <p className="mt-0.5 font-mono text-xs text-foreground/70">
             /{branch.slug}
           </p>
         </div>
@@ -75,7 +75,7 @@ export function BranchCard({
       {!editing && (
         <div className="mt-3 space-y-1 text-sm text-foreground/70">
           {branch.address && <p>{branch.address}</p>}
-          <p className="text-xs text-foreground/50">{branch.timezone}</p>
+          <p className="text-xs text-foreground/70">{branch.timezone}</p>
         </div>
       )}
 

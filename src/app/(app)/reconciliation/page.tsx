@@ -199,7 +199,7 @@ export default async function ReconciliationPage() {
             key={card.label}
             className="rounded-2xl border border-border bg-white/70 p-4"
           >
-            <p className="text-xs uppercase tracking-wide text-foreground/50">
+            <p className="text-xs uppercase tracking-wide text-foreground/70">
               {card.label}
             </p>
             <p className="mt-1 text-lg font-semibold">
@@ -224,7 +224,7 @@ export default async function ReconciliationPage() {
         </h2>
         <div className="mt-4 overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/50">
+            <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/70">
               <tr>
                 <th className="px-3 py-2">Cliente</th>
                 <th className="px-3 py-2">Descrição</th>
@@ -298,7 +298,7 @@ export default async function ReconciliationPage() {
                   {payment.providerRef ? `(${payment.providerRef})` : ""}
                 </span>
                 <span className="flex shrink-0 items-center gap-3">
-                  <span className="text-xs text-foreground/50">
+                  <span className="text-xs text-foreground/70">
                     {METHOD_LABELS[payment.method] ?? payment.method}
                   </span>
                   <span className="font-medium">

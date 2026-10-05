@@ -44,7 +44,7 @@ export function InvitationRow({ invitation }: { invitation: Invitation }) {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{invitation.email}</p>
-          <p className="mt-0.5 text-xs text-foreground/50">
+          <p className="mt-0.5 text-xs text-foreground/70">
             {ROLE_LABELS[invitation.role] ?? invitation.role} · expira em{" "}
             {formatDate(invitation.expiresAt)}
           </p>

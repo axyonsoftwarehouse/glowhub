@@ -250,7 +250,7 @@ export default async function SchedulePage({
       </header>
 
       <section className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-foreground/50">
+        <p className="text-xs font-medium uppercase tracking-wide text-foreground/70">
           Filial
         </p>
         <div className="flex flex-wrap gap-2">
@@ -292,7 +292,7 @@ export default async function SchedulePage({
       {professionalsList.length > 0 && selectedProfessional && (
         <section className="space-y-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-foreground/50">
+            <p className="text-xs font-medium uppercase tracking-wide text-foreground/70">
               Profissional
             </p>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -319,7 +319,7 @@ export default async function SchedulePage({
             initial={professionalHoursEntries}
             canManage={data.canManage}
           />
-          <p className="text-xs text-foreground/50">
+          <p className="text-xs text-foreground/70">
             Sem horários definidos, o profissional herda o horário da filial.
           </p>
         </section>

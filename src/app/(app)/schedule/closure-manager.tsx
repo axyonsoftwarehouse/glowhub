@@ -147,7 +147,7 @@ export function ClosureManager({
             <div className="min-w-0">
               <p className="text-sm">{formatRange(closure)}</p>
               {closure.reason && (
-                <p className="text-xs text-foreground/50">{closure.reason}</p>
+                <p className="text-xs text-foreground/70">{closure.reason}</p>
               )}
             </div>
             {canManage && (

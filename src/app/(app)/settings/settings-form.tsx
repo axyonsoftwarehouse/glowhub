@@ -8,7 +8,7 @@ import {
 } from "./types";
 
 const inputClass =
-  "w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand disabled:bg-muted disabled:text-foreground/50";
+  "w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand disabled:bg-muted disabled:text-foreground/70";
 
 export function SettingsForm({
   cancellationWindowHours,
@@ -42,7 +42,7 @@ export function SettingsForm({
       className="rounded-2xl border border-border bg-white/70 p-5"
     >
       <h2 className="text-sm font-semibold">Políticas de agendamento</h2>
-      <p className="mt-1 text-xs text-foreground/50">
+      <p className="mt-1 text-xs text-foreground/70">
         Aplica-se a cancelamentos e faltas no painel e na visão do profissional.
       </p>
 
@@ -64,7 +64,7 @@ export function SettingsForm({
             disabled={!canEdit}
             className={`mt-1 ${inputClass}`}
           />
-          <p className="mt-1 text-xs text-foreground/40">
+          <p className="mt-1 text-xs text-foreground/70">
             0 = sem restrição. Dentro da janela, só owner/admin/manager cancelam.
           </p>
           {cancellationError && (
@@ -89,7 +89,7 @@ export function SettingsForm({
             disabled={!canEdit}
             className={`mt-1 ${inputClass}`}
           />
-          <p className="mt-1 text-xs text-foreground/40">
+          <p className="mt-1 text-xs text-foreground/70">
             Ao marcar um atendimento como “não compareceu”, gera a cobrança da
             taxa via ledger (se ainda não houver cobrança no agendamento).
           </p>

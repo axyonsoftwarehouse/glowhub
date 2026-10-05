@@ -423,7 +423,7 @@ export default async function ReportsPage({
             key={card.label}
             className="rounded-2xl border border-border bg-white/70 p-4"
           >
-            <p className="text-xs uppercase tracking-wide text-foreground/50">
+            <p className="text-xs uppercase tracking-wide text-foreground/70">
               {card.label}
             </p>
             <p className="mt-1 text-lg font-semibold">{formatCentsBRL(card.value)}</p>
@@ -456,7 +456,7 @@ export default async function ReportsPage({
             </div>
           ))}
         </div>
-        <div className="mt-1 flex justify-between text-[10px] text-foreground/40">
+        <div className="mt-1 flex justify-between text-[10px] text-foreground/70">
           <span>{dailyRevenue[0]?.date}</span>
           <span>{dailyRevenue.at(-1)?.date}</span>
         </div>
@@ -497,7 +497,7 @@ export default async function ReportsPage({
         </h2>
         <div className="mt-4 overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/50">
+            <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/70">
               <tr>
                 <th className="px-3 py-2">Conta</th>
                 <th className="px-3 py-2">Tipo</th>
@@ -510,7 +510,7 @@ export default async function ReportsPage({
               {trialRows.map((row) => (
                 <tr key={row.id} className="border-t border-border">
                   <td className="px-3 py-2">
-                    <span className="font-mono text-xs text-foreground/50">
+                    <span className="font-mono text-xs text-foreground/70">
                       {row.code}
                     </span>{" "}
                     {row.name}
@@ -547,7 +547,7 @@ export default async function ReportsPage({
         </h2>
         <div className="mt-4 overflow-hidden rounded-xl border border-border">
           <table className="w-full text-sm">
-            <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/50">
+            <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/70">
               <tr>
                 <th className="px-3 py-2">Profissional</th>
                 <th className="px-3 py-2 text-right">Agend.</th>
@@ -614,10 +614,10 @@ export default async function ReportsPage({
             >
               <span>{professionalName.get(professionalId) ?? "Profissional"}</span>
               <span className="flex gap-4">
-                <span className="text-xs text-foreground/50">
+                <span className="text-xs text-foreground/70">
                   comissão {formatCentsBRL(totals.commission)}
                 </span>
-                <span className="text-xs text-foreground/50">
+                <span className="text-xs text-foreground/70">
                   gorjeta {formatCentsBRL(totals.tip)}
                 </span>
                 <span className="font-medium">

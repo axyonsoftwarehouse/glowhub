@@ -47,7 +47,7 @@ export function PayoutList({ rows }: { rows: PayoutRow[] }) {
           <input type="hidden" name="professionalId" value={row.professionalId} />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{row.professionalName}</p>
-            <p className="text-xs text-foreground/50">
+            <p className="text-xs text-foreground/70">
               comissão {formatCentsBRL(row.commissionCents)} · gorjeta{" "}
               {formatCentsBRL(row.tipCents)}
             </p>

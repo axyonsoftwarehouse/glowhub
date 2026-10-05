@@ -257,7 +257,9 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 - [x] **Segurança**: **rate limiting** no sign-in/sign-up do Better Auth
       (fixed-window em banco, tabela interna `rate_limits`, fail-open); revisão
       contínua de policies.
-- [ ] Revisão de **acessibilidade** e i18n (hoje só pt-BR).
+- [x] **Acessibilidade**: foco visível global, link "pular para o conteúdo",
+      labels/aria em formulários, contraste AA e testes e2e com **axe**
+      (`e2e/a11y.spec.ts`). Projeto **exclusivamente em pt-BR** (sem i18n).
 
 ---
 

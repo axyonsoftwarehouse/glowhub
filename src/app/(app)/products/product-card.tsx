@@ -66,7 +66,7 @@ export function ProductCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-medium">{product.name}</h3>
-          <p className="mt-0.5 text-xs text-foreground/50">
+          <p className="mt-0.5 text-xs text-foreground/70">
             {categoryName ?? "Sem categoria"} · {product.variants.length} variação(ões)
             {product.variants.length > 0 ? ` · ${totalStock} em estoque` : ""}
           </p>

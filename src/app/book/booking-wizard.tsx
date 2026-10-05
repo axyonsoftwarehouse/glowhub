@@ -106,6 +106,7 @@ export function BookingWizard({
       <div>
         <label className="text-xs font-medium text-foreground/60">Serviço</label>
         <select
+          aria-label="Serviço"
           value={serviceId}
           onChange={(e) => {
             setServiceId(e.target.value);
@@ -132,6 +133,7 @@ export function BookingWizard({
             Profissional
           </label>
           <select
+            aria-label="Profissional"
             value={professionalId}
             onChange={(e) => {
               setProfessionalId(e.target.value);
@@ -156,6 +158,7 @@ export function BookingWizard({
           <div>
             <label className="text-xs font-medium text-foreground/60">Filial</label>
             <select
+              aria-label="Filial"
               value={branchId}
               onChange={(e) => {
                 setBranchId(e.target.value);
@@ -176,6 +179,7 @@ export function BookingWizard({
             <label className="text-xs font-medium text-foreground/60">Data</label>
             <input
               type="date"
+              aria-label="Data"
               value={date}
               onChange={(e) => {
                 setDate(e.target.value);
@@ -227,18 +231,21 @@ export function BookingWizard({
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-3">
             <input
+              aria-label="Seu nome"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Seu nome"
               className={inputClass}
             />
             <input
+              aria-label="Telefone/WhatsApp"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="Telefone/WhatsApp"
               className={inputClass}
             />
             <input
+              aria-label="E-mail (opcional)"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="E-mail (opcional)"

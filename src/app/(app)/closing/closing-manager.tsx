@@ -60,7 +60,7 @@ export function ClosingManager({
       {canManage && (
         <section className="rounded-2xl border border-border bg-white/70 p-5">
           <h2 className="text-sm font-semibold">Fechar período</h2>
-          <p className="mt-1 text-xs text-foreground/50">
+          <p className="mt-1 text-xs text-foreground/70">
             Lançamentos com data dentro do período fechado passam a ser
             bloqueados. Apenas proprietários e administradores fecham/reabrem.
           </p>
@@ -72,6 +72,7 @@ export function ClosingManager({
               <input
                 type="date"
                 name="periodStart"
+                aria-label="Início"
                 defaultValue={defaultStart}
                 className={`mt-1 ${inputClass}`}
               />
@@ -86,6 +87,7 @@ export function ClosingManager({
               <input
                 type="date"
                 name="periodEnd"
+                aria-label="Fim"
                 defaultValue={defaultEnd}
                 className={`mt-1 ${inputClass}`}
               />
@@ -124,7 +126,7 @@ export function ClosingManager({
                   <p className="text-sm font-medium">
                     {formatDate(period.periodStart)} → {formatDate(period.periodEnd)}
                   </p>
-                  <p className="mt-0.5 text-xs text-foreground/50">
+                  <p className="mt-0.5 text-xs text-foreground/70">
                     {STATUS_LABELS[period.status]}
                     {period.closedAt
                       ? ` · fechado em ${period.closedAt.slice(0, 10)}`

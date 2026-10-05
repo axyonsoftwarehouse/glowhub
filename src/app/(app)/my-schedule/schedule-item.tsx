@@ -77,7 +77,7 @@ export function ScheduleItem({
           <p className="text-sm font-medium">
             {item.timeLabel} · {item.clientName}
           </p>
-          <p className="mt-0.5 text-xs text-foreground/50">
+          <p className="mt-0.5 text-xs text-foreground/70">
             {item.serviceName} · {item.branchName}
           </p>
         </div>

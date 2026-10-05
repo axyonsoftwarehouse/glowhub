@@ -88,7 +88,7 @@ export function ProfessionalCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="font-medium">{professional.name}</h3>
-          <p className="mt-0.5 text-xs text-foreground/50">
+          <p className="mt-0.5 text-xs text-foreground/70">
             {professional.serviceIds.length} serviço(s) ·{" "}
             {linkedBranchNames.length} filial(is)
             {professional.commissionBp > 0
@@ -123,7 +123,7 @@ export function ProfessionalCard({
             name="professionalId"
             value={professional.id}
           />
-          <span className="text-xs font-medium uppercase tracking-wide text-foreground/50">
+          <span className="text-xs font-medium uppercase tracking-wide text-foreground/70">
             Acesso
           </span>
           <select
@@ -154,7 +154,7 @@ export function ProfessionalCard({
         </form>
       ) : (
         linkedMember && (
-          <p className="mt-3 text-xs text-foreground/50">
+          <p className="mt-3 text-xs text-foreground/70">
             Acesso: {linkedMember.name}
           </p>
         )
