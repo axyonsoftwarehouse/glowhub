@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
@@ -96,7 +98,7 @@ export async function inviteMemberAction(
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite convidar." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/team");
@@ -130,7 +132,7 @@ export async function revokeInvitationAction(
     );
     if (removed.length === 0) return { status: "error", message: "Convite não encontrado." };
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/team");
@@ -204,7 +206,7 @@ export async function updateMemberRoleAction(
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite alterar papéis." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/team");
@@ -273,7 +275,7 @@ export async function removeMemberAction(
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite remover membros." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/team");

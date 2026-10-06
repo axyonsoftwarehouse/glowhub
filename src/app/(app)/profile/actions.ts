@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { profiles } from "@/db/schema";
@@ -69,7 +71,7 @@ export async function updateProfileAction(
         });
     });
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/profile");

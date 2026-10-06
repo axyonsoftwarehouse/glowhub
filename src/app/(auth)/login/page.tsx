@@ -36,7 +36,7 @@ export default async function LoginPage({
       {isConfigured() ? (
         <>
           <LoginForm redirectTo={safeNext(next)} />
-          {process.env.NEXT_PUBLIC_DEMO_LOGIN !== "false" && <DemoLoginButton />}
+          {process.env.NEXT_PUBLIC_DEMO_LOGIN === "true" && <DemoLoginButton />}
         </>
       ) : (
         <SetupNotice />

@@ -185,8 +185,9 @@ Browser ──► Next (RSC + Server Actions)
 - **Conta demo:** botão *"Entrar com conta demo"* na tela de login. Vincula o
   usuário como **owner de 3 tenants** (`demo`, `studio-bella`, `clinica-lumina`)
   → use o seletor **Empresa**. Também vincula a um profissional de `demo`,
-  habilitando a visão **Minha agenda**. Desativável com
-  `NEXT_PUBLIC_DEMO_LOGIN=false`.
+  habilitando a visão **Minha agenda**. Desativado por padrão: só funciona com
+  `NEXT_PUBLIC_DEMO_LOGIN=true` **e** `DEMO_PASSWORD` definidos (validado no
+  servidor, não apenas no botão).
 - **Dados demo:** `npm run seed:demo` recria os 3 tenants com cenário completo e
   ledger balanceado (catálogo, agenda, financeiro, pacotes, assinatura, cupons,
   gateway mock). Idempotente (não toca em outros dados).

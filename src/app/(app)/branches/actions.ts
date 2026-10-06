@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -94,7 +96,7 @@ export async function createBranchAction(
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar filiais." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/branches");
@@ -143,7 +145,7 @@ export async function updateBranchAction(
         fieldErrors: { slug: ["Já existe uma filial com este identificador."] },
       };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/branches");
@@ -174,7 +176,7 @@ export async function setBranchActiveAction(
       return { status: "error", message: "Sem permissão para alterar esta filial." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/branches");

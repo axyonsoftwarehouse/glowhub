@@ -51,11 +51,11 @@ export async function checkRateLimit(params: {
   }
 }
 
-export function clientKey(request: Request, scope: string): string {
-  const forwarded = request.headers.get("x-forwarded-for") ?? "";
+export function clientKey(headers: Headers, scope: string): string {
+  const forwarded = headers.get("x-forwarded-for") ?? "";
   const ip =
     forwarded.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
+    headers.get("x-real-ip") ||
     "unknown";
   return `${scope}:${ip}`;
 }

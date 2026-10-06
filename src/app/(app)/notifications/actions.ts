@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { and, asc, eq } from "drizzle-orm";
-import { notifications } from "@/db/schema";
+import { notifications, memberships } from "@/db/schema";
 import { withUser } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import type { NotificationActionState } from "./types";
+
+const SENDER_ROLES = ["owner", "admin", "manager", "staff"];
 
 export async function processNotificationsAction(): Promise<NotificationActionState> {
   const tenant = await getCurrentTenant();
@@ -15,6 +17,20 @@ export async function processNotificationsAction(): Promise<NotificationActionSt
   const session = await getSession();
   if (!session?.user) return { status: "error", message: "Sessão expirada." };
   const userId = session.user.id;
+
+  const role = await withUser(userId, async (tx) => {
+    const [membership] = await tx
+      .select({ role: memberships.role })
+      .from(memberships)
+      .where(
+        and(eq(memberships.tenantId, tenant.id), eq(memberships.userId, userId)),
+      )
+      .limit(1);
+    return membership?.role ?? null;
+  });
+  if (!role || !SENDER_ROLES.includes(role)) {
+    return { status: "error", message: "Seu papel não permite enviar notificações." };
+  }
 
   const pending = await withUser(userId, (tx) =>
     tx
@@ -56,7 +72,12 @@ export async function processNotificationsAction(): Promise<NotificationActionSt
               }
             : { status: "failed", error: result.error },
         )
-        .where(eq(notifications.id, item.id)),
+        .where(
+          and(
+            eq(notifications.id, item.id),
+            eq(notifications.tenantId, tenant.id),
+          ),
+        ),
     );
     if (result.ok) sent += 1;
     else failed += 1;

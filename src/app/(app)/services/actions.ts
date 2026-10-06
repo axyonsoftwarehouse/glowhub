@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -138,7 +140,7 @@ export async function createCategoryAction(
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar categorias." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/services");
@@ -171,7 +173,7 @@ export async function setCategoryActiveAction(
       return { status: "error", message: "Sem permissão para alterar a categoria." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/services");
@@ -218,7 +220,7 @@ export async function createServiceAction(
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar serviços." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/services");
@@ -271,7 +273,7 @@ export async function updateServiceAction(
     if (errorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { name: ["Já existe um serviço com esse nome."] } };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/services");
@@ -301,7 +303,7 @@ export async function setServiceActiveAction(
       return { status: "error", message: "Sem permissão para alterar o serviço." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/services");
@@ -392,7 +394,7 @@ export async function upsertServiceBranchAction(
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite alterar." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/services");

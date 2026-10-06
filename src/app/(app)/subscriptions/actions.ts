@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq, gte, lte } from "drizzle-orm";
@@ -112,7 +114,7 @@ export async function createPlanAction(payload: {
     if (errorCode(cause) === "23505") {
       return { status: "error", message: "Já existe um plano com esse nome." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/subscriptions");
@@ -147,7 +149,7 @@ export async function setPlanActiveAction(
       return { status: "error", message: "Sem permissão para alterar o plano." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/subscriptions");
@@ -310,7 +312,7 @@ export async function subscribeAction(
     revalidatePath("/finance");
     return { status: "success", message: "Assinatura criada." };
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 }
 
@@ -391,7 +393,7 @@ export async function renewSubscriptionAction(
     revalidatePath("/finance");
     return { status: "success", message: "Assinatura renovada." };
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 }
 
@@ -422,7 +424,7 @@ export async function cancelSubscriptionAction(
       return { status: "error", message: "Assinatura não encontrada." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/subscriptions");
@@ -450,7 +452,7 @@ export async function runSubscriptionBillingAction(): Promise<SubscriptionAction
           : "Nenhuma assinatura vencida.",
     };
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 }
 
@@ -551,6 +553,6 @@ export async function redeemSubscriptionServiceAction(
     revalidatePath("/subscriptions");
     return { status: "success", message: "Consumo registrado." };
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 }

@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
   if (rule) {
     const result = await checkRateLimit({
-      key: clientKey(request, rule.scope),
+      key: clientKey(request.headers, rule.scope),
       limit: rule.limit,
       windowSeconds: rule.windowSeconds,
     });

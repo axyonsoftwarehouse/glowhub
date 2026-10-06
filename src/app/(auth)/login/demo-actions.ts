@@ -14,7 +14,6 @@ import {
 } from "@/db/schema";
 
 const DEMO_EMAIL = process.env.DEMO_EMAIL?.trim() || "demo@glowhub.app";
-const DEMO_PASSWORD = process.env.DEMO_PASSWORD || "demo123456";
 const DEMO_TENANT_SLUG = process.env.DEMO_TENANT_SLUG?.trim() || "demo";
 const DEMO_EXTRA_SLUGS = (process.env.DEMO_EXTRA_TENANTS ?? "studio-bella,clinica-lumina")
   .split(",")
@@ -26,23 +25,36 @@ export type DemoLoginResult = { error: string };
 /**
  * Login de demonstracao: garante que a conta demo exista (cria no primeiro
  * acesso), vincula como owner do tenant demo e entra. Para a equipe testar sem
- * criar conta. Pode ser desativado com NEXT_PUBLIC_DEMO_LOGIN=false.
+ * criar conta.
+ *
+ * Desativado por padrao: so funciona com `NEXT_PUBLIC_DEMO_LOGIN=true` E
+ * `DEMO_PASSWORD` definido. O botao na tela e apenas a UI; esta action valida o
+ * flag no servidor, entao desliga-la nao depende de esconder o botao.
  */
 export async function demoLoginAction(): Promise<DemoLoginResult | void> {
+  if (process.env.NEXT_PUBLIC_DEMO_LOGIN !== "true") {
+    return { error: "O login de demonstração está desativado." };
+  }
+
+  const password = process.env.DEMO_PASSWORD;
+  if (!password) {
+    return { error: "O login de demonstração não está configurado." };
+  }
+
   const requestHeaders = await headers();
 
   let userId: string | null = null;
 
   try {
     const result = await auth.api.signInEmail({
-      body: { email: DEMO_EMAIL, password: DEMO_PASSWORD },
+      body: { email: DEMO_EMAIL, password },
       headers: requestHeaders,
     });
     userId = result.user.id;
   } catch {
     try {
       const result = await auth.api.signUpEmail({
-        body: { email: DEMO_EMAIL, password: DEMO_PASSWORD, name: "Conta Demo" },
+        body: { email: DEMO_EMAIL, password, name: "Conta Demo" },
         headers: requestHeaders,
       });
       userId = result.user.id;

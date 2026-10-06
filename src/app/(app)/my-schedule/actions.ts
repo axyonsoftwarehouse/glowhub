@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import {
@@ -163,7 +165,7 @@ export async function setMyAppointmentStatusAction(
     if (code === "42501") {
       return error("Seu papel não permite alterar o status.");
     }
-    return error(String(cause));
+    return error(internalError(cause));
   }
 
   revalidatePath("/my-schedule");

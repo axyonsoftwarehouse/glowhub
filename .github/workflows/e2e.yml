@@ -17,6 +17,7 @@ jobs:
       NEXT_PUBLIC_ROOT_DOMAIN: glowhub.app
       DEFAULT_TENANT_SLUG: demo
       NEXT_PUBLIC_DEMO_LOGIN: "true"
+      DEMO_PASSWORD: "demo123456"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

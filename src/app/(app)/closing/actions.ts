@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { revalidatePath } from "next/cache";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { z } from "zod";
@@ -135,7 +137,7 @@ export async function closePeriodAction(
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite fechar períodos." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/closing");
@@ -170,7 +172,7 @@ export async function reopenPeriodAction(
       return { status: "error", message: "Sem permissão para reabrir o período." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/closing");

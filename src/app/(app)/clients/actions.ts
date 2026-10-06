@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -91,7 +93,7 @@ export async function createClientAction(
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar clientes." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/clients");
@@ -133,7 +135,7 @@ export async function updateClientAction(
     if (errorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { email: ["Já existe um cliente com esse e-mail."] } };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/clients");
@@ -163,7 +165,7 @@ export async function setClientActiveAction(
       return { status: "error", message: "Sem permissão para alterar este cliente." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/clients");

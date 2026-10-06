@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -130,7 +132,7 @@ export async function saveWeeklyHoursAction(payload: {
       }
     });
   } catch (cause) {
-    return error(String(cause));
+    return error(internalError(cause));
   }
 
   revalidatePath("/schedule");
@@ -199,7 +201,7 @@ export async function addClosureAction(
       });
     });
   } catch (cause) {
-    return error(String(cause));
+    return error(internalError(cause));
   }
 
   revalidatePath("/schedule");
@@ -230,7 +232,7 @@ export async function removeClosureAction(
     );
     if (removed.length === 0) return error("Bloqueio não encontrado.");
   } catch (cause) {
-    return error(String(cause));
+    return error(internalError(cause));
   }
 
   revalidatePath("/schedule");

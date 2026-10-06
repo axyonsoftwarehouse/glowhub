@@ -1,17 +1,34 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
+import { headers } from "next/headers";
 import { and, eq, sql } from "drizzle-orm";
 import { appointments, clients } from "@/db/schema";
 import { computeSlotsForDay } from "@/lib/availability-data";
 import { getDb } from "@/lib/db";
 import { enqueueEmail } from "@/lib/notifications";
-import { getCurrentTenant } from "@/lib/tenant";
+import { checkRateLimit, clientKey } from "@/lib/rate-limit";
+import { getPublicTenant } from "@/lib/tenant";
 import { zonedTimeToUtc } from "@/lib/timezone";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+async function withinRateLimit(
+  scope: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<boolean> {
+  const result = await checkRateLimit({
+    key: clientKey(await headers(), scope),
+    limit,
+    windowSeconds,
+  });
+  return result.allowed;
+}
 
 export type PublicBookingResult =
   | { ok: true; label: string }
@@ -32,7 +49,11 @@ export async function getPublicAvailabilityAction(input: {
     return { error: "Dados inválidos." };
   }
 
-  const tenant = await getCurrentTenant();
+  if (!(await withinRateLimit("book:availability", 60, 60))) {
+    return { error: "Muitas solicitações. Aguarde um instante." };
+  }
+
+  const tenant = await getPublicTenant();
   if (!tenant) return { error: "Empresa não encontrada." };
 
   try {
@@ -42,7 +63,7 @@ export async function getPublicAvailabilityAction(input: {
     if ("error" in result) return result;
     return { slots: result.slots };
   } catch (cause) {
-    return { error: String(cause) };
+    return { error: internalError(cause) };
   }
 }
 
@@ -73,7 +94,11 @@ export async function createPublicBookingAction(input: {
   if (name.length < 2) return { error: "Informe seu nome." };
   if (phone.length < 8) return { error: "Informe um telefone válido." };
 
-  const tenant = await getCurrentTenant();
+  if (!(await withinRateLimit("book:create", 10, 600))) {
+    return { error: "Muitas solicitações. Tente novamente mais tarde." };
+  }
+
+  const tenant = await getPublicTenant();
   if (!tenant) return { error: "Empresa não encontrada." };
 
   try {

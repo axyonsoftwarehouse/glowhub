@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { appointments, clients, memberships, tenants } from "@/db/schema";
@@ -146,7 +148,7 @@ export async function createAppointmentAction(
     if (errorCode(cause) === "42501") {
       return error("Seu papel não permite agendar.");
     }
-    return error(String(cause));
+    return error(internalError(cause));
   }
 
   revalidatePath("/appointments");
@@ -240,7 +242,7 @@ export async function setAppointmentStatusAction(
 
     if ("error" in result) return error(result.error);
   } catch (cause) {
-    return error(String(cause));
+    return error(internalError(cause));
   }
 
   revalidatePath("/appointments");

@@ -8,6 +8,41 @@ import { getSession } from "@/lib/session";
 
 export const TENANT_HEADER = "x-tenant-slug";
 
+/** Resolve o slug a partir do host (subdominio), sem confiar em headers/query. */
+function slugFromHost(host: string): string | null {
+  const clean = host.split(":")[0].toLowerCase();
+
+  if (clean.endsWith(".localhost")) {
+    const sub = clean.slice(0, -".localhost".length);
+    return sub && sub !== "www" ? sub : null;
+  }
+
+  const root = (getEnv().NEXT_PUBLIC_ROOT_DOMAIN ?? "").toLowerCase();
+  if (root && clean !== root && clean.endsWith(`.${root}`)) {
+    const sub = clean.slice(0, -(root.length + 1));
+    if (sub && sub !== "www" && sub !== "app" && sub !== "api") return sub;
+  }
+
+  return null;
+}
+
+/**
+ * Tenant do canal PUBLICO: resolvido estritamente pelo host da requisicao
+ * (com fallback em DEFAULT_TENANT_SLUG). Nao usa o header `x-tenant-slug` nem
+ * `?tenant=`, que sao influenciaveis pelo cliente. Usar em `/book` e actions
+ * publicas.
+ */
+export const getPublicTenant = cache(
+  async (): Promise<CurrentTenant | null> => {
+    if (!isConfigured()) return null;
+    const requestHeaders = await headers();
+    const host = requestHeaders.get("host") ?? "";
+    const slug = slugFromHost(host) ?? getEnv().DEFAULT_TENANT_SLUG ?? null;
+    if (!slug) return null;
+    return loadTenantBySlug(slug);
+  },
+);
+
 export type CurrentTenant = {
   id: string;
   slug: string;

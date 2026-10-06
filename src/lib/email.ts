@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 export type EmailResult =
   | { ok: true; id: string }
   | { ok: false; error: string };
@@ -43,6 +45,9 @@ export async function sendEmail(params: {
     const data = (await response.json()) as { id?: string };
     return { ok: true, id: data.id ?? "unknown" };
   } catch (cause) {
-    return { ok: false, error: String(cause) };
+    logger.error("email_send_failed", {
+      error: cause instanceof Error ? cause.message : String(cause),
+    });
+    return { ok: false, error: "Falha ao enviar e-mail." };
   }
 }

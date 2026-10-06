@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { charges, payments } from "@/db/schema";
@@ -114,6 +116,6 @@ export async function confirmPaymentAction(
       message: result.already ? "Já estava conciliado." : "Pagamento conciliado.",
     };
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 }

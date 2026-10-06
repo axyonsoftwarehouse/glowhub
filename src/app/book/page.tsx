@@ -7,7 +7,7 @@ import {
   services,
 } from "@/db/schema";
 import { getDb } from "@/lib/db";
-import { getCurrentTenant } from "@/lib/tenant";
+import { getPublicTenant } from "@/lib/tenant";
 import { BookingWizard } from "./booking-wizard";
 import type {
   BookingBranch,
@@ -18,7 +18,7 @@ import type {
 export const dynamic = "force-dynamic";
 
 export default async function PublicBookingPage() {
-  const tenant = await getCurrentTenant();
+  const tenant = await getPublicTenant();
 
   if (!tenant) {
     return (

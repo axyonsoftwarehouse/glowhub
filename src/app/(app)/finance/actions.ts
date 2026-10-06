@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
@@ -124,7 +126,7 @@ export async function createAccountAction(
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar contas." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/finance");
@@ -156,7 +158,7 @@ export async function setAccountActiveAction(
       return { status: "error", message: "Sem permissão para alterar a conta." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/finance");
@@ -197,7 +199,7 @@ export async function createDefaultChartAction(): Promise<FinanceActionState> {
       }
     });
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/finance");
@@ -301,7 +303,7 @@ export async function postJournalEntryAction(payload: {
     if (message.includes("append-only")) {
       return { status: "error", message: "Ledger é append-only." };
     }
-    return { status: "error", message };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/finance");
@@ -499,7 +501,7 @@ export async function createChargeAction(
     if (message.includes("not balanced")) {
       return { status: "error", message: "Lançamento desbalanceado." };
     }
-    return { status: "error", message };
+    return { status: "error", message: internalError(cause) };
   }
 }
 
@@ -741,7 +743,7 @@ export async function registerPaymentAction(
       message: result.already ? "Cobrança já está quitada." : "Pagamento registrado.",
     };
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 }
 
@@ -878,7 +880,7 @@ export async function payProfessionalAction(
       message: result.already ? "Nada a repassar." : "Repasse registrado.",
     };
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 }
 
@@ -962,6 +964,6 @@ export async function addWalletCreditAction(
     revalidatePath("/finance");
     return { status: "success", message: "Crédito adicionado à carteira." };
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 }

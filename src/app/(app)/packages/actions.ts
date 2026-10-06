@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
@@ -117,7 +119,7 @@ export async function createPackageAction(payload: {
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar pacotes." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/packages");
@@ -147,7 +149,7 @@ export async function setPackageActiveAction(
       return { status: "error", message: "Sem permissão para alterar o pacote." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/packages");
@@ -245,7 +247,7 @@ export async function sellPackageAction(
     revalidatePath("/finance");
     return { status: "success", message: "Pacote vendido." };
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 }
 
@@ -358,6 +360,6 @@ export async function redeemPackageServiceAction(
     revalidatePath("/finance");
     return { status: "success", message: "Resgate registrado." };
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 }

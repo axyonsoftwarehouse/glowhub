@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -121,7 +123,7 @@ export async function createCouponAction(
     if (errorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { code: ["Já existe um cupom com esse código."] } };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/coupons");
@@ -151,7 +153,7 @@ export async function setCouponActiveAction(
       return { status: "error", message: "Sem permissão para alterar o cupom." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/coupons");
@@ -280,6 +282,6 @@ export async function applyCouponAction(
     revalidatePath("/finance");
     return { status: "success", message: "Cupom aplicado." };
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 }

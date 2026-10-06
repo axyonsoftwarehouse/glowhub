@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray, notInArray } from "drizzle-orm";
 import { z } from "zod";
@@ -88,7 +90,7 @@ export async function createProfessionalAction(
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar profissionais." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/professionals");
@@ -137,7 +139,7 @@ export async function updateProfessionalAction(
     if (errorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { name: ["Já existe um profissional com esse nome."] } };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/professionals");
@@ -172,7 +174,7 @@ export async function setProfessionalActiveAction(
       return { status: "error", message: "Sem permissão para alterar este profissional." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/professionals");
@@ -239,7 +241,7 @@ export async function linkProfessionalUserAction(
       return { status: "error", message: "Sem permissão para editar este profissional." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/professionals");
@@ -357,7 +359,7 @@ export async function updateProfessionalLinksAction(
         );
     });
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/professionals");

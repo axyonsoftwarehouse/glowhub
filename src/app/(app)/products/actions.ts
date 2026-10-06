@@ -1,5 +1,7 @@
 "use server";
 
+import { internalError } from "@/lib/errors";
+
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -201,7 +203,7 @@ export async function createProductAction(
     if (errorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar produtos." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/products");
@@ -256,7 +258,7 @@ export async function updateProductAction(
     if (errorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { name: ["Já existe um produto com esse nome."] } };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/products");
@@ -286,7 +288,7 @@ export async function setProductActiveAction(
       return { status: "error", message: "Sem permissão para alterar este produto." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/products");
@@ -332,7 +334,7 @@ export async function createVariantAction(
     if (errorCode(cause) === "23505") {
       return { status: "error", message: "Já existe uma variação com esse nome ou SKU." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/products");
@@ -379,7 +381,7 @@ export async function updateVariantAction(
     if (errorCode(cause) === "23505") {
       return { status: "error", message: "Já existe uma variação com esse nome ou SKU." };
     }
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/products");
@@ -414,7 +416,7 @@ export async function setVariantActiveAction(
       return { status: "error", message: "Sem permissão para alterar esta variação." };
     }
   } catch (cause) {
-    return { status: "error", message: String(cause) };
+    return { status: "error", message: internalError(cause) };
   }
 
   revalidatePath("/products");

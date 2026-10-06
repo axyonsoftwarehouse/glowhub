@@ -1,15 +1,54 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { webhookEvents } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { logger } from "@/lib/logger";
 
+/** Limite de tamanho do corpo (evita payloads gigantes / abuso da tabela). */
+const MAX_BODY_BYTES = 256 * 1024;
+
+const PROVIDER_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
+
+/**
+ * Segredo do provedor: `WEBHOOK_<PROVIDER>_SECRET` (especifico) ou
+ * `WEBHOOK_SECRET` (global). Sem segredo configurado, o endpoint rejeita.
+ */
+function getSecret(provider: string): string | null {
+  const specific = `WEBHOOK_${provider.toUpperCase().replace(/[^A-Z0-9]/g, "_")}_SECRET`;
+  return process.env[specific] ?? process.env.WEBHOOK_SECRET ?? null;
+}
+
+/**
+ * Verifica HMAC-SHA256 do corpo bruto. Aceita `sha256=<hex>` ou `<hex>` nos
+ * cabecalhos `x-webhook-signature` / `x-signature`. Comparacao em tempo constante.
+ */
+function verifySignature(
+  raw: string,
+  signature: string | null,
+  secret: string,
+): boolean {
+  if (!signature) return false;
+  const providedHex = signature.includes("=")
+    ? signature.slice(signature.indexOf("=") + 1)
+    : signature;
+  const expected = createHmac("sha256", secret).update(raw).digest();
+  let provided: Buffer;
+  try {
+    provided = Buffer.from(providedHex.trim(), "hex");
+  } catch {
+    return false;
+  }
+  if (provided.length !== expected.length) return false;
+  return timingSafeEqual(provided, expected);
+}
+
 /**
  * Endpoint generico de webhook de pagamento.
- * Cada provedor registra a URL `/api/webhooks/<provider>`. Os eventos sao
- * gravados de forma IDEMPOTENTE (unique provider + event_id); a confirmacao do
- * pagamento deve ser adicionada por provedor, com validacao de assinatura
- * (segredo via env).
+ * Cada provedor registra a URL `/api/webhooks/<provider>` e configura um segredo
+ * (`WEBHOOK_<PROVIDER>_SECRET`). O corpo e validado por assinatura HMAC antes de
+ * qualquer gravacao; os eventos sao gravados de forma IDEMPOTENTE (unique
+ * provider + event_id). A confirmacao do pagamento deve ser adicionada por
+ * provedor, de forma idempotente e lancando no ledger.
  */
 export async function POST(
   request: Request,
@@ -17,7 +56,33 @@ export async function POST(
 ) {
   const { provider } = await params;
 
+  if (!PROVIDER_RE.test(provider)) {
+    return Response.json({ error: "Provedor inválido." }, { status: 404 });
+  }
+
   const raw = await request.text();
+  if (raw.length > MAX_BODY_BYTES) {
+    return Response.json({ error: "Payload muito grande." }, { status: 413 });
+  }
+
+  const secret = getSecret(provider);
+  if (!secret) {
+    // Sem segredo nao ha como autenticar: nao aceitar eventos (safe by default).
+    logger.warn("webhook_not_configured", { provider });
+    return Response.json(
+      { error: "Webhook não configurado." },
+      { status: 503 },
+    );
+  }
+
+  const signature =
+    request.headers.get("x-webhook-signature") ??
+    request.headers.get("x-signature");
+  if (!verifySignature(raw, signature, secret)) {
+    logger.warn("webhook_invalid_signature", { provider });
+    return Response.json({ error: "Assinatura inválida." }, { status: 401 });
+  }
+
   let payload: unknown;
   try {
     payload = JSON.parse(raw);
@@ -25,7 +90,6 @@ export async function POST(
     payload = { raw };
   }
 
-  // TODO(provider): validar assinatura (cabecalho do provedor + segredo).
   const eventId =
     request.headers.get("x-webhook-id") ??
     extractEventId(payload) ??
@@ -56,7 +120,7 @@ export async function POST(
   } catch (cause) {
     logger.error("webhook_failed", { provider, eventId, error: String(cause) });
     return Response.json(
-      { error: "Falha ao processar webhook.", detail: String(cause) },
+      { error: "Falha ao processar webhook." },
       { status: 500 },
     );
   }
