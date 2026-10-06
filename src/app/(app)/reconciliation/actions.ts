@@ -1,5 +1,7 @@
 "use server";
 
+import { isUuid } from "@/lib/validation";
+
 import { internalError } from "@/lib/errors";
 
 import { revalidatePath } from "next/cache";
@@ -21,7 +23,7 @@ export async function confirmPaymentAction(
   formData: FormData,
 ): Promise<ReconcileState> {
   const paymentId = String(formData.get("paymentId") ?? "");
-  if (!paymentId) return { status: "error", message: "Pagamento inválido." };
+  if (!isUuid(paymentId)) return { status: "error", message: "Pagamento inválido." };
 
   const tenant = await getCurrentTenant();
   if (!tenant) return { status: "error", message: "Empresa não resolvida." };
@@ -79,7 +81,9 @@ export async function confirmPaymentAction(
       await tx
         .update(payments)
         .set({ status: "confirmed", entryId })
-        .where(eq(payments.id, payment.id));
+        .where(
+          and(eq(payments.id, payment.id), eq(payments.tenantId, tenant.id)),
+        );
 
       const confirmed = await tx
         .select({ amountCents: payments.amountCents })
@@ -87,6 +91,7 @@ export async function confirmPaymentAction(
         .where(
           and(
             eq(payments.chargeId, payment.chargeId),
+            eq(payments.tenantId, tenant.id),
             eq(payments.status, "confirmed"),
           ),
         );
@@ -95,14 +100,21 @@ export async function confirmPaymentAction(
       const [charge] = await tx
         .select({ totalCents: charges.totalCents })
         .from(charges)
-        .where(eq(charges.id, payment.chargeId))
+        .where(
+          and(eq(charges.id, payment.chargeId), eq(charges.tenantId, tenant.id)),
+        )
         .limit(1);
 
       if (charge && paid >= charge.totalCents) {
         await tx
           .update(charges)
           .set({ status: "paid", settlementEntryId: entryId })
-          .where(eq(charges.id, payment.chargeId));
+          .where(
+            and(
+              eq(charges.id, payment.chargeId),
+              eq(charges.tenantId, tenant.id),
+            ),
+          );
       }
 
       return { ok: true as const, already: false };

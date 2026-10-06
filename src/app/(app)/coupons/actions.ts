@@ -2,6 +2,8 @@
 
 import { internalError } from "@/lib/errors";
 
+import { isUuid } from "@/lib/validation";
+
 import { revalidatePath } from "next/cache";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -136,7 +138,7 @@ export async function setCouponActiveAction(
 ): Promise<CouponActionState> {
   const id = String(formData.get("id") ?? "");
   const isActive = String(formData.get("is_active") ?? "") === "true";
-  if (!id) return { status: "error", message: "Cupom inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Cupom inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -166,7 +168,7 @@ export async function applyCouponAction(
 ): Promise<CouponActionState> {
   const chargeId = String(formData.get("chargeId") ?? "");
   const code = String(formData.get("code") ?? "").trim();
-  if (!chargeId || !code) {
+  if (!isUuid(chargeId) || !code) {
     return { status: "error", message: "Informe o cupom." };
   }
 
@@ -244,7 +246,9 @@ export async function applyCouponAction(
       await tx
         .update(charges)
         .set({ totalCents: charge.totalCents - amount })
-        .where(eq(charges.id, charge.id));
+        .where(
+          and(eq(charges.id, charge.id), eq(charges.tenantId, ctx.tenant.id)),
+        );
 
       const entryId = await postEntry(tx, {
         tenantId: ctx.tenant.id,
@@ -272,7 +276,9 @@ export async function applyCouponAction(
       await tx
         .update(coupons)
         .set({ usedCount: coupon.usedCount + 1 })
-        .where(eq(coupons.id, coupon.id));
+        .where(
+          and(eq(coupons.id, coupon.id), eq(coupons.tenantId, ctx.tenant.id)),
+        );
 
       return { ok: true as const };
     });

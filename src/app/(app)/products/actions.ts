@@ -1,5 +1,7 @@
 "use server";
 
+import { isUuid } from "@/lib/validation";
+
 import { internalError } from "@/lib/errors";
 
 import { revalidatePath } from "next/cache";
@@ -215,7 +217,7 @@ export async function updateProductAction(
   formData: FormData,
 ): Promise<ProductActionState> {
   const id = String(formData.get("id") ?? "");
-  if (!id) return { status: "error", message: "Produto inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Produto inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -271,7 +273,7 @@ export async function setProductActiveAction(
 ): Promise<ProductActionState> {
   const id = String(formData.get("id") ?? "");
   const isActive = String(formData.get("is_active") ?? "") === "true";
-  if (!id) return { status: "error", message: "Produto inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Produto inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -300,7 +302,7 @@ export async function createVariantAction(
   formData: FormData,
 ): Promise<ProductActionState> {
   const productId = String(formData.get("productId") ?? "");
-  if (!productId) return { status: "error", message: "Produto inválido." };
+  if (!isUuid(productId)) return { status: "error", message: "Produto inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -346,7 +348,7 @@ export async function updateVariantAction(
   formData: FormData,
 ): Promise<ProductActionState> {
   const id = String(formData.get("id") ?? "");
-  if (!id) return { status: "error", message: "Variação inválida." };
+  if (!isUuid(id)) return { status: "error", message: "Variação inválida." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -394,7 +396,7 @@ export async function setVariantActiveAction(
 ): Promise<ProductActionState> {
   const id = String(formData.get("id") ?? "");
   const isActive = String(formData.get("is_active") ?? "") === "true";
-  if (!id) return { status: "error", message: "Variação inválida." };
+  if (!isUuid(id)) return { status: "error", message: "Variação inválida." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };

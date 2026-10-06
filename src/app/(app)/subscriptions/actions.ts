@@ -1,5 +1,7 @@
 "use server";
 
+import { isUuid } from "@/lib/validation";
+
 import { internalError } from "@/lib/errors";
 
 import { randomUUID } from "node:crypto";
@@ -127,7 +129,7 @@ export async function setPlanActiveAction(
 ): Promise<SubscriptionActionState> {
   const id = String(formData.get("id") ?? "");
   const isActive = String(formData.get("is_active") ?? "") === "true";
-  if (!id) return { status: "error", message: "Plano inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Plano inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -245,7 +247,7 @@ export async function subscribeAction(
   const clientId = String(formData.get("clientId") ?? "");
   const planId = String(formData.get("planId") ?? "");
   const method = (String(formData.get("method") ?? "cash") || "cash") as PaymentMethod;
-  if (!clientId || !planId) {
+  if (!isUuid(clientId) || !isUuid(planId)) {
     return { status: "error", message: "Selecione o cliente e o plano." };
   }
 
@@ -322,7 +324,7 @@ export async function renewSubscriptionAction(
 ): Promise<SubscriptionActionState> {
   const id = String(formData.get("id") ?? "");
   const method = (String(formData.get("method") ?? "cash") || "cash") as PaymentMethod;
-  if (!id) return { status: "error", message: "Assinatura inválida." };
+  if (!isUuid(id)) return { status: "error", message: "Assinatura inválida." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -383,7 +385,12 @@ export async function renewSubscriptionAction(
           currentPeriodEnd: newEnd,
           status: "active",
         })
-        .where(eq(clientSubscriptions.id, subscription.id));
+        .where(
+          and(
+            eq(clientSubscriptions.id, subscription.id),
+            eq(clientSubscriptions.tenantId, ctx.tenant.id),
+          ),
+        );
 
       return { ok: true as const };
     });
@@ -402,7 +409,7 @@ export async function cancelSubscriptionAction(
   formData: FormData,
 ): Promise<SubscriptionActionState> {
   const id = String(formData.get("id") ?? "");
-  if (!id) return { status: "error", message: "Assinatura inválida." };
+  if (!isUuid(id)) return { status: "error", message: "Assinatura inválida." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -462,7 +469,7 @@ export async function redeemSubscriptionServiceAction(
 ): Promise<SubscriptionActionState> {
   const subscriptionId = String(formData.get("subscriptionId") ?? "");
   const serviceId = String(formData.get("serviceId") ?? "");
-  if (!subscriptionId || !serviceId) {
+  if (!isUuid(subscriptionId) || !isUuid(serviceId)) {
     return { status: "error", message: "Dados incompletos." };
   }
 

@@ -1,5 +1,7 @@
 "use server";
 
+import { isUuid } from "@/lib/validation";
+
 import { internalError } from "@/lib/errors";
 
 import { revalidatePath } from "next/cache";
@@ -102,7 +104,7 @@ export async function updateProfessionalAction(
   formData: FormData,
 ): Promise<ProfessionalActionState> {
   const id = String(formData.get("id") ?? "");
-  if (!id) return { status: "error", message: "Profissional inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Profissional inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -152,7 +154,7 @@ export async function setProfessionalActiveAction(
 ): Promise<ProfessionalActionState> {
   const id = String(formData.get("id") ?? "");
   const isActive = String(formData.get("is_active") ?? "") === "true";
-  if (!id) return { status: "error", message: "Profissional inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Profissional inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -188,7 +190,7 @@ export async function linkProfessionalUserAction(
   const professionalId = String(formData.get("professionalId") ?? "");
   const rawUserId = String(formData.get("userId") ?? "");
   const userId = rawUserId === "" ? null : rawUserId;
-  if (!professionalId) {
+  if (!isUuid(professionalId)) {
     return { status: "error", message: "Profissional inválido." };
   }
 
@@ -267,7 +269,7 @@ export async function updateProfessionalLinksAction(
   formData: FormData,
 ): Promise<ProfessionalActionState> {
   const professionalId = String(formData.get("professionalId") ?? "");
-  if (!professionalId) {
+  if (!isUuid(professionalId)) {
     return { status: "error", message: "Profissional inválido." };
   }
 

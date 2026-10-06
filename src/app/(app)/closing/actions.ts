@@ -1,5 +1,7 @@
 "use server";
 
+import { isUuid } from "@/lib/validation";
+
 import { internalError } from "@/lib/errors";
 
 import { revalidatePath } from "next/cache";
@@ -150,14 +152,28 @@ export async function reopenPeriodAction(
   formData: FormData,
 ): Promise<ClosingActionState> {
   const id = String(formData.get("id") ?? "");
-  if (!id) return { status: "error", message: "Período inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Período inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
 
   try {
-    const updated = await withUser(ctx.userId, async (tx) =>
-      tx
+    const result = await withUser(ctx.userId, async (tx) => {
+      const [membership] = await tx
+        .select({ role: memberships.role })
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.tenantId, ctx.tenant.id),
+            eq(memberships.userId, ctx.userId),
+          ),
+        )
+        .limit(1);
+      if (!CLOSE_ROLES.includes(membership?.role ?? "")) {
+        return { error: "Apenas proprietários e administradores podem reabrir períodos." };
+      }
+
+      const updated = await tx
         .update(accountingPeriods)
         .set({ status: "open", reopenedAt: new Date() })
         .where(
@@ -166,12 +182,18 @@ export async function reopenPeriodAction(
             eq(accountingPeriods.tenantId, ctx.tenant.id),
           ),
         )
-        .returning({ id: accountingPeriods.id }),
-    );
-    if (updated.length === 0) {
-      return { status: "error", message: "Sem permissão para reabrir o período." };
-    }
+        .returning({ id: accountingPeriods.id });
+      if (updated.length === 0) {
+        return { error: "Período não encontrado." };
+      }
+      return { ok: true as const };
+    });
+
+    if ("error" in result) return { status: "error", message: result.error };
   } catch (cause) {
+    if (errorCode(cause) === "42501") {
+      return { status: "error", message: "Seu papel não permite reabrir períodos." };
+    }
     return { status: "error", message: internalError(cause) };
   }
 

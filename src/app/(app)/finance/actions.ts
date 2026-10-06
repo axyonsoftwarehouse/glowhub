@@ -1,5 +1,7 @@
 "use server";
 
+import { isUuid } from "@/lib/validation";
+
 import { internalError } from "@/lib/errors";
 
 import { randomUUID } from "node:crypto";
@@ -139,7 +141,7 @@ export async function setAccountActiveAction(
 ): Promise<FinanceActionState> {
   const id = String(formData.get("id") ?? "");
   const isActive = String(formData.get("is_active") ?? "") === "true";
-  if (!id) return { status: "error", message: "Conta inválida." };
+  if (!isUuid(id)) return { status: "error", message: "Conta inválida." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -313,7 +315,7 @@ export async function postJournalEntryAction(payload: {
 export async function createChargeAction(
   appointmentId: string,
 ): Promise<FinanceActionState> {
-  if (!appointmentId) return { status: "error", message: "Agendamento inválido." };
+  if (!isUuid(appointmentId)) return { status: "error", message: "Agendamento inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -534,7 +536,7 @@ export async function registerPaymentAction(
   const tipRaw = String(formData.get("tip") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
 
-  if (!chargeId) return { status: "error", message: "Cobrança inválida." };
+  if (!isUuid(chargeId)) return { status: "error", message: "Cobrança inválida." };
   if (!PAYMENT_METHODS.includes(method)) {
     return { status: "error", message: "Forma de pagamento inválida." };
   }
@@ -753,7 +755,7 @@ export async function payProfessionalAction(
 ): Promise<FinanceActionState> {
   const professionalId = String(formData.get("professionalId") ?? "");
   const method = String(formData.get("method") ?? "cash") as PaymentMethod;
-  if (!professionalId) return { status: "error", message: "Profissional inválido." };
+  if (!isUuid(professionalId)) return { status: "error", message: "Profissional inválido." };
   if (!PAYMENT_METHODS.includes(method)) {
     return { status: "error", message: "Forma de pagamento inválida." };
   }
@@ -892,7 +894,7 @@ export async function addWalletCreditAction(
   const method = String(formData.get("method") ?? "cash") as PaymentMethod;
   const amountRaw = String(formData.get("amount") ?? "").trim();
 
-  if (!clientId) return { status: "error", message: "Cliente inválido." };
+  if (!isUuid(clientId)) return { status: "error", message: "Cliente inválido." };
   if (!PAYMENT_METHODS.includes(method)) {
     return { status: "error", message: "Forma de pagamento inválida." };
   }

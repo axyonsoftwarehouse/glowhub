@@ -1,5 +1,7 @@
 "use server";
 
+import { isUuid } from "@/lib/validation";
+
 import { internalError } from "@/lib/errors";
 
 import { randomUUID } from "node:crypto";
@@ -132,7 +134,7 @@ export async function setPackageActiveAction(
 ): Promise<PackageActionState> {
   const id = String(formData.get("id") ?? "");
   const isActive = String(formData.get("is_active") ?? "") === "true";
-  if (!id) return { status: "error", message: "Pacote inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Pacote inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -163,7 +165,7 @@ export async function sellPackageAction(
   const clientId = String(formData.get("clientId") ?? "");
   const packageId = String(formData.get("packageId") ?? "");
   const method = (String(formData.get("method") ?? "cash") || "cash") as PaymentMethod;
-  if (!clientId || !packageId) {
+  if (!isUuid(clientId) || !isUuid(packageId)) {
     return { status: "error", message: "Selecione o cliente e o pacote." };
   }
 
@@ -237,7 +239,12 @@ export async function sellPackageAction(
       await tx
         .update(clientPackages)
         .set({ entryId })
-        .where(eq(clientPackages.id, sold.id));
+        .where(
+          and(
+            eq(clientPackages.id, sold.id),
+            eq(clientPackages.tenantId, ctx.tenant.id),
+          ),
+        );
 
       return { ok: true as const };
     });
@@ -290,7 +297,7 @@ export async function redeemPackageServiceAction(
 ): Promise<PackageActionState> {
   const clientPackageId = String(formData.get("clientPackageId") ?? "");
   const serviceId = String(formData.get("serviceId") ?? "");
-  if (!clientPackageId || !serviceId) {
+  if (!isUuid(clientPackageId) || !isUuid(serviceId)) {
     return { status: "error", message: "Dados incompletos." };
   }
 

@@ -1,5 +1,7 @@
 "use server";
 
+import { isUuid } from "@/lib/validation";
+
 import { internalError } from "@/lib/errors";
 
 import { revalidatePath } from "next/cache";
@@ -154,7 +156,7 @@ export async function setCategoryActiveAction(
 ): Promise<CatalogActionState> {
   const id = String(formData.get("id") ?? "");
   const isActive = String(formData.get("is_active") ?? "") === "true";
-  if (!id) return { status: "error", message: "Categoria inválida." };
+  if (!isUuid(id)) return { status: "error", message: "Categoria inválida." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -232,7 +234,7 @@ export async function updateServiceAction(
   formData: FormData,
 ): Promise<CatalogActionState> {
   const id = String(formData.get("id") ?? "");
-  if (!id) return { status: "error", message: "Serviço inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Serviço inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -286,7 +288,7 @@ export async function setServiceActiveAction(
 ): Promise<CatalogActionState> {
   const id = String(formData.get("id") ?? "");
   const isActive = String(formData.get("is_active") ?? "") === "true";
-  if (!id) return { status: "error", message: "Serviço inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Serviço inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -316,7 +318,7 @@ export async function upsertServiceBranchAction(
 ): Promise<CatalogActionState> {
   const serviceId = String(formData.get("serviceId") ?? "");
   const branchId = String(formData.get("branchId") ?? "");
-  if (!serviceId || !branchId) {
+  if (!isUuid(serviceId) || !isUuid(branchId)) {
     return { status: "error", message: "Dados incompletos." };
   }
 

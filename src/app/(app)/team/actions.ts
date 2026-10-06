@@ -1,5 +1,7 @@
 "use server";
 
+import { isUuid } from "@/lib/validation";
+
 import { internalError } from "@/lib/errors";
 
 import { randomBytes } from "node:crypto";
@@ -113,7 +115,7 @@ export async function revokeInvitationAction(
   formData: FormData,
 ): Promise<TeamActionState> {
   const id = String(formData.get("id") ?? "");
-  if (!id) return { status: "error", message: "Convite inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Convite inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -144,7 +146,7 @@ export async function updateMemberRoleAction(
   formData: FormData,
 ): Promise<TeamActionState> {
   const memberUserId = String(formData.get("userId") ?? "");
-  if (!memberUserId) return { status: "error", message: "Membro inválido." };
+  if (!isUuid(memberUserId)) return { status: "error", message: "Membro inválido." };
 
   const parsed = memberRoleInput.safeParse(formData.get("role") ?? "");
   if (!parsed.success) return { status: "error", message: "Papel inválido." };
@@ -218,7 +220,7 @@ export async function removeMemberAction(
   formData: FormData,
 ): Promise<TeamActionState> {
   const memberUserId = String(formData.get("userId") ?? "");
-  if (!memberUserId) return { status: "error", message: "Membro inválido." };
+  if (!isUuid(memberUserId)) return { status: "error", message: "Membro inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };

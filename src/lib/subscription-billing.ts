@@ -103,7 +103,12 @@ export async function billDueSubscriptions(
         currentPeriodEnd: newEnd,
         status: "active",
       })
-      .where(eq(clientSubscriptions.id, sub.id));
+      .where(
+        and(
+          eq(clientSubscriptions.id, sub.id),
+          eq(clientSubscriptions.tenantId, params.tenantId),
+        ),
+      );
 
     billed += 1;
   }

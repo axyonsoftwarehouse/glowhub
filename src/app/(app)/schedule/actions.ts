@@ -1,5 +1,7 @@
 "use server";
 
+import { isUuid } from "@/lib/validation";
+
 import { internalError } from "@/lib/errors";
 
 import { revalidatePath } from "next/cache";
@@ -213,7 +215,7 @@ export async function removeClosureAction(
   formData: FormData,
 ): Promise<ScheduleActionState> {
   const id = String(formData.get("id") ?? "");
-  if (!id) return error("Bloqueio inválido.");
+  if (!isUuid(id)) return error("Bloqueio inválido.");
 
   const ctx = await context();
   if ("error" in ctx) return error(ctx.error);

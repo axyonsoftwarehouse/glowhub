@@ -94,5 +94,7 @@ export async function applyNoShowFee(
   await tx
     .update(charges)
     .set({ revenueEntryId: entryId })
-    .where(eq(charges.id, charge.id));
+    .where(
+      and(eq(charges.id, charge.id), eq(charges.tenantId, params.tenantId)),
+    );
 }

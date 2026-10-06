@@ -1,5 +1,7 @@
 "use server";
 
+import { isUuid } from "@/lib/validation";
+
 import { internalError } from "@/lib/errors";
 
 import { revalidatePath } from "next/cache";
@@ -105,7 +107,7 @@ export async function updateClientAction(
   formData: FormData,
 ): Promise<ClientActionState> {
   const id = String(formData.get("id") ?? "");
-  if (!id) return { status: "error", message: "Cliente inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Cliente inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
@@ -148,7 +150,7 @@ export async function setClientActiveAction(
 ): Promise<ClientActionState> {
   const id = String(formData.get("id") ?? "");
   const isActive = String(formData.get("is_active") ?? "") === "true";
-  if (!id) return { status: "error", message: "Cliente inválido." };
+  if (!isUuid(id)) return { status: "error", message: "Cliente inválido." };
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };

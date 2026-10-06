@@ -328,3 +328,10 @@ revoke update, delete on public.journal_lines from glowhub_app;
 -- webhook_events e rate_limits sao internos (sem tenant_id; so admin).
 revoke all on public.webhook_events from glowhub_app;
 revoke all on public.rate_limits from glowhub_app;
+
+-- Tabelas do Better Auth sao geridas pela conexao admin (sem RLS). Revogar o
+-- acesso da role do app evita consultas via withUser sem isolamento.
+revoke all on public."user" from glowhub_app;
+revoke all on public.session from glowhub_app;
+revoke all on public.account from glowhub_app;
+revoke all on public.verification from glowhub_app;
