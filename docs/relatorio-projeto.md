@@ -4,10 +4,11 @@
 > o que o produto é, para quem, como está construído, o que falta e como
 > **retomar o trabalho** (handoff).
 
-- Repositório: privado (`torinoorbit-dev/glowhub`).
+- Repositório: https://github.com/axyonsoftwarehouse/glowhub (público).
 - Estágio: **MVP interno funcional** (Fases 0–5 concluídas; Fase 6 parcial).
   Ainda **não pronto para produção** (ver backlog e riscos).
-- Última atualização: alinhada ao estado atual do código.
+- Última atualização: alinhada ao estado atual do código (repo migrado para
+  `axyonsoftwarehouse/glowhub` e deploy reconectado na Vercel).
 
 ---
 
@@ -174,6 +175,8 @@ Browser ──► Next (RSC + Server Actions)
 
 ### 2.8 Infra & deploy
 - **Vercel** + **Neon**; **CI** (lint/typecheck/test/build) no GitHub Actions.
+- **Git**: `axyonsoftwarehouse/glowhub` (branch de produção `master`), conectado ao
+  projeto Vercel `glowhub` (time `torinoorbit-dev`) para deploy automático a cada push.
 - **Cron** (`vercel.json`): `/api/cron/subscriptions` (diário, renova assinaturas
   vencidas); protegido por `CRON_SECRET`.
 - **Produção:** https://glowhub-silk.vercel.app (também
@@ -281,7 +284,7 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 
 ## 6. Retomada (handoff) — como continuar em uma nova sessão
 
-1. **Repositório**: `git clone`/`git pull`; branch `master`.
+1. **Repositório**: `git clone https://github.com/axyonsoftwarehouse/glowhub`; branch `master`.
 2. **Dependências**: `npm install`.
 3. **Env**: criar `.env.local` a partir de `.env.example` (Neon owner + role do
    app + `BETTER_AUTH_SECRET`). Ver `docs/neon-migration.md` para o setup do Neon.
