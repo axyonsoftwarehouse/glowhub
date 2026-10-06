@@ -103,10 +103,12 @@ begin
 end;
 $$;
 
--- tenants
+-- tenants: leitura apenas por membros. O branding publico (/book) usa a
+-- conexao admin (getDb), entao nao depende desta policy.
 drop policy if exists tenants_public_read on public.tenants;
-create policy tenants_public_read on public.tenants
-  for select using (is_active = true);
+drop policy if exists tenants_member_read on public.tenants;
+create policy tenants_member_read on public.tenants
+  for select using (public.is_tenant_member(id));
 drop policy if exists tenants_member_update on public.tenants;
 create policy tenants_member_update on public.tenants
   for update using (public.has_tenant_role(id, array['owner', 'admin']::public.tenant_role[]));

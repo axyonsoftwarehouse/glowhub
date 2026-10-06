@@ -7,26 +7,14 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   if (!isConfigured()) {
-    return Response.json(
-      { status: "unconfigured", db: "unknown" },
-      { status: 503 },
-    );
+    return Response.json({ status: "unconfigured" }, { status: 503 });
   }
 
-  const started = Date.now();
   try {
     await getDb().execute(sql`select 1`);
-    return Response.json({
-      status: "ok",
-      db: "up",
-      latencyMs: Date.now() - started,
-      time: new Date().toISOString(),
-    });
+    return Response.json({ status: "ok", db: "up" });
   } catch (cause) {
     logger.error("health_check_failed", { error: String(cause) });
-    return Response.json(
-      { status: "error", db: "down", latencyMs: Date.now() - started },
-      { status: 503 },
-    );
+    return Response.json({ status: "error", db: "down" }, { status: 503 });
   }
 }
