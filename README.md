@@ -118,6 +118,13 @@ Acesse: http://localhost:3000/dashboard
 - **Aceite de convite** via `SECURITY DEFINER` (`public.accept_invitation`).
 - A conexão admin (`DATABASE_URL`) ignora RLS — use só no servidor.
 
+## Deploy
+
+- **Repositório:** https://github.com/axyonsoftwarehouse/glowhub
+- **Vercel:** projeto `glowhub`, branch de produção `master`, com deploy automático
+  a cada push.
+- As variáveis de ambiente pertencem ao projeto da Vercel (não ao repositório).
+
 ## Status
 - [x] Projeto Next 16 + Tailwind + TypeScript + Neon + Drizzle + Better Auth
 - [x] Tenancy + RLS por `auth_uid()`
