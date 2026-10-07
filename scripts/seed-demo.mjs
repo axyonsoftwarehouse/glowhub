@@ -122,7 +122,7 @@ async function createService(tx, tenantId, categoryId, [name, duration, price, i
 // ------------------------------------------------------------------
 async function seedDemo(tx) {
   const today = spToday();
-  const [tenant] = await tx`insert into public.tenants ${tx({ slug: DEMO_SLUG, name: "Encanto Studio (Demo)" })} returning id`;
+  const [tenant] = await tx`insert into public.tenants ${tx({ slug: DEMO_SLUG, name: "Encanto Studio (Demo)", is_read_only: true })} returning id`;
   const tenantId = tenant.id;
   const accounts = await seedChart(tx, tenantId);
 
@@ -403,7 +403,7 @@ async function seedDemo(tx) {
 // ------------------------------------------------------------------
 async function seedBella(tx) {
   const today = spToday();
-  const [tenant] = await tx`insert into public.tenants ${tx({ slug: BELLA_SLUG, name: "Studio Bella" })} returning id`;
+  const [tenant] = await tx`insert into public.tenants ${tx({ slug: BELLA_SLUG, name: "Studio Bella", is_read_only: true })} returning id`;
   const tenantId = tenant.id;
   const accounts = await seedChart(tx, tenantId);
 
@@ -477,7 +477,7 @@ async function seedBella(tx) {
 // ------------------------------------------------------------------
 async function seedClinica(tx) {
   const today = spToday();
-  const [tenant] = await tx`insert into public.tenants ${tx({ slug: CLINICA_SLUG, name: "Clínica Lumina" })} returning id`;
+  const [tenant] = await tx`insert into public.tenants ${tx({ slug: CLINICA_SLUG, name: "Clínica Lumina", is_read_only: true })} returning id`;
   const tenantId = tenant.id;
   const accounts = await seedChart(tx, tenantId);
 

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 
 const ACTION_TO_STATUS: Record<string, string> = {
   Reabrir: "Pendente",
@@ -48,12 +48,35 @@ test.describe("Minha agenda (visão do profissional)", () => {
       return;
     }
 
-    const card = cards.first();
-    // Referência estável: o card pode deixar de ter botões após a transição
-    // (ex.: "Concluir" -> sem próximas ações), então localizamos por texto.
+    // Evita "Não compareceu": gera taxa no financeiro, que fica congelado no
+    // tenant de demonstração (somente leitura).
+    let card: Locator | null = null;
+    let actionButton: Locator | null = null;
+    let action = "";
+    const total = await cards.count();
+    for (let i = 0; i < total && !actionButton; i++) {
+      const candidate = cards.nth(i);
+      const buttons = candidate.getByRole("button");
+      const buttonCount = await buttons.count();
+      for (let j = 0; j < buttonCount; j++) {
+        const button = buttons.nth(j);
+        const label = ((await button.textContent()) ?? "").trim();
+        if (label && label !== "Não compareceu" && label !== "Nao compareceu") {
+          card = candidate;
+          actionButton = button;
+          action = label;
+          break;
+        }
+      }
+    }
+    if (!card || !actionButton) {
+      test.skip(true, "Sem ação aplicável (fora do financeiro congelado).");
+      return;
+    }
+
+    // Referência estável: o card pode deixar de ter botões após a transição,
+    // então localizamos por texto.
     const headerText = await card.locator("p").first().innerText();
-    const actionButton = card.getByRole("button").first();
-    const action = ((await actionButton.textContent()) ?? "").trim();
     const expectedStatus = ACTION_TO_STATUS[action];
     expect(expectedStatus, `ação desconhecida: ${action}`).toBeTruthy();
 

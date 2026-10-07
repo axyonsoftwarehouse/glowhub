@@ -162,6 +162,13 @@ export default async function AppLayout({
           <SignOutButton />
         </header>
         <main id="conteudo" className="flex-1 px-6 py-8">
+          {tenant?.isReadOnly && (
+            <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Modo demonstração: este ambiente é somente leitura para catálogo,
+              financeiro, equipe e configurações. Agenda e agendamento online
+              seguem liberados.
+            </div>
+          )}
           {children}
         </main>
       </div>

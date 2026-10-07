@@ -53,6 +53,14 @@ returns boolean language sql stable security definer set search_path = public as
   )
 $$;
 
+create or replace function public.tenant_is_readonly(target_tenant uuid)
+returns boolean language sql stable security definer set search_path = public as $$
+  select coalesce(
+    (select t.is_read_only from public.tenants t where t.id = target_tenant),
+    false
+  )
+$$;
+
 -- =========================================================
 -- Triggers de updated_at
 -- =========================================================
@@ -310,6 +318,64 @@ begin
 
   delete from public.invitations where id = v_invitation.id;
   return v_invitation.tenant_id;
+end;
+$$;
+
+-- =========================================================
+-- Modo demonstracao (somente leitura) para tabelas destrutivas
+-- =========================================================
+-- Bloqueia escrita da role do app em tenants marcados `is_read_only = true`
+-- (catalogo, config de agenda, equipe, configuracoes, financeiro, cupons,
+-- pacotes, assinaturas, mensagens). Fluxos interativos de agenda/agendamento
+-- (clients, appointments) e a conexao admin (seed/login demo/onboarding/cron/
+-- booking publico) continuam funcionando.
+create or replace function public.enforce_readonly_tenant()
+returns trigger language plpgsql security definer set search_path = public as $$
+declare
+  v_tenant uuid;
+begin
+  -- Só a role do app injeta `request.jwt.claims`; a admin não tem claims.
+  if public.auth_uid() is null then
+    return coalesce(new, old);
+  end if;
+
+  v_tenant := coalesce(
+    nullif(to_jsonb(new) ->> 'tenant_id', '')::uuid,
+    nullif(to_jsonb(old) ->> 'tenant_id', '')::uuid,
+    nullif(to_jsonb(new) ->> 'id', '')::uuid,
+    nullif(to_jsonb(old) ->> 'id', '')::uuid
+  );
+
+  if v_tenant is not null and public.tenant_is_readonly(v_tenant) then
+    raise exception 'tenant_read_only';
+  end if;
+
+  return coalesce(new, old);
+end;
+$$;
+
+do $$
+declare
+  t text;
+begin
+  foreach t in array array[
+    'tenants', 'branches', 'memberships', 'invitations',
+    'categories', 'services', 'service_branches',
+    'products', 'product_variants',
+    'professionals', 'professional_branches', 'professional_services',
+    'branch_hours', 'professional_hours', 'branch_closures',
+    'ledger_accounts', 'accounting_periods', 'journal_entries', 'journal_lines',
+    'charges', 'charge_items', 'payments', 'earnings', 'payouts',
+    'wallet_transactions', 'coupons', 'packages', 'package_items',
+    'subscription_plans', 'plan_items', 'notifications'
+  ]
+  loop
+    execute format('drop trigger if exists %I on public.%I', t || '_readonly_guard', t);
+    execute format(
+      'create trigger %I before insert or update or delete on public.%I for each row execute function public.enforce_readonly_tenant()',
+      t || '_readonly_guard', t
+    );
+  end loop;
 end;
 $$;
 

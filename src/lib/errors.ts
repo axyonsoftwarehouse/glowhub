@@ -9,8 +9,10 @@ const GENERIC_ERROR_MESSAGE = "Ocorreu um erro inesperado. Tente novamente.";
  * erro cru do Postgres/Neon expoe nomes de tabela, constraint e policy.
  */
 export function internalError(cause: unknown): string {
-  logger.error("server_error", {
-    error: cause instanceof Error ? cause.message : String(cause),
-  });
+  const raw = cause instanceof Error ? cause.message : String(cause);
+  if (raw.includes("tenant_read_only")) {
+    return "Ambiente de demonstração: esta ação está desabilitada (somente leitura).";
+  }
+  logger.error("server_error", { error: raw });
   return GENERIC_ERROR_MESSAGE;
 }
