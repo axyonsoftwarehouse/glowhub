@@ -339,6 +339,11 @@ begin
     return coalesce(new, old);
   end if;
 
+  -- Excecao de teste (ex.: preview/dev): DEMO_READ_ONLY=false desativa o guard.
+  if coalesce(current_setting('app.demo_readonly', true), 'on') = 'off' then
+    return coalesce(new, old);
+  end if;
+
   v_tenant := coalesce(
     nullif(to_jsonb(new) ->> 'tenant_id', '')::uuid,
     nullif(to_jsonb(old) ->> 'tenant_id', '')::uuid,

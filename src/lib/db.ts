@@ -54,6 +54,13 @@ export async function withUser<T>(
     await tx.execute(
       sql`select set_config('request.jwt.claims', ${claims}, true)`,
     );
+    // Excecao de teste: com DEMO_READ_ONLY=false o guard de "somente leitura"
+    // do tenant demo e desativado (ex.: preview/dev). Em producao (default) fica
+    // ativo. Ver db/rls.sql (enforce_readonly_tenant).
+    const demoReadOnly = process.env.DEMO_READ_ONLY === "false" ? "off" : "on";
+    await tx.execute(
+      sql`select set_config('app.demo_readonly', ${demoReadOnly}, true)`,
+    );
     return callback(tx);
   });
 }
