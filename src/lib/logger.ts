@@ -4,10 +4,10 @@ type LogContext = Record<string, unknown>;
 
 function write(level: LogLevel, message: string, context?: LogContext) {
   const entry = JSON.stringify({
+    ...context,
     level,
     message,
     time: new Date().toISOString(),
-    ...context,
   });
 
   if (level === "error") console.error(entry);
