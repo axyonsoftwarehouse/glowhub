@@ -187,7 +187,9 @@ Browser ──► Next (RSC + Server Actions)
   → use o seletor **Empresa**. Também vincula a um profissional de `demo`,
   habilitando a visão **Minha agenda**. Desativado por padrão: só funciona com
   `NEXT_PUBLIC_DEMO_LOGIN=true` **e** `DEMO_PASSWORD` definidos (validado no
-  servidor, não apenas no botão).
+  servidor, não apenas no botão); tem rate limit. Em produção está **habilitado
+  para demonstrações**: qualquer visitante vira `owner` apenas dos tenants demo
+  (dados de exemplo, isolados por RLS).
 - **Dados demo:** `npm run seed:demo` recria os 3 tenants com cenário completo e
   ledger balanceado (catálogo, agenda, financeiro, pacotes, assinatura, cupons,
   gateway mock). Idempotente (não toca em outros dados).
