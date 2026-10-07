@@ -5,12 +5,14 @@ import { redirect } from "next/navigation";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
+import { checkRateLimit, clientKey } from "@/lib/rate-limit";
 import {
   branches,
   memberships,
   professionals,
   profiles,
   tenants,
+  user,
 } from "@/db/schema";
 
 const DEMO_EMAIL = process.env.DEMO_EMAIL?.trim() || "demo@glowhub.app";
@@ -23,8 +25,45 @@ const DEMO_EXTRA_SLUGS = (process.env.DEMO_EXTRA_TENANTS ?? "studio-bella,clinic
 export type DemoLoginResult = { error: string };
 
 /**
+ * Garante que a conta demo exista e autentique com a senha configurada. Se a
+ * conta existir com outra senha (ex.: apos rotacionar `DEMO_PASSWORD`), recria o
+ * usuario demo. O usuario demo e descartavel (so tem vinculos nos tenants demo).
+ */
+async function ensureDemoAccount(
+  requestHeaders: Headers,
+  password: string,
+): Promise<string | null> {
+  try {
+    const created = await auth.api.signUpEmail({
+      body: { email: DEMO_EMAIL, password, name: "Conta Demo" },
+      headers: requestHeaders,
+    });
+    return created.user.id;
+  } catch {
+    try {
+      const db = getDb();
+      const [existing] = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.email, DEMO_EMAIL))
+        .limit(1);
+      if (existing) {
+        await db.delete(user).where(eq(user.id, existing.id));
+      }
+      const created = await auth.api.signUpEmail({
+        body: { email: DEMO_EMAIL, password, name: "Conta Demo" },
+        headers: requestHeaders,
+      });
+      return created.user.id;
+    } catch {
+      return null;
+    }
+  }
+}
+
+/**
  * Login de demonstracao: garante que a conta demo exista (cria no primeiro
- * acesso), vincula como owner do tenant demo e entra. Para a equipe testar sem
+ * acesso), vincula como owner dos tenants demo e entra. Para a equipe testar sem
  * criar conta.
  *
  * Desativado por padrao: so funciona com `NEXT_PUBLIC_DEMO_LOGIN=true` E
@@ -43,6 +82,15 @@ export async function demoLoginAction(): Promise<DemoLoginResult | void> {
 
   const requestHeaders = await headers();
 
+  const limited = await checkRateLimit({
+    key: clientKey(requestHeaders, "demo:login"),
+    limit: 30,
+    windowSeconds: 300,
+  });
+  if (!limited.allowed) {
+    return { error: "Muitas tentativas. Aguarde alguns minutos." };
+  }
+
   let userId: string | null = null;
 
   try {
@@ -52,15 +100,7 @@ export async function demoLoginAction(): Promise<DemoLoginResult | void> {
     });
     userId = result.user.id;
   } catch {
-    try {
-      const result = await auth.api.signUpEmail({
-        body: { email: DEMO_EMAIL, password, name: "Conta Demo" },
-        headers: requestHeaders,
-      });
-      userId = result.user.id;
-    } catch {
-      return { error: "Nao foi possivel entrar na conta demo." };
-    }
+    userId = await ensureDemoAccount(requestHeaders, password);
   }
 
   if (!userId) return { error: "Nao foi possivel entrar na conta demo." };
