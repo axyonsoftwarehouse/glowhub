@@ -54,7 +54,9 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{variant.name}</p>
             <p className="mt-0.5 text-xs text-foreground/70">
-              {formatCentsBRL(variant.priceCents)} · estoque {variant.stockQuantity}
+              {formatCentsBRL(variant.priceCents)} · custo{" "}
+              {formatCentsBRL(variant.costCents)} · estoque {variant.stockQuantity}
+              {variant.unit} (mín {variant.minStock})
               {variant.sku ? ` · ${variant.sku}` : ""}
             </p>
           </div>
@@ -77,13 +79,27 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
             <input name="name" defaultValue={variant.name} placeholder="Nome" className={inputClass} />
             <input name="sku" defaultValue={variant.sku ?? ""} placeholder="SKU" className={inputClass} />
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
+          <div className="grid gap-2 sm:grid-cols-3">
+            <input
+              name="unit"
+              defaultValue={variant.unit}
+              placeholder="Unidade"
+              className={inputClass}
+            />
             <input
               name="price"
               defaultValue={formatCentsToInput(variant.priceCents)}
               placeholder="Preço"
               className={inputClass}
             />
+            <input
+              name="cost"
+              defaultValue={formatCentsToInput(variant.costCents)}
+              placeholder="Custo"
+              className={inputClass}
+            />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
             <input
               name="stock"
               type="number"
@@ -92,10 +108,20 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
               placeholder="Estoque"
               className={inputClass}
             />
+            <input
+              name="minStock"
+              type="number"
+              min={0}
+              defaultValue={variant.minStock}
+              placeholder="Estoque mínimo"
+              className={inputClass}
+            />
           </div>
           {e.name?.[0] && <p className="text-xs text-red-600">{e.name[0]}</p>}
           {e.price?.[0] && <p className="text-xs text-red-600">{e.price[0]}</p>}
+          {e.cost?.[0] && <p className="text-xs text-red-600">{e.cost[0]}</p>}
           {e.stock?.[0] && <p className="text-xs text-red-600">{e.stock[0]}</p>}
+          {e.minStock?.[0] && <p className="text-xs text-red-600">{e.minStock[0]}</p>}
           {updateResult.status === "error" && updateResult.message && (
             <p className="text-xs text-red-600">{updateResult.message}</p>
           )}
@@ -189,8 +215,12 @@ export function VariantManager({
           <input name="name" placeholder="Nova variação (ex.: 300ml)" className={inputClass} />
           <input name="sku" placeholder="SKU (opcional)" className={inputClass} />
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="grid gap-2 sm:grid-cols-3">
+          <input name="unit" placeholder="Unidade (un/ml/g)" className={inputClass} />
           <input name="price" placeholder="Preço" className={inputClass} />
+          <input name="cost" placeholder="Custo" className={inputClass} />
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
           <input
             name="stock"
             type="number"
@@ -199,10 +229,20 @@ export function VariantManager({
             placeholder="Estoque"
             className={inputClass}
           />
+          <input
+            name="minStock"
+            type="number"
+            min={0}
+            defaultValue={0}
+            placeholder="Estoque mínimo"
+            className={inputClass}
+          />
         </div>
         {e.name?.[0] && <p className="text-xs text-red-600">{e.name[0]}</p>}
         {e.price?.[0] && <p className="text-xs text-red-600">{e.price[0]}</p>}
+        {e.cost?.[0] && <p className="text-xs text-red-600">{e.cost[0]}</p>}
         {e.stock?.[0] && <p className="text-xs text-red-600">{e.stock[0]}</p>}
+        {e.minStock?.[0] && <p className="text-xs text-red-600">{e.minStock[0]}</p>}
         {result.status === "error" && result.message && (
           <p className="text-xs text-red-600">{result.message}</p>
         )}

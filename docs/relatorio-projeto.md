@@ -60,15 +60,18 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Equipe & Convites | Convidar por link, papéis, editar papel/remover membro, revogar convite, troca de empresa ativa | ✅ (envio de e-mail pendente) |
 | Filiais | Criar/editar/ativar-desativar | ✅ |
 | Catálogo | Categorias, serviços, produtos (variações/estoque), profissionais | ✅ |
+| Estoque & insumos | Produtos internos (insumos) e de revenda, custo, mínimo de reposição, ficha técnica do serviço, movimentos append-only, fornecedores, entrada de estoque com custo médio, baixa automática + **CMV** na cobrança e alertas (`/inventory`) | ✅ |
 | Preços por filial | Override de preço/duração e disponibilidade | ✅ |
 | Agenda | Horários, intervalos, feriados, disponibilidade; busca na agenda; políticas de cancelamento/no-show por tenant | ✅ |
 | Agendamentos | Reserva + status (pendente→confirmado→check-in→checkout→concluído) | ✅ |
-| Clientes | Cadastro, **busca**, **histórico dedicado** (atendimentos, cobranças/pagamentos, carteira) | ✅ |
-| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **receita diferida**, conciliação, **fechamento contábil** | ✅ (gateway online pendente) |
+| Clientes | Cadastro, **busca**, **histórico dedicado** (atendimentos, cobranças/pagamentos, carteira), **CRM** (aniversário, tags, preferências, segmentos, VIP, ticket, frequência, LTV, recência) | ✅ |
+| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **receita diferida**, conciliação, **fechamento contábil**, **gateway online** (link de checkout; mock + Mercado Pago) | ✅ |
+| Comandas | Cobrança aberta por atendimento; **adicionar/remover produtos** com receita (`revenue_product`), baixa de estoque na inclusão e estorno/devolução na remoção; pagamento até quitar | ✅ |
+| Fidelização | **Gift cards** (valor fixo + código; passivo→receita no resgate), **programa de pontos** (acúmulo ao quitar a comanda, resgate como crédito na carteira) e **campanhas por segmento** (e-mail com opt-in) | ✅ |
 | Pacotes & Assinaturas | Pré-pago e recorrente, com ledger, **consumo/limites por período** e **renovação automática** (cron) | ✅ |
 | Notificações | Caixa de saída + e-mail (adapter portável) | 🟡 (push/lembretes agendados pendentes) |
 | Canal cliente | Agendamento online `(/book)`; app mobile | 🟡 |
-| Relatórios | Balancete, resultado, receita/dia, recebimentos por forma, **ocupação por profissional** | ✅ |
+| Relatórios & BI | Balancete, resultado, receita/dia, recebimentos por forma, **ocupação por profissional**; **inteligência de clientes** (segmentos/RFM); **lucratividade & DRE** (margem por serviço/produto, ranking e fluxo de caixa vs. competência) | ✅ (fidelização pendente) |
 
 Legenda: ✅ pronto · 🟡 parcial · ⛔ não iniciado.
 
@@ -261,8 +264,16 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
       (vínculo + status), histórico do cliente e booking público. Workflow
       `e2e.yml` manual (usa secrets de banco).
 - [x] **Observabilidade in-app**: logger estruturado (JSON), `/api/health`
-      (checa banco) e logs de webhook/rate-limit. Métricas agregadas e alertas
-      externos (e-mail/Slack) pendentes.
+      (checa banco) e logs de webhook/rate-limit.
+- [x] **Métricas e alertas externos**: `recordMetric` (`src/lib/metrics.ts`)
+      emite cada métrica como log JSON (coletável por log drain) e, se
+      `METRICS_WEBHOOK_URL` existir, faz POST best-effort ao coletor; scrape
+      protegido em `/api/metrics` (`METRICS_TOKEN`). `sendAlert`
+      (`src/lib/alerts.ts`) loga sempre e empurra alertas (`ALERT_WEBHOOK_URL`,
+      compatível com Slack/Discord/Mattermost) a partir de `ALERT_MIN_LEVEL`
+      (`error` por padrão), com supressão por `ALERT_COOLDOWN_SECONDS`. Pontos
+      instrumentados: health, webhooks, rate-limit/auth, e-mail, erros de
+      servidor e cron de assinaturas.
 - [x] **Deploy na Vercel**: produção em `glowhub-silk.vercel.app`; domínio
       raiz/subdomínios customizados ainda pendentes.
 - [x] **Segurança**: **rate limiting** no sign-in/sign-up do Better Auth
@@ -275,8 +286,9 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 ---
 
 ## 5. Riscos e considerações
-- **Produção**: falta e-mail de verificação, CI/CD de deploy, observabilidade e
-  revisão de segurança.
+- **Produção**: falta e-mail de verificação, CI/CD de deploy e revisão de
+  segurança; observabilidade in-app + métricas/alertas externos já prontos (falta
+  apenas configurar coletor/webhook).
 - **Financeiro**: mudanças exigem cuidado (imutável, balanceado, idempotente);
   novos lançamentos devem passar por `src/lib/ledger.ts`.
 - **Gateway**: escolha e desenho de webhooks ainda em aberto.
@@ -302,16 +314,31 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 Pontos de entrada úteis:
 - Multi-tenancy/RLS: `src/lib/db.ts`, `src/lib/tenant.ts`, `db/rls.sql`.
 - Rate limit / logs / health: `src/lib/rate-limit.ts`, `src/lib/logger.ts`,
-  `src/app/api/auth/[...all]/route.ts`, `src/app/api/health/route.ts`.
+  `src/lib/metrics.ts`, `src/lib/alerts.ts`,
+  `src/app/api/auth/[...all]/route.ts`, `src/app/api/health/route.ts`,
+  `src/app/api/metrics/route.ts`.
 - Auth: `src/lib/auth.ts`, `src/lib/session.ts`, `src/app/api/auth/[...all]/route.ts`.
 - Financeiro: `src/lib/ledger.ts`, `src/app/(app)/finance/*`.
 - Fechamento contábil: `src/lib/accounting.ts`, `src/app/(app)/closing/*`,
   `src/db/schema/accounting.ts` (bloqueio em `postEntry`).
+- Estoque e insumos: `src/lib/inventory.ts`, `src/app/(app)/inventory/*`,
+  ficha técnica em `src/app/(app)/services/service-materials.tsx`.
 - Disponibilidade: `src/lib/availability.ts`, `src/lib/availability-data.ts`.
 - Booking público: `src/app/book/*`.
 - Visão do profissional: `src/app/(app)/my-schedule/*` + vínculo em
   `src/app/(app)/professionals/*` (`professionals.user_id`).
 - Histórico do cliente: `src/app/(app)/clients/[id]/page.tsx`.
+- CRM de clientes: `src/lib/crm.ts`, `src/app/(app)/clients/*`
+  (segmentos, VIP, ticket, frequência, LTV, aniversário/tags/preferências).
+- Lucratividade & DRE: `src/lib/profitability.ts`,
+  `src/app/(app)/reports/profitability/*`, `src/lib/accounting.ts`
+  (`computeTrialBalance`, agora com `systemKey`).
+- Fidelização: `src/lib/loyalty.ts`, `src/app/(app)/loyalty/*`
+  (gift cards, pontos, campanhas; contas `liability_gift_card`,
+  `revenue_gift_card`, `expense_loyalty`).
+- Pagamento online: `src/lib/payments/*` (adapter mock/Mercado Pago,
+  `confirmPendingPayment`), `/api/webhooks/[provider]`, `/pay/mock`,
+  botão "Cobrar online" em `src/app/(app)/finance/*`.
 - e2e: `e2e/*.spec.ts`, `e2e/auth.setup.ts`, `playwright.config.ts`.
 
 Decisões em aberto (ver `docs/architecture.md`): provedor de **pagamento**,

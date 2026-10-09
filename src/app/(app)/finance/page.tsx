@@ -8,6 +8,8 @@ import {
   ledgerAccounts,
   memberships,
   payments,
+  productVariants,
+  products,
   professionals,
 } from "@/db/schema";
 import { formatCentsBRL } from "@/lib/money";
@@ -19,7 +21,13 @@ import { ChargeList } from "./charge-list";
 import { JournalForm } from "./journal-form";
 import { JournalList } from "./journal-list";
 import { PayoutList } from "./payout-list";
-import type { Charge, JournalEntry, LedgerAccount } from "./types";
+import type {
+  Charge,
+  ChargeItem,
+  JournalEntry,
+  LedgerAccount,
+  ProductOption,
+} from "./types";
 
 export const dynamic = "force-dynamic";
 
@@ -113,10 +121,37 @@ export default async function FinancePage() {
     const chargeIds = chargeRows.map((row) => row.id);
     const chargeItemRows = chargeIds.length
       ? await tx
-          .select({ chargeId: chargeItems.chargeId, description: chargeItems.description })
+          .select({
+            id: chargeItems.id,
+            chargeId: chargeItems.chargeId,
+            kind: chargeItems.kind,
+            description: chargeItems.description,
+            quantity: chargeItems.quantity,
+            unitPriceCents: chargeItems.unitPriceCents,
+            totalCents: chargeItems.totalCents,
+          })
           .from(chargeItems)
           .where(inArray(chargeItems.chargeId, chargeIds))
       : [];
+
+    const productRows = await tx
+      .select({
+        variantId: productVariants.id,
+        productName: products.name,
+        variantName: productVariants.name,
+        priceCents: productVariants.priceCents,
+        stockQuantity: productVariants.stockQuantity,
+      })
+      .from(productVariants)
+      .innerJoin(products, eq(products.id, productVariants.productId))
+      .where(
+        and(
+          eq(productVariants.tenantId, tenant.id),
+          eq(productVariants.isActive, true),
+          eq(products.kind, "resale"),
+        ),
+      )
+      .orderBy(asc(products.name), asc(productVariants.name));
 
     const paymentRows = await tx
       .select({
@@ -166,6 +201,7 @@ export default async function FinancePage() {
       entryLines,
       chargeRows,
       chargeItemRows,
+      productRows,
       paymentRows,
       earningRows,
       professionalRows,
@@ -207,10 +243,21 @@ export default async function FinancePage() {
   }));
 
   const itemByCharge = new Map<string, string>();
+  const itemsByCharge = new Map<string, ChargeItem[]>();
   for (const item of data.chargeItemRows) {
     if (!itemByCharge.has(item.chargeId)) {
       itemByCharge.set(item.chargeId, item.description);
     }
+    const list = itemsByCharge.get(item.chargeId) ?? [];
+    list.push({
+      id: item.id,
+      kind: item.kind,
+      description: item.description,
+      quantity: item.quantity,
+      unitPriceCents: item.unitPriceCents,
+      totalCents: item.totalCents,
+    });
+    itemsByCharge.set(item.chargeId, list);
   }
   const paidByCharge = new Map<string, number>();
   for (const payment of data.paymentRows) {
@@ -227,6 +274,14 @@ export default async function FinancePage() {
     totalCents: row.totalCents,
     paidCents: paidByCharge.get(row.id) ?? 0,
     status: row.status,
+    items: itemsByCharge.get(row.id) ?? [],
+  }));
+
+  const productOptions: ProductOption[] = data.productRows.map((row) => ({
+    variantId: row.variantId,
+    label: `${row.productName} · ${row.variantName}`,
+    priceCents: row.priceCents,
+    stockQuantity: row.stockQuantity,
   }));
 
   const paymentList = data.paymentRows.map((row) => ({
@@ -286,7 +341,11 @@ export default async function FinancePage() {
           Cobranças
         </h2>
         <div className="mt-4">
-          <ChargeList charges={chargeList} canSettle={data.canManage} />
+          <ChargeList
+            charges={chargeList}
+            productOptions={productOptions}
+            canSettle={data.canManage}
+          />
         </div>
       </section>
 

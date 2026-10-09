@@ -71,6 +71,21 @@ export function ProductCreateForm({
         </div>
 
         <div>
+          <label className="text-xs font-medium text-foreground/60" htmlFor="product-kind">
+            Tipo
+          </label>
+          <select
+            id="product-kind"
+            name="kind"
+            defaultValue="resale"
+            className={`mt-1 ${inputClass}`}
+          >
+            <option value="resale">Revenda (vendido ao cliente)</option>
+            <option value="internal">Insumo interno (consumido em serviços)</option>
+          </select>
+        </div>
+
+        <div>
           <label className="text-xs font-medium text-foreground/60" htmlFor="product-description">
             Descrição (opcional)
           </label>
@@ -112,6 +127,17 @@ export function ProductCreateForm({
               )}
             </div>
             <div>
+              <label className="text-xs font-medium text-foreground/60" htmlFor="variant-unit">
+                Unidade
+              </label>
+              <input
+                id="variant-unit"
+                name="variantUnit"
+                placeholder="un / ml / g"
+                className={`mt-1 ${inputClass}`}
+              />
+            </div>
+            <div>
               <label className="text-xs font-medium text-foreground/60" htmlFor="variant-price">
                 Preço (R$)
               </label>
@@ -123,6 +149,22 @@ export function ProductCreateForm({
               />
               {e.price?.[0] && (
                 <p className="mt-1 text-xs text-red-600">{e.price[0]}</p>
+              )}
+            </div>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div>
+              <label className="text-xs font-medium text-foreground/60" htmlFor="variant-cost">
+                Custo (R$)
+              </label>
+              <input
+                id="variant-cost"
+                name="cost"
+                placeholder="0,00"
+                className={`mt-1 ${inputClass}`}
+              />
+              {e.cost?.[0] && (
+                <p className="mt-1 text-xs text-red-600">{e.cost[0]}</p>
               )}
             </div>
             <div>
@@ -139,6 +181,22 @@ export function ProductCreateForm({
               />
               {e.stock?.[0] && (
                 <p className="mt-1 text-xs text-red-600">{e.stock[0]}</p>
+              )}
+            </div>
+            <div>
+              <label className="text-xs font-medium text-foreground/60" htmlFor="variant-min">
+                Estoque mínimo
+              </label>
+              <input
+                id="variant-min"
+                name="minStock"
+                type="number"
+                min={0}
+                defaultValue={0}
+                className={`mt-1 ${inputClass}`}
+              />
+              {e.minStock?.[0] && (
+                <p className="mt-1 text-xs text-red-600">{e.minStock[0]}</p>
               )}
             </div>
           </div>

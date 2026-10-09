@@ -2,17 +2,27 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { CLIENT_SEGMENT_LABELS, formatTags } from "@/lib/crm";
+import { formatCentsBRL } from "@/lib/money";
 import { setClientActiveAction, updateClientAction } from "./actions";
 import {
   initialClientActionState,
-  type Client,
+  type ClientWithInsights,
   type ClientActionState,
 } from "./types";
 
 const inputClass =
   "w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand";
 
-export function ClientCard({ client }: { client: Client }) {
+const SEGMENT_STYLES: Record<string, string> = {
+  sem_visitas: "bg-zinc-100 text-zinc-600",
+  novo: "bg-sky-100 text-sky-700",
+  ativo: "bg-emerald-100 text-emerald-700",
+  em_risco: "bg-amber-100 text-amber-700",
+  inativo: "bg-red-100 text-red-700",
+};
+
+export function ClientCard({ client }: { client: ClientWithInsights }) {
   const [editing, setEditing] = useState(false);
   const [updateResult, setUpdateResult] = useState<ClientActionState>(
     initialClientActionState,
@@ -60,16 +70,47 @@ export function ClientCard({ client }: { client: Client }) {
             {client.email ? ` · ${client.email}` : ""}
           </p>
         </div>
-        <span
-          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${
-            client.isActive
-              ? "bg-emerald-100 text-emerald-700"
-              : "bg-zinc-100 text-zinc-600"
-          }`}
-        >
-          {client.isActive ? "Ativo" : "Inativo"}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span
+            className={`rounded-full px-2 py-0.5 text-[11px] ${SEGMENT_STYLES[client.insights.segment]}`}
+          >
+            {CLIENT_SEGMENT_LABELS[client.insights.segment]}
+          </span>
+          {client.insights.isVip && (
+            <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[11px] font-medium text-brand">
+              VIP
+            </span>
+          )}
+          {!client.isActive && (
+            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[11px] text-zinc-600">
+              Inativo
+            </span>
+          )}
+        </div>
       </div>
+
+      {!editing && (
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-foreground/70">
+          <span>{client.insights.visits} visita(s)</span>
+          <span>{formatCentsBRL(client.insights.totalSpentCents)} gastos</span>
+          {client.insights.daysSinceLastVisit !== null && (
+            <span>última há {client.insights.daysSinceLastVisit} dia(s)</span>
+          )}
+        </div>
+      )}
+
+      {!editing && client.tags && client.tags.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {client.tags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-foreground/70"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
 
       {!editing && client.notes && (
         <p className="mt-3 text-sm text-foreground/70">{client.notes}</p>
@@ -85,6 +126,37 @@ export function ClientCard({ client }: { client: Client }) {
           </div>
           {e.name?.[0] && <p className="text-xs text-red-600">{e.name[0]}</p>}
           {e.email?.[0] && <p className="text-xs text-red-600">{e.email[0]}</p>}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <input
+              name="birthday"
+              type="date"
+              defaultValue={client.birthday ?? ""}
+              className={inputClass}
+            />
+            <input
+              name="tags"
+              defaultValue={formatTags(client.tags)}
+              placeholder="Tags (separadas por vírgula)"
+              className={inputClass}
+            />
+          </div>
+          {e.birthday?.[0] && <p className="text-xs text-red-600">{e.birthday[0]}</p>}
+          <textarea
+            name="preferences"
+            rows={2}
+            defaultValue={client.preferences ?? ""}
+            placeholder="Preferências"
+            className={inputClass}
+          />
+          <label className="flex items-center gap-2 text-xs text-foreground/70">
+            <input
+              type="checkbox"
+              name="marketing_opt_in"
+              defaultChecked={client.marketingOptIn}
+              className="h-4 w-4"
+            />
+            Aceita receber comunicações e promoções
+          </label>
           <textarea
             name="notes"
             rows={2}

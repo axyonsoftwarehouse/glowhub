@@ -6,12 +6,17 @@ export type ProductActionState = {
 
 export const initialProductActionState: ProductActionState = { status: "idle" };
 
+export type ProductKind = "resale" | "internal";
+
 export type ProductVariant = {
   id: string;
   name: string;
   sku: string | null;
+  unit: string;
   priceCents: number;
+  costCents: number;
   stockQuantity: number;
+  minStock: number;
   isActive: boolean;
 };
 
@@ -21,6 +26,7 @@ export type Product = {
   description: string | null;
   imageUrl: string | null;
   categoryId: string | null;
+  kind: ProductKind;
   isActive: boolean;
   variants: ProductVariant[];
 };

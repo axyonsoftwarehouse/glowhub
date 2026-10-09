@@ -71,6 +71,8 @@ begin
   foreach t in array array[
     'tenants', 'branches', 'profiles', 'categories', 'services',
     'service_branches', 'professionals', 'products', 'product_variants',
+    'suppliers', 'service_materials',
+    'gift_cards', 'loyalty_settings', 'campaigns',
     'clients', 'appointments'
   ]
   loop
@@ -95,6 +97,7 @@ begin
     'categories', 'services', 'service_branches',
     'professionals', 'professional_branches', 'professional_services',
     'products', 'product_variants',
+    'suppliers', 'stock_movements', 'service_materials',
     'branch_hours', 'professional_hours', 'branch_closures',
     'clients', 'appointments',
     'ledger_accounts', 'journal_entries', 'journal_lines', 'accounting_periods',
@@ -103,7 +106,9 @@ begin
     'packages', 'package_items', 'client_packages', 'package_redemptions',
     'subscription_plans', 'plan_items', 'client_subscriptions',
     'subscription_redemptions',
-    'coupons', 'coupon_redemptions', 'notifications'
+    'coupons', 'coupon_redemptions', 'notifications',
+    'gift_cards', 'gift_card_redemptions', 'loyalty_settings',
+    'loyalty_points', 'campaigns'
   ]
   loop
     execute format('alter table public.%I enable row level security', t);
@@ -177,9 +182,11 @@ begin
     'categories', 'services', 'service_branches',
     'professionals', 'professional_branches', 'professional_services',
     'products', 'product_variants',
+    'suppliers', 'service_materials',
     'branch_hours', 'professional_hours', 'branch_closures',
     'ledger_accounts', 'payouts', 'packages', 'package_items',
-    'subscription_plans', 'plan_items', 'coupons'
+    'subscription_plans', 'plan_items', 'coupons',
+    'gift_cards', 'loyalty_settings', 'campaigns'
   ]
   loop
     execute format('drop policy if exists %I on public.%I', t || '_member_read', t);
@@ -201,7 +208,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['clients', 'appointments', 'charges', 'charge_items', 'payments', 'earnings', 'wallet_transactions', 'client_packages', 'package_redemptions', 'client_subscriptions', 'subscription_redemptions', 'coupon_redemptions', 'notifications']
+  foreach t in array array['clients', 'appointments', 'charges', 'charge_items', 'payments', 'earnings', 'wallet_transactions', 'client_packages', 'package_redemptions', 'client_subscriptions', 'subscription_redemptions', 'coupon_redemptions', 'notifications', 'stock_movements', 'gift_card_redemptions', 'loyalty_points']
   loop
     execute format('drop policy if exists %I on public.%I', t || '_member_read', t);
     execute format(
@@ -367,12 +374,15 @@ begin
     'tenants', 'branches', 'memberships', 'invitations',
     'categories', 'services', 'service_branches',
     'products', 'product_variants',
+    'suppliers', 'stock_movements', 'service_materials',
     'professionals', 'professional_branches', 'professional_services',
     'branch_hours', 'professional_hours', 'branch_closures',
     'ledger_accounts', 'accounting_periods', 'journal_entries', 'journal_lines',
     'charges', 'charge_items', 'payments', 'earnings', 'payouts',
     'wallet_transactions', 'coupons', 'packages', 'package_items',
-    'subscription_plans', 'plan_items', 'notifications'
+    'subscription_plans', 'plan_items', 'notifications',
+    'gift_cards', 'gift_card_redemptions', 'loyalty_settings',
+    'loyalty_points', 'campaigns'
   ]
   loop
     execute format('drop trigger if exists %I on public.%I', t || '_readonly_guard', t);
@@ -397,6 +407,13 @@ grant execute on all functions in schema public to glowhub_app;
 -- Ledger e append-only tambem via permissoes.
 revoke update, delete on public.journal_entries from glowhub_app;
 revoke update, delete on public.journal_lines from glowhub_app;
+
+-- Movimentos de estoque sao append-only (auditoria).
+revoke update, delete on public.stock_movements from glowhub_app;
+
+-- Pontos de fidelidade e resgates de gift card sao append-only (auditoria).
+revoke update, delete on public.loyalty_points from glowhub_app;
+revoke update, delete on public.gift_card_redemptions from glowhub_app;
 
 -- webhook_events e rate_limits sao internos (sem tenant_id; so admin).
 revoke all on public.webhook_events from glowhub_app;

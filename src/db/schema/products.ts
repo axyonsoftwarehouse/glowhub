@@ -5,6 +5,7 @@ import {
   check,
   index,
   integer,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -13,6 +14,8 @@ import {
 } from "drizzle-orm/pg-core";
 import { categories } from "./catalog";
 import { tenants } from "./tenancy";
+
+export const productKind = pgEnum("product_kind", ["resale", "internal"]);
 
 export const products = pgTable(
   "products",
@@ -27,6 +30,7 @@ export const products = pgTable(
     name: text("name").notNull(),
     description: text("description"),
     imageUrl: text("image_url"),
+    kind: productKind("kind").notNull().default("resale"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -50,8 +54,11 @@ export const productVariants = pgTable(
       .references(() => products.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     sku: text("sku"),
+    unit: text("unit").notNull().default("un"),
     priceCents: bigint("price_cents", { mode: "number" }).notNull().default(0),
+    costCents: bigint("cost_cents", { mode: "number" }).notNull().default(0),
     stockQuantity: integer("stock_quantity").notNull().default(0),
+    minStock: integer("min_stock").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -67,6 +74,7 @@ export const productVariants = pgTable(
       .on(t.tenantId, sql`lower(${t.sku})`)
       .where(sql`${t.sku} is not null`),
     check("product_variants_price_non_negative", sql`${t.priceCents} >= 0`),
-    check("product_variants_stock_non_negative", sql`${t.stockQuantity} >= 0`),
+    check("product_variants_cost_non_negative", sql`${t.costCents} >= 0`),
+    check("product_variants_min_stock_non_negative", sql`${t.minStock} >= 0`),
   ],
 );

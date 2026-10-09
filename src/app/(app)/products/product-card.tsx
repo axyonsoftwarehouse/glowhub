@@ -67,6 +67,7 @@ export function ProductCard({
         <div className="min-w-0">
           <h3 className="font-medium">{product.name}</h3>
           <p className="mt-0.5 text-xs text-foreground/70">
+            {product.kind === "internal" ? "Insumo" : "Revenda"} ·{" "}
             {categoryName ?? "Sem categoria"} · {product.variants.length} variação(ões)
             {product.variants.length > 0 ? ` · ${totalStock} em estoque` : ""}
           </p>
@@ -117,6 +118,19 @@ export function ProductCard({
             {e.categoryId?.[0] && (
               <p className="mt-1 text-xs text-red-600">{e.categoryId[0]}</p>
             )}
+          </div>
+          <div>
+            <label className="text-xs font-medium text-foreground/60">
+              Tipo
+            </label>
+            <select
+              name="kind"
+              defaultValue={product.kind}
+              className={`mt-1 ${inputClass}`}
+            >
+              <option value="resale">Revenda (vendido ao cliente)</option>
+              <option value="internal">Insumo interno (consumido em serviços)</option>
+            </select>
           </div>
           <div>
             <label className="text-xs font-medium text-foreground/60">

@@ -3,6 +3,10 @@ import { eq } from "drizzle-orm";
 import { webhookEvents } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { recordMetric } from "@/lib/metrics";
+import { sendAlert } from "@/lib/alerts";
+import { getPaymentProvider } from "@/lib/payments";
+import { processPaymentWebhook } from "@/lib/payments/confirm";
 
 /** Limite de tamanho do corpo (evita payloads gigantes / abuso da tabela). */
 const MAX_BODY_BYTES = 256 * 1024;
@@ -19,8 +23,9 @@ function getSecret(provider: string): string | null {
 }
 
 /**
- * Verifica HMAC-SHA256 do corpo bruto. Aceita `sha256=<hex>` ou `<hex>` nos
- * cabecalhos `x-webhook-signature` / `x-signature`. Comparacao em tempo constante.
+ * Verifica HMAC-SHA256 do corpo bruto (fallback para provedores sem adapter).
+ * Aceita `sha256=<hex>` ou `<hex>` nos cabecalhos `x-webhook-signature` /
+ * `x-signature`. Comparacao em tempo constante.
  */
 function verifySignature(
   raw: string,
@@ -43,12 +48,10 @@ function verifySignature(
 }
 
 /**
- * Endpoint generico de webhook de pagamento.
- * Cada provedor registra a URL `/api/webhooks/<provider>` e configura um segredo
- * (`WEBHOOK_<PROVIDER>_SECRET`). O corpo e validado por assinatura HMAC antes de
- * qualquer gravacao; os eventos sao gravados de forma IDEMPOTENTE (unique
- * provider + event_id). A confirmacao do pagamento deve ser adicionada por
- * provedor, de forma idempotente e lancando no ledger.
+ * Endpoint generico de webhook de pagamento. Valida a assinatura antes de
+ * gravar; os eventos sao gravados de forma IDEMPOTENTE (unique provider +
+ * event_id). Quando ha um adapter registrado para o provedor, o evento e
+ * despachado para confirmar/estornar o pagamento de forma idempotente no ledger.
  */
 export async function POST(
   request: Request,
@@ -69,18 +72,11 @@ export async function POST(
   if (!secret) {
     // Sem segredo nao ha como autenticar: nao aceitar eventos (safe by default).
     logger.warn("webhook_not_configured", { provider });
+    recordMetric("webhook_event", 1, { provider, status: "not_configured" });
     return Response.json(
       { error: "Webhook não configurado." },
       { status: 503 },
     );
-  }
-
-  const signature =
-    request.headers.get("x-webhook-signature") ??
-    request.headers.get("x-signature");
-  if (!verifySignature(raw, signature, secret)) {
-    logger.warn("webhook_invalid_signature", { provider });
-    return Response.json({ error: "Assinatura inválida." }, { status: 401 });
   }
 
   let payload: unknown;
@@ -88,6 +84,28 @@ export async function POST(
     payload = JSON.parse(raw);
   } catch {
     payload = { raw };
+  }
+
+  const adapter = getPaymentProvider(provider);
+  const webhookRequest = {
+    raw,
+    headers: request.headers,
+    url: new URL(request.url),
+    payload,
+  };
+
+  const valid = adapter
+    ? adapter.verifyWebhook({ request: webhookRequest, secret })
+    : verifySignature(
+        raw,
+        request.headers.get("x-webhook-signature") ??
+          request.headers.get("x-signature"),
+        secret,
+      );
+  if (!valid) {
+    logger.warn("webhook_invalid_signature", { provider });
+    recordMetric("webhook_event", 1, { provider, status: "invalid_signature" });
+    return Response.json({ error: "Assinatura inválida." }, { status: 401 });
   }
 
   const eventId =
@@ -105,20 +123,35 @@ export async function POST(
 
     if (inserted.length === 0) {
       logger.info("webhook_duplicate", { provider, eventId });
+      recordMetric("webhook_event", 1, { provider, status: "duplicate" });
       return Response.json({ received: true, duplicate: true }, { status: 200 });
     }
 
-    // TODO(provider): despachar por provedor para confirmar/estornar o pagamento
-    // de forma idempotente e lancar no ledger.
+    if (adapter) {
+      const result = await adapter.parseWebhook({
+        request: webhookRequest,
+        secret,
+      });
+      await db.transaction((tx) =>
+        processPaymentWebhook(tx, { providerId: provider, result }),
+      );
+    }
+
     await db
       .update(webhookEvents)
       .set({ processedAt: new Date() })
       .where(eq(webhookEvents.id, inserted[0].id));
 
     logger.info("webhook_received", { provider, eventId });
+    recordMetric("webhook_event", 1, { provider, status: "received" });
     return Response.json({ received: true }, { status: 200 });
   } catch (cause) {
-    logger.error("webhook_failed", { provider, eventId, error: String(cause) });
+    recordMetric("webhook_event", 1, { provider, status: "failed" });
+    sendAlert({
+      level: "error",
+      title: "webhook_failed",
+      context: { provider, eventId, error: String(cause) },
+    });
     return Response.json(
       { error: "Falha ao processar webhook." },
       { status: 500 },

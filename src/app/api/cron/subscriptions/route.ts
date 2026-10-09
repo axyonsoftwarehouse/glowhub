@@ -4,6 +4,8 @@ import { eq } from "drizzle-orm";
 import { tenants } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { billDueSubscriptions } from "@/lib/subscription-billing";
+import { recordMetric } from "@/lib/metrics";
+import { sendAlert } from "@/lib/alerts";
 
 export const dynamic = "force-dynamic";
 
@@ -29,18 +31,30 @@ export async function GET(request: Request) {
   }
 
   const db = getDb();
-  const tenantRows = await db
-    .select({ id: tenants.id })
-    .from(tenants)
-    .where(eq(tenants.isActive, true));
+  try {
+    const tenantRows = await db
+      .select({ id: tenants.id })
+      .from(tenants)
+      .where(eq(tenants.isActive, true));
 
-  let billed = 0;
-  for (const tenant of tenantRows) {
-    const count = await db.transaction((tx) =>
-      billDueSubscriptions(tx, { tenantId: tenant.id, userId: null }),
-    );
-    billed += count;
+    let billed = 0;
+    for (const tenant of tenantRows) {
+      const count = await db.transaction((tx) =>
+        billDueSubscriptions(tx, { tenantId: tenant.id, userId: null }),
+      );
+      billed += count;
+    }
+
+    recordMetric("subscription_cron", 1, { status: "ok" });
+    recordMetric("subscription_billed", billed);
+    return NextResponse.json({ tenants: tenantRows.length, billed });
+  } catch (cause) {
+    recordMetric("subscription_cron", 1, { status: "failed" });
+    sendAlert({
+      level: "error",
+      title: "subscription_cron_failed",
+      context: { error: String(cause) },
+    });
+    return NextResponse.json({ error: "cron failed" }, { status: 500 });
   }
-
-  return NextResponse.json({ tenants: tenantRows.length, billed });
 }

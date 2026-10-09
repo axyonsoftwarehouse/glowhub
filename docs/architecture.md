@@ -47,9 +47,10 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   "serviço ↔ profissional ↔ filial" é a **interseção** dos dois vínculos — evita
   uma tabela ternária e mantém a agenda derivável.
 - **Produtos** (`products`) com **variações** (`product_variants`): preço
-  (`price_cents`, bigint), `sku` e `stock_quantity` vivem na variação. Todo
-  produto tem ao menos uma variação (a ação de criação garante isso). Estoque é
-  básico (quantidade); movimentos de estoque ficam para o financeiro.
+  (`price_cents`, bigint), `sku`, `unit`, custo (`cost_cents`) e estoque
+  (`stock_quantity`/`min_stock`) vivem na variação. Todo produto tem ao menos uma
+  variação (a ação de criação garante isso). Movimentos, ficha técnica e CMV em
+  **Estoque e insumos** (abaixo).
 - Dinheiro sempre em **centavos**; a conversão de/para texto fica em
   `src/lib/money.ts` (nunca float em repouso).
 
@@ -94,6 +95,10 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   (contas resolvidas por `ledger_accounts.system_key`). Receber = débito em Caixa
   e crédito em Contas a Receber, marcando `paid`. Cada lançamento guarda
   `idempotency_key` (`charge-revenue-<id>`, `payment-<id>`).
+  A **comanda** aceita adicionar/remover **produtos** enquanto aberta: cada item
+  gera receita própria (`charge-item-revenue-<item>`, conta `revenue_product`) e a
+  baixa de estoque na inclusão; a remoção estorna a receita e devolve o estoque
+  (ver **Estoque e insumos**). Não é possível remover item já pago.
 - **Pagamentos** (`payments`): idempotentes (`idempotency_key`), com `method`
   (cash/debit/credit/pix/transfer/wallet/other), `status`
   (pending/confirmed/failed/refunded) e vínculo ao lançamento. O pagamento manual
@@ -124,10 +129,50 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   C Contas a Receber**, registrando o resgate.
 - **Relatórios** (`/reports`): balancete do período por conta, resultado
   (receitas − despesas), recebimentos e comissões/gorjetas por profissional.
+  **Lucratividade & DRE** (`/reports/profitability`, `src/lib/profitability.ts`):
+  DRE (bruta → deduções → CMV → líquida), **margem por serviço/produto** (custo
+  vem dos movimentos de estoque por item) com ranking lucro/prejuízo, e **fluxo
+  de caixa** realizado (débitos/créditos em Caixa/Banco) vs. competência.
 - **Webhooks** (`webhook_events`): eventos do provedor gravados de forma
-  idempotente (`provider` + `event_id`); endpoint `/api/webhooks/<provider>` já
-  existe e falta a confirmação por provedor (com validação de assinatura).
-  `webhook_events` é interno (sem acesso pela role do app).
+  idempotente (`provider` + `event_id`); o endpoint `/api/webhooks/<provider>`
+  valida a assinatura e, havendo adapter do provedor, despacha a confirmação/
+  estorno no ledger. `webhook_events` é interno (sem acesso pela role do app).
+
+## Estoque e insumos
+- **Produtos** têm `kind` (`resale` | `internal`): insumos internos não são
+  vendidos, só consumidos por serviços via **ficha técnica**.
+- **Variações** guardam `unit` (un/ml/g), `price_cents`, `cost_cents` e
+  `min_stock`. Quantidades são **inteiras na unidade-base** (ex.: 30 ml). O saldo
+  `stock_quantity` **pode ficar negativo** — a baixa automática nunca bloqueia a
+  comanda (estoque impreciso é corrigido por ajuste).
+- **`stock_movements`** é *append-only* (auditoria): `purchase`, `sale`,
+  `service_consumption`, `adjustment`, `loss`, `opening`, com `quantity_delta`
+  assinado, `unit_cost_cents`, fornecedor e referência. Baixas usam chave
+  idempotente por (cobrança, variação, tipo).
+- **`service_materials`** define os insumos consumidos por serviço.
+- **`suppliers`** + entrada de estoque (`recordPurchase`): atualiza saldo, o
+  **custo médio ponderado** e lança **D Estoque / C Caixa|Contas a Pagar**.
+- **Baixa por item** (`consumeChargeItem`; a criação percorre os itens via
+  `consumeForCharge`): itens de produto baixam a própria variação; itens de
+  serviço baixam a ficha técnica; lança **D CMV / C Estoque** por item
+  (idempotente, conta `expense_cogs`). A remoção de um produto devolve o estoque e
+  estorna o CMV (`restoreChargeProduct`, movimento `sale_return`). A reposição é
+  sinalizada por `listLowStock` e pela tela `/inventory`.
+
+## Pagamento online (gateway)
+- **Adapter portável** (`src/lib/payments/*`): interface `PaymentProviderAdapter`
+  (`createCheckout`, `verifyWebhook`, `parseWebhook`). Provedores: `mock`
+  (padrão, para dev/testes — link local `/pay/mock`) e `mercadopago`
+  (Checkout Pro). Ativo via `PAYMENT_PROVIDER`.
+- **Link de checkout**: na comanda aberta, "Cobrar online" cria uma preferência
+  no provedor, registra um `payment` **pendente** (`provider` + `provider_ref`)
+  e devolve o link (`init_point`).
+- **Webhook** (`/api/webhooks/<provider>`): assinatura verificada por provedor
+  (Mercado Pago usa `x-signature`/`x-request-id`); o evento é gravado
+  idempotente e despachado (`processPaymentWebhook`) para **confirmar**
+  (D Caixa/Banco, C Contas a Receber) ou **estornar** (D Contas a Receber,
+  C Caixa/Banco) via `confirmPendingPayment` — a mesma lógica usada na
+  conciliação manual. Sem segredo configurado, o endpoint rejeita (safe default).
 
 ## Canal público (agendamento online)
 - `/book` resolve o tenant por **subdomínio/slug** (`getCurrentTenant`) e deixa o
@@ -149,6 +194,36 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   existir, senão apenas registra no console (dev). Trocar de provedor = ajustar
   só essa função. Falta um **agendador** (pg_cron/Inngest) para lembretes no
   horário certo e canais push/SMS.
+
+## Observabilidade (in-app + externa)
+- **Logger** estruturado em JSON (`src/lib/logger.ts`); a saída vai para
+  stdout/stderr e é coletável por log drains.
+- **Métricas** (`src/lib/metrics.ts`): `recordMetric(name, value, tags)` acumula
+  contadores em memória e **sempre** emite um log JSON (`message: "metric"`). Se
+  `METRICS_WEBHOOK_URL` existir, envia um POST **best-effort** (fire-and-forget,
+  com timeout) ao coletor. `GET /api/metrics` faz o *scrape* dos contadores da
+  instância, protegido por `METRICS_TOKEN` (Bearer; sem token → 404).
+- **Alertas** (`src/lib/alerts.ts`): `sendAlert` sempre loga e, se
+  `ALERT_WEBHOOK_URL` existir, empurra um payload compatível com
+  Slack/Discord/Mattermost a partir de `ALERT_MIN_LEVEL` (padrão `error`),
+  suprimindo títulos repetidos por `ALERT_COOLDOWN_SECONDS` (padrão 300s).
+- **Health** (`/api/health`) checa o banco; instrumentado com métricas/alertas.
+- Nota serverless: contadores em memória são **por instância**; séries
+  históricas vêm do log drain / coletor HTTP.
+
+## Fidelização
+- **Gift cards** (`gift_cards` + `gift_card_redemptions`): valor fixo e código
+  único por tenant. A venda lança **D Caixa / C Gift Cards a Resgatar** (passivo)
+  e o resgate **D Gift Cards a Resgatar / C Receita de Gift Cards**; o saldo é
+  derivado dos resgates (status `redeemed` ao zerar; validade opcional).
+- **Pontos** (`loyalty_points` + `loyalty_settings`): configuração por tenant
+  (`is_active`, `points_per_real`, `redeem_points_per_real`). Ao **quitar a
+  comanda**, credita pontos (idempotente por comanda). O **resgate** converte
+  pontos em **crédito na carteira**: **D Despesa de Fidelidade / C Carteira**,
+  com a transação de carteira correspondente (`src/lib/loyalty.ts`).
+- **Campanhas** (`campaigns`): segmento do CRM (novos/ativos/em risco/inativos/
+  VIP/aniversariantes) respeitando o `marketing_opt_in`; enfileira e-mails na
+  caixa de saída existente (envio real ainda depende de provedor configurado).
 
 ## Princípios do financeiro (contábil)
 1. **Livro-razão de partidas dobradas** (`ledger_accounts`, `journal_entries`,

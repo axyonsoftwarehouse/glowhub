@@ -57,6 +57,48 @@ export function ClientCreateForm() {
             {e.phone?.[0] && <p className="mt-1 text-xs text-red-600">{e.phone[0]}</p>}
           </div>
         </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <label className="text-xs font-medium text-foreground/60" htmlFor="client-birthday">
+              Aniversário
+            </label>
+            <input
+              id="client-birthday"
+              name="birthday"
+              type="date"
+              className={`mt-1 ${inputClass}`}
+            />
+            {e.birthday?.[0] && <p className="mt-1 text-xs text-red-600">{e.birthday[0]}</p>}
+          </div>
+          <div className="sm:col-span-2">
+            <label className="text-xs font-medium text-foreground/60" htmlFor="client-tags">
+              Tags (separadas por vírgula)
+            </label>
+            <input
+              id="client-tags"
+              name="tags"
+              placeholder="ex.: VIP, loira, coloração"
+              className={`mt-1 ${inputClass}`}
+            />
+            {e.tags?.[0] && <p className="mt-1 text-xs text-red-600">{e.tags[0]}</p>}
+          </div>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-foreground/60" htmlFor="client-preferences">
+            Preferências (opcional)
+          </label>
+          <textarea
+            id="client-preferences"
+            name="preferences"
+            rows={2}
+            placeholder="Produtos favoritos, alergias, profissional preferido…"
+            className={`mt-1 ${inputClass}`}
+          />
+        </div>
+        <label className="flex items-center gap-2 text-xs text-foreground/70">
+          <input type="checkbox" name="marketing_opt_in" className="h-4 w-4" />
+          Aceita receber comunicações e promoções
+        </label>
         <div>
           <label className="text-xs font-medium text-foreground/60" htmlFor="client-notes">
             Observações (opcional)
