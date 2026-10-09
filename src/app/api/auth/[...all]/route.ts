@@ -5,7 +5,18 @@ import { logger } from "@/lib/logger";
 import { recordMetric } from "@/lib/metrics";
 import { checkRateLimit, clientKey } from "@/lib/rate-limit";
 
-const handlers = toNextJsHandler(auth);
+type Handlers = ReturnType<typeof toNextJsHandler>;
+
+let handlers: Handlers | undefined;
+
+/**
+ * Constroi os handlers do Better Auth sob demanda: evita tocar o banco (isso
+ * exigiria DATABASE_URL) no momento em que o modulo e avaliado durante o build.
+ */
+function getHandlers(): Handlers {
+  if (!handlers) handlers = toNextJsHandler(auth);
+  return handlers;
+}
 
 const RULES = [
   {
@@ -22,7 +33,9 @@ const RULES = [
   },
 ];
 
-export const GET = handlers.GET;
+export async function GET(request: NextRequest) {
+  return getHandlers().GET(request);
+}
 
 export async function POST(request: NextRequest) {
   const path = new URL(request.url).pathname;
@@ -48,5 +61,5 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return handlers.POST(request);
+  return getHandlers().POST(request);
 }
