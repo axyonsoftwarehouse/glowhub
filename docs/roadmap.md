@@ -36,7 +36,10 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Cobrança de atendimento (`charges`/`charge_items`; serviços; produtos/pacotes via `kind`)
 - [x] Comanda: adicionar/remover produtos numa cobrança aberta, com receita dedicada
   (`revenue_product`), baixa de estoque na inclusão e estorno + devolução na remoção
-- [x] Pagamentos **idempotentes** + webhooks + conciliação (tela `/reconciliation`; gateway real a integrar)
+- [x] Pagamentos **idempotentes** + webhooks + conciliação (tela `/reconciliation`)
+- [x] **Gateway online**: adapter portável (mock + Mercado Pago), link de checkout
+  por comanda, webhook assinado que confirma/estorna no ledger e conciliação
+  automática (`src/lib/payments/*`, `/pay/mock`)
 - [x] Gorjeta, comissão e repasses
 - [x] Carteira do cliente (crédito pré-pago; pagamento por carteira)
 - [x] Relatórios (balancete, resultado, receita/dia, recebimentos por forma, ocupação por profissional, comissões)
@@ -79,4 +82,4 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Segurança (rate limiting no Better Auth, tabela interna `rate_limits`; revisão contínua de policies)
 - [x] Acessibilidade (foco visível, skip link, labels/aria, contraste AA, axe e2e). Projeto **somente pt-BR** (sem i18n)
 - [ ] Provedor de e-mail (verificação, convites, lembretes)
-- [ ] Gateway de pagamento online
+- [x] Gateway de pagamento online (adapter portável: mock + Mercado Pago; ver Fase 4)

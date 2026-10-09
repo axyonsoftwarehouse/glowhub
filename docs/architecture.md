@@ -134,9 +134,9 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   vem dos movimentos de estoque por item) com ranking lucro/prejuízo, e **fluxo
   de caixa** realizado (débitos/créditos em Caixa/Banco) vs. competência.
 - **Webhooks** (`webhook_events`): eventos do provedor gravados de forma
-  idempotente (`provider` + `event_id`); endpoint `/api/webhooks/<provider>` já
-  existe e falta a confirmação por provedor (com validação de assinatura).
-  `webhook_events` é interno (sem acesso pela role do app).
+  idempotente (`provider` + `event_id`); o endpoint `/api/webhooks/<provider>`
+  valida a assinatura e, havendo adapter do provedor, despacha a confirmação/
+  estorno no ledger. `webhook_events` é interno (sem acesso pela role do app).
 
 ## Estoque e insumos
 - **Produtos** têm `kind` (`resale` | `internal`): insumos internos não são
@@ -158,6 +158,21 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   (idempotente, conta `expense_cogs`). A remoção de um produto devolve o estoque e
   estorna o CMV (`restoreChargeProduct`, movimento `sale_return`). A reposição é
   sinalizada por `listLowStock` e pela tela `/inventory`.
+
+## Pagamento online (gateway)
+- **Adapter portável** (`src/lib/payments/*`): interface `PaymentProviderAdapter`
+  (`createCheckout`, `verifyWebhook`, `parseWebhook`). Provedores: `mock`
+  (padrão, para dev/testes — link local `/pay/mock`) e `mercadopago`
+  (Checkout Pro). Ativo via `PAYMENT_PROVIDER`.
+- **Link de checkout**: na comanda aberta, "Cobrar online" cria uma preferência
+  no provedor, registra um `payment` **pendente** (`provider` + `provider_ref`)
+  e devolve o link (`init_point`).
+- **Webhook** (`/api/webhooks/<provider>`): assinatura verificada por provedor
+  (Mercado Pago usa `x-signature`/`x-request-id`); o evento é gravado
+  idempotente e despachado (`processPaymentWebhook`) para **confirmar**
+  (D Caixa/Banco, C Contas a Receber) ou **estornar** (D Contas a Receber,
+  C Caixa/Banco) via `confirmPendingPayment` — a mesma lógica usada na
+  conciliação manual. Sem segredo configurado, o endpoint rejeita (safe default).
 
 ## Canal público (agendamento online)
 - `/book` resolve o tenant por **subdomínio/slug** (`getCurrentTenant`) e deixa o

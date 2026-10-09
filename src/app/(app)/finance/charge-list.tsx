@@ -5,6 +5,7 @@ import { applyCouponAction } from "@/app/(app)/coupons/actions";
 import { formatCentsBRL, formatCentsToInput } from "@/lib/money";
 import {
   addChargeItemAction,
+  createOnlinePaymentAction,
   registerPaymentAction,
   removeChargeItemAction,
 } from "./actions";
@@ -58,6 +59,10 @@ export function ChargeList({
   const [itemResult, setItemResult] = useState<FinanceActionState>(
     initialFinanceActionState,
   );
+  const [onlineResult, setOnlineResult] = useState<FinanceActionState>(
+    initialFinanceActionState,
+  );
+  const [onlineFor, setOnlineFor] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   function handlePayment(formData: FormData) {
@@ -84,6 +89,15 @@ export function ChargeList({
     startTransition(async () => {
       setItemResult(
         await removeChargeItemAction(initialFinanceActionState, formData),
+      );
+    });
+  }
+
+  function handleOnline(formData: FormData) {
+    setOnlineFor(String(formData.get("chargeId") ?? ""));
+    startTransition(async () => {
+      setOnlineResult(
+        await createOnlinePaymentAction(initialFinanceActionState, formData),
       );
     });
   }
@@ -244,6 +258,46 @@ export function ChargeList({
                 >
                   Aplicar cupom
                 </button>
+              </form>
+            )}
+
+            {canSettle && isOpen && remaining > 0 && (
+              <form
+                action={handleOnline}
+                className="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2"
+              >
+                <input type="hidden" name="chargeId" value={charge.id} />
+                <select name="method" defaultValue="pix" className={smallInput}>
+                  <option value="pix">Pix</option>
+                  <option value="credit">Cartão de crédito</option>
+                  <option value="debit">Cartão de débito</option>
+                </select>
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="rounded-full border border-border px-3 py-1 text-xs font-medium hover:bg-muted disabled:opacity-60"
+                >
+                  {pending ? "..." : "Cobrar online"}
+                </button>
+                {onlineFor === charge.id &&
+                  onlineResult.status === "error" &&
+                  onlineResult.message && (
+                    <span className="text-xs text-red-600">
+                      {onlineResult.message}
+                    </span>
+                  )}
+                {onlineFor === charge.id &&
+                  onlineResult.status === "success" &&
+                  onlineResult.checkoutUrl && (
+                    <a
+                      href={onlineResult.checkoutUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium text-brand hover:underline"
+                    >
+                      Abrir checkout →
+                    </a>
+                  )}
               </form>
             )}
           </div>

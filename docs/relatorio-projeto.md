@@ -65,7 +65,7 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Agenda | Horários, intervalos, feriados, disponibilidade; busca na agenda; políticas de cancelamento/no-show por tenant | ✅ |
 | Agendamentos | Reserva + status (pendente→confirmado→check-in→checkout→concluído) | ✅ |
 | Clientes | Cadastro, **busca**, **histórico dedicado** (atendimentos, cobranças/pagamentos, carteira), **CRM** (aniversário, tags, preferências, segmentos, VIP, ticket, frequência, LTV, recência) | ✅ |
-| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **receita diferida**, conciliação, **fechamento contábil** | ✅ (gateway online pendente) |
+| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **receita diferida**, conciliação, **fechamento contábil**, **gateway online** (link de checkout; mock + Mercado Pago) | ✅ |
 | Comandas | Cobrança aberta por atendimento; **adicionar/remover produtos** com receita (`revenue_product`), baixa de estoque na inclusão e estorno/devolução na remoção; pagamento até quitar | ✅ |
 | Fidelização | **Gift cards** (valor fixo + código; passivo→receita no resgate), **programa de pontos** (acúmulo ao quitar a comanda, resgate como crédito na carteira) e **campanhas por segmento** (e-mail com opt-in) | ✅ |
 | Pacotes & Assinaturas | Pré-pago e recorrente, com ledger, **consumo/limites por período** e **renovação automática** (cron) | ✅ |
@@ -336,6 +336,9 @@ Pontos de entrada úteis:
 - Fidelização: `src/lib/loyalty.ts`, `src/app/(app)/loyalty/*`
   (gift cards, pontos, campanhas; contas `liability_gift_card`,
   `revenue_gift_card`, `expense_loyalty`).
+- Pagamento online: `src/lib/payments/*` (adapter mock/Mercado Pago,
+  `confirmPendingPayment`), `/api/webhooks/[provider]`, `/pay/mock`,
+  botão "Cobrar online" em `src/app/(app)/finance/*`.
 - e2e: `e2e/*.spec.ts`, `e2e/auth.setup.ts`, `playwright.config.ts`.
 
 Decisões em aberto (ver `docs/architecture.md`): provedor de **pagamento**,

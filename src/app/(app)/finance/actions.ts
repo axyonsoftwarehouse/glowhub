@@ -32,6 +32,7 @@ import {
   restoreChargeProduct,
 } from "@/lib/inventory";
 import { awardChargePoints } from "@/lib/loyalty";
+import { activePaymentProvider } from "@/lib/payments";
 import {
   getSystemAccountId,
   postEntry,
@@ -775,6 +776,115 @@ export async function removeChargeItemAction(
 
   revalidatePath("/finance");
   return { status: "success", message: "Item removido da comanda." };
+}
+
+const onlinePaymentInput = z.object({
+  chargeId: z.string().trim(),
+  method: z.enum(["pix", "credit", "debit"]),
+});
+
+/**
+ * Gera um link de checkout no provedor ativo para o saldo em aberto da comanda,
+ * registrando um pagamento pendente (conciliado depois pelo webhook).
+ */
+export async function createOnlinePaymentAction(
+  _prev: FinanceActionState,
+  formData: FormData,
+): Promise<FinanceActionState> {
+  const parsed = onlinePaymentInput.safeParse({
+    chargeId: formData.get("chargeId") ?? "",
+    method: formData.get("method") ?? "pix",
+  });
+  if (!parsed.success) {
+    return { status: "error", fieldErrors: toFieldErrors(parsed.error) };
+  }
+  if (!isUuid(parsed.data.chargeId)) {
+    return { status: "error", message: "Cobrança inválida." };
+  }
+
+  const ctx = await context();
+  if ("error" in ctx) return { status: "error", message: ctx.error };
+
+  try {
+    const result = await withUser(ctx.userId, async (tx) => {
+      const [charge] = await tx
+        .select({
+          id: charges.id,
+          status: charges.status,
+          totalCents: charges.totalCents,
+          clientId: charges.clientId,
+        })
+        .from(charges)
+        .where(
+          and(
+            eq(charges.id, parsed.data.chargeId),
+            eq(charges.tenantId, ctx.tenant.id),
+          ),
+        )
+        .limit(1);
+      if (!charge) return { error: "Cobrança não encontrada." };
+      if (charge.status !== "open") return { error: "A comanda não está aberta." };
+
+      const confirmed = await tx
+        .select({ amountCents: payments.amountCents })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.chargeId, charge.id),
+            eq(payments.tenantId, ctx.tenant.id),
+            eq(payments.status, "confirmed"),
+          ),
+        );
+      const paid = confirmed.reduce((sum, row) => sum + row.amountCents, 0);
+      const remaining = charge.totalCents - paid;
+      if (remaining <= 0) return { error: "Cobrança já está quitada." };
+
+      let payerEmail: string | null = null;
+      if (charge.clientId) {
+        const [client] = await tx
+          .select({ email: clients.email })
+          .from(clients)
+          .where(eq(clients.id, charge.clientId))
+          .limit(1);
+        payerEmail = client?.email ?? null;
+      }
+
+      const provider = activePaymentProvider();
+      const checkout = await provider.createCheckout({
+        amountCents: remaining,
+        description: "Comanda",
+        externalReference: charge.id,
+        method: parsed.data.method,
+        payerEmail,
+      });
+
+      await tx.insert(payments).values({
+        tenantId: ctx.tenant.id,
+        chargeId: charge.id,
+        method: parsed.data.method,
+        amountCents: remaining,
+        status: "pending",
+        provider: provider.id,
+        providerRef: checkout.providerRef,
+        idempotencyKey: randomUUID(),
+        createdBy: ctx.userId,
+      });
+
+      return { checkoutUrl: checkout.checkoutUrl, provider: provider.id };
+    });
+
+    if ("error" in result) return { status: "error", message: result.error };
+
+    revalidatePath("/finance");
+    revalidatePath("/reconciliation");
+    return {
+      status: "success",
+      message: `Link de pagamento gerado (${result.provider}).`,
+      checkoutUrl: result.checkoutUrl,
+    };
+  } catch (cause) {
+    return { status: "error", message: itemErrorMessage(cause) };
+  }
 }
 
 type PaymentMethod =

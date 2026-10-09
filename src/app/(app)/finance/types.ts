@@ -2,6 +2,7 @@ export type FinanceActionState = {
   status: "idle" | "success" | "error";
   message?: string;
   fieldErrors?: Record<string, string[]>;
+  checkoutUrl?: string;
 };
 
 export const initialFinanceActionState: FinanceActionState = { status: "idle" };
