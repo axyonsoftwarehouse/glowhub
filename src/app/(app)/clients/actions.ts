@@ -9,6 +9,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { clients } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { parseTags } from "@/lib/crm";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import type { ClientActionState } from "./types";
@@ -29,6 +30,21 @@ const clientInput = z.object({
     )
     .optional(),
   phone: z.string().trim().max(40, "No máximo 40 caracteres.").optional(),
+  birthday: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === "" || /^\d{4}-\d{2}-\d{2}$/.test(value),
+      "Data inválida.",
+    )
+    .optional(),
+  tags: z.string().trim().max(400, "No máximo 400 caracteres.").optional(),
+  preferences: z
+    .string()
+    .trim()
+    .max(2000, "No máximo 2000 caracteres.")
+    .optional(),
+  marketing_opt_in: z.boolean().optional(),
   notes: z.string().trim().max(1000, "No máximo 1000 caracteres.").optional(),
 });
 
@@ -54,6 +70,12 @@ function readInput(formData: FormData) {
     name: formData.get("name") ?? "",
     email: formData.get("email") ?? "",
     phone: formData.get("phone") ?? "",
+    birthday: formData.get("birthday") ?? "",
+    tags: formData.get("tags") ?? "",
+    preferences: formData.get("preferences") ?? "",
+    marketing_opt_in:
+      formData.get("marketing_opt_in") === "on" ||
+      formData.get("marketing_opt_in") === "true",
     notes: formData.get("notes") ?? "",
   });
 }
@@ -85,6 +107,10 @@ export async function createClientAction(
         name: parsed.data.name,
         email: nullIfEmpty(parsed.data.email),
         phone: nullIfEmpty(parsed.data.phone),
+        birthday: nullIfEmpty(parsed.data.birthday),
+        tags: parseTags(parsed.data.tags),
+        preferences: nullIfEmpty(parsed.data.preferences),
+        marketingOptIn: parsed.data.marketing_opt_in ?? false,
         notes: nullIfEmpty(parsed.data.notes),
       });
     });
@@ -125,6 +151,10 @@ export async function updateClientAction(
           name: parsed.data.name,
           email: nullIfEmpty(parsed.data.email),
           phone: nullIfEmpty(parsed.data.phone),
+          birthday: nullIfEmpty(parsed.data.birthday),
+          tags: parseTags(parsed.data.tags),
+          preferences: nullIfEmpty(parsed.data.preferences),
+          marketingOptIn: parsed.data.marketing_opt_in ?? false,
           notes: nullIfEmpty(parsed.data.notes),
         })
         .where(and(eq(clients.id, id), eq(clients.tenantId, ctx.tenant.id)))

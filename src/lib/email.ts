@@ -1,4 +1,5 @@
-import { logger } from "@/lib/logger";
+import { recordMetric } from "@/lib/metrics";
+import { sendAlert } from "@/lib/alerts";
 
 export type EmailResult =
   | { ok: true; id: string }
@@ -45,8 +46,13 @@ export async function sendEmail(params: {
     const data = (await response.json()) as { id?: string };
     return { ok: true, id: data.id ?? "unknown" };
   } catch (cause) {
-    logger.error("email_send_failed", {
-      error: cause instanceof Error ? cause.message : String(cause),
+    recordMetric("email_send_failed", 1);
+    sendAlert({
+      level: "error",
+      title: "email_send_failed",
+      context: {
+        error: cause instanceof Error ? cause.message : String(cause),
+      },
     });
     return { ok: false, error: "Falha ao enviar e-mail." };
   }

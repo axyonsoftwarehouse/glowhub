@@ -6,7 +6,7 @@ import { internalError } from "@/lib/errors";
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   appointments,
@@ -19,11 +19,19 @@ import {
   ledgerAccounts,
   payments,
   payouts,
+  productVariants,
+  products,
   professionals,
   services,
   walletTransactions,
 } from "@/db/schema";
 import { withUser, type AppTx } from "@/lib/db";
+import {
+  consumeChargeItem,
+  consumeForCharge,
+  restoreChargeProduct,
+} from "@/lib/inventory";
+import { awardChargePoints } from "@/lib/loyalty";
 import {
   getSystemAccountId,
   postEntry,
@@ -78,22 +86,27 @@ const DEFAULT_CHART: {
   { code: "1", name: "Caixa", type: "asset", systemKey: "cash" },
   { code: "1.1", name: "Banco", type: "asset", systemKey: "bank" },
   { code: "1.2", name: "Contas a Receber", type: "asset", systemKey: "accounts_receivable" },
-  { code: "1.3", name: "Estoque", type: "asset" },
-  { code: "2.1", name: "Contas a Pagar", type: "liability" },
+  { code: "1.3", name: "Estoque", type: "asset", systemKey: "asset_inventory" },
+  { code: "2.1", name: "Contas a Pagar", type: "liability", systemKey: "liability_payable" },
   { code: "2.2", name: "Comissões a Pagar", type: "liability", systemKey: "liability_commission" },
   { code: "2.3", name: "Gorjetas a Pagar", type: "liability", systemKey: "liability_tip" },
   { code: "2.4", name: "Carteira de Clientes", type: "liability", systemKey: "liability_wallet" },
   { code: "2.5", name: "Pacotes a Resgatar", type: "liability", systemKey: "liability_package" },
   { code: "2.6", name: "Receitas a Apropriar", type: "liability", systemKey: "liability_deferred_revenue" },
+  { code: "2.7", name: "Gift Cards a Resgatar", type: "liability", systemKey: "liability_gift_card" },
   { code: "3.1", name: "Capital / Resultados", type: "equity" },
   { code: "4.1", name: "Receita de Serviços", type: "revenue", systemKey: "revenue_service" },
   { code: "4.2", name: "Receita de Produtos", type: "revenue", systemKey: "revenue_product" },
   { code: "4.3", name: "Receita de Pacotes", type: "revenue", systemKey: "revenue_package" },
   { code: "4.4", name: "Receita de Assinaturas", type: "revenue", systemKey: "revenue_subscription" },
+  { code: "4.5", name: "Receita de Gift Cards", type: "revenue", systemKey: "revenue_gift_card" },
   { code: "5.1", name: "Despesas Operacionais", type: "expense" },
   { code: "5.2", name: "Comissões", type: "expense", systemKey: "expense_commission" },
   { code: "5.3", name: "Taxas de Cartão", type: "expense" },
   { code: "5.4", name: "Descontos e Estornos", type: "expense", systemKey: "expense_discount" },
+  { code: "5.5", name: "Custo de Produtos e Serviços", type: "expense", systemKey: "expense_cogs" },
+  { code: "5.6", name: "Perdas e Ajustes de Estoque", type: "expense", systemKey: "expense_inventory_loss" },
+  { code: "5.7", name: "Despesa de Fidelidade", type: "expense", systemKey: "expense_loyalty" },
 ];
 
 export async function createAccountAction(
@@ -399,6 +412,13 @@ export async function createChargeAction(
         totalCents: appointment.priceCents,
       });
 
+      // Baixa insumos da ficha tecnica e produtos, lancando o CMV (idempotente).
+      await consumeForCharge(tx, {
+        tenantId: ctx.tenant.id,
+        userId: ctx.userId,
+        chargeId: charge.id,
+      });
+
       const entryId = await postEntry(tx, {
         tenantId: ctx.tenant.id,
         userId: ctx.userId,
@@ -505,6 +525,256 @@ export async function createChargeAction(
     }
     return { status: "error", message: internalError(cause) };
   }
+}
+
+const chargeItemInput = z.object({
+  chargeId: z.string().trim(),
+  variantId: z.string().trim(),
+  quantity: z.coerce
+    .number()
+    .int("Use quantidades inteiras.")
+    .min(1, "Quantidade mínima de 1.")
+    .max(999, "Quantidade muito alta."),
+});
+
+function itemErrorMessage(cause: unknown): string {
+  const code = (cause as { code?: string })?.code;
+  const message = cause instanceof Error ? cause.message : "";
+  if (!code && message && !message.includes("_")) return message;
+  return internalError(cause);
+}
+
+/** Adiciona um produto (revenda) a uma comanda aberta: receita + baixa de estoque. */
+export async function addChargeItemAction(
+  _prev: FinanceActionState,
+  formData: FormData,
+): Promise<FinanceActionState> {
+  const parsed = chargeItemInput.safeParse({
+    chargeId: formData.get("chargeId") ?? "",
+    variantId: formData.get("variantId") ?? "",
+    quantity: formData.get("quantity") ?? "1",
+  });
+  if (!parsed.success) {
+    return { status: "error", fieldErrors: toFieldErrors(parsed.error) };
+  }
+  if (!isUuid(parsed.data.chargeId) || !isUuid(parsed.data.variantId)) {
+    return { status: "error", message: "Dados inválidos." };
+  }
+
+  const ctx = await context();
+  if ("error" in ctx) return { status: "error", message: ctx.error };
+
+  try {
+    await withUser(ctx.userId, async (tx) => {
+      const [charge] = await tx
+        .select({ id: charges.id, status: charges.status })
+        .from(charges)
+        .where(
+          and(
+            eq(charges.id, parsed.data.chargeId),
+            eq(charges.tenantId, ctx.tenant.id),
+          ),
+        )
+        .limit(1);
+      if (!charge) throw new Error("Cobrança não encontrada.");
+      if (charge.status !== "open") throw new Error("A comanda não está aberta.");
+
+      const [variant] = await tx
+        .select({
+          id: productVariants.id,
+          name: productVariants.name,
+          priceCents: productVariants.priceCents,
+          productName: products.name,
+        })
+        .from(productVariants)
+        .innerJoin(products, eq(products.id, productVariants.productId))
+        .where(
+          and(
+            eq(productVariants.id, parsed.data.variantId),
+            eq(productVariants.tenantId, ctx.tenant.id),
+            eq(productVariants.isActive, true),
+            eq(products.kind, "resale"),
+          ),
+        )
+        .limit(1);
+      if (!variant) throw new Error("Produto indisponível para venda.");
+
+      const totalCents = variant.priceCents * parsed.data.quantity;
+
+      const [item] = await tx
+        .insert(chargeItems)
+        .values({
+          tenantId: ctx.tenant.id,
+          chargeId: charge.id,
+          kind: "product",
+          referenceId: variant.id,
+          description: `${variant.productName} · ${variant.name}`,
+          quantity: parsed.data.quantity,
+          unitPriceCents: variant.priceCents,
+          totalCents,
+        })
+        .returning({ id: chargeItems.id });
+
+      const receivable = await getSystemAccountId(
+        tx,
+        ctx.tenant.id,
+        "accounts_receivable",
+      );
+      const revenue = await getSystemAccountId(
+        tx,
+        ctx.tenant.id,
+        "revenue_product",
+      );
+      if (!receivable || !revenue) {
+        throw new Error("Crie o plano de contas padrão em Financeiro.");
+      }
+
+      await postEntry(tx, {
+        tenantId: ctx.tenant.id,
+        userId: ctx.userId,
+        description: `Comanda: ${variant.productName} · ${variant.name}`,
+        idempotencyKey: `charge-item-revenue-${item.id}`,
+        referenceType: "charge_item",
+        referenceId: item.id,
+        lines: [
+          { accountId: receivable, direction: "debit", amountCents: totalCents },
+          { accountId: revenue, direction: "credit", amountCents: totalCents },
+        ],
+      });
+
+      await tx
+        .update(charges)
+        .set({ totalCents: sql`${charges.totalCents} + ${totalCents}` })
+        .where(eq(charges.id, charge.id));
+
+      await consumeChargeItem(tx, {
+        tenantId: ctx.tenant.id,
+        userId: ctx.userId,
+        chargeItemId: item.id,
+      });
+    });
+  } catch (cause) {
+    return { status: "error", message: itemErrorMessage(cause) };
+  }
+
+  revalidatePath("/finance");
+  return { status: "success", message: "Produto adicionado à comanda." };
+}
+
+/** Remove um produto de uma comanda aberta: estorna a receita e devolve o estoque. */
+export async function removeChargeItemAction(
+  _prev: FinanceActionState,
+  formData: FormData,
+): Promise<FinanceActionState> {
+  const id = String(formData.get("id") ?? "");
+  if (!isUuid(id)) return { status: "error", message: "Item inválido." };
+
+  const ctx = await context();
+  if ("error" in ctx) return { status: "error", message: ctx.error };
+
+  try {
+    await withUser(ctx.userId, async (tx) => {
+      const [item] = await tx
+        .select({
+          id: chargeItems.id,
+          kind: chargeItems.kind,
+          referenceId: chargeItems.referenceId,
+          quantity: chargeItems.quantity,
+          totalCents: chargeItems.totalCents,
+          chargeId: charges.id,
+          chargeStatus: charges.status,
+          chargeTotal: charges.totalCents,
+        })
+        .from(chargeItems)
+        .innerJoin(charges, eq(charges.id, chargeItems.chargeId))
+        .where(
+          and(
+            eq(chargeItems.id, id),
+            eq(chargeItems.tenantId, ctx.tenant.id),
+          ),
+        )
+        .limit(1);
+      if (!item) throw new Error("Item não encontrado.");
+      if (item.chargeStatus !== "open") throw new Error("A comanda não está aberta.");
+      if (item.kind !== "product") {
+        throw new Error("Só é possível remover produtos da comanda.");
+      }
+
+      const confirmed = await tx
+        .select({ amountCents: payments.amountCents })
+        .from(payments)
+        .where(
+          and(
+            eq(payments.chargeId, item.chargeId),
+            eq(payments.tenantId, ctx.tenant.id),
+            eq(payments.status, "confirmed"),
+          ),
+        );
+      const paid = confirmed.reduce((sum, row) => sum + row.amountCents, 0);
+      if (item.chargeTotal - item.totalCents < paid) {
+        throw new Error("Há pagamentos registrados; não é possível remover este item.");
+      }
+
+      const [original] = await tx
+        .select({ id: journalEntries.id })
+        .from(journalEntries)
+        .where(
+          and(
+            eq(journalEntries.tenantId, ctx.tenant.id),
+            eq(journalEntries.idempotencyKey, `charge-item-revenue-${item.id}`),
+          ),
+        )
+        .limit(1);
+
+      const receivable = await getSystemAccountId(
+        tx,
+        ctx.tenant.id,
+        "accounts_receivable",
+      );
+      const revenue = await getSystemAccountId(
+        tx,
+        ctx.tenant.id,
+        "revenue_product",
+      );
+      if (receivable && revenue) {
+        await postEntry(tx, {
+          tenantId: ctx.tenant.id,
+          userId: ctx.userId,
+          description: "Estorno de item da comanda",
+          idempotencyKey: `charge-item-revenue-reversal-${item.id}`,
+          referenceType: "charge_item",
+          referenceId: item.id,
+          reversesEntryId: original?.id ?? null,
+          lines: [
+            { accountId: revenue, direction: "debit", amountCents: item.totalCents },
+            { accountId: receivable, direction: "credit", amountCents: item.totalCents },
+          ],
+        });
+      }
+
+      if (item.referenceId) {
+        await restoreChargeProduct(tx, {
+          tenantId: ctx.tenant.id,
+          userId: ctx.userId,
+          chargeItemId: item.id,
+          variantId: item.referenceId,
+          quantity: item.quantity,
+        });
+      }
+
+      await tx
+        .update(charges)
+        .set({ totalCents: sql`greatest(0, ${charges.totalCents} - ${item.totalCents})` })
+        .where(eq(charges.id, item.chargeId));
+
+      await tx.delete(chargeItems).where(eq(chargeItems.id, item.id));
+    });
+  } catch (cause) {
+    return { status: "error", message: itemErrorMessage(cause) };
+  }
+
+  revalidatePath("/finance");
+  return { status: "success", message: "Item removido da comanda." };
 }
 
 type PaymentMethod =
@@ -732,6 +1002,16 @@ export async function registerPaymentAction(
           .update(charges)
           .set({ status: "paid", settlementEntryId: entryId })
           .where(eq(charges.id, charge.id));
+
+        if (charge.clientId) {
+          await awardChargePoints(tx, {
+            tenantId: ctx.tenant.id,
+            userId: ctx.userId,
+            chargeId: charge.id,
+            clientId: charge.clientId,
+            amountCents: charge.totalCents,
+          });
+        }
       }
 
       return { ok: true as const, already: false };

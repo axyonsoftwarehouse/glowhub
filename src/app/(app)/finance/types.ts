@@ -53,12 +53,29 @@ export type JournalEntry = {
   lines: JournalLine[];
 };
 
+export type ChargeItem = {
+  id: string;
+  kind: "service" | "product" | "package";
+  description: string;
+  quantity: number;
+  unitPriceCents: number;
+  totalCents: number;
+};
+
 export type Charge = {
   id: string;
   description: string;
   totalCents: number;
   paidCents: number;
   status: "open" | "paid" | "void";
+  items: ChargeItem[];
+};
+
+export type ProductOption = {
+  variantId: string;
+  label: string;
+  priceCents: number;
+  stockQuantity: number;
 };
 
 export type PayoutRow = {

@@ -1,6 +1,7 @@
 import {
   bigint,
   boolean,
+  date,
   index,
   pgEnum,
   pgTable,
@@ -33,12 +34,19 @@ export const clients = pgTable(
     name: text("name").notNull(),
     email: text("email"),
     phone: text("phone"),
+    birthday: date("birthday"),
+    tags: text("tags").array(),
+    preferences: text("preferences"),
+    marketingOptIn: boolean("marketing_opt_in").notNull().default(false),
     notes: text("notes"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("clients_tenant_idx").on(t.tenantId)],
+  (t) => [
+    index("clients_tenant_idx").on(t.tenantId),
+    index("clients_tags_idx").using("gin", t.tags),
+  ],
 );
 
 export const appointments = pgTable(

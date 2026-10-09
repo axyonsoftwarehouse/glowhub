@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { toNextJsHandler } from "better-auth/next-js";
 import { auth } from "@/lib/auth";
 import { logger } from "@/lib/logger";
+import { recordMetric } from "@/lib/metrics";
 import { checkRateLimit, clientKey } from "@/lib/rate-limit";
 
 const handlers = toNextJsHandler(auth);
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
 
     if (!result.allowed) {
       logger.warn("rate_limited", { scope: rule.scope, path });
+      recordMetric("rate_limited", 1, { scope: rule.scope });
       return Response.json(
         { error: "Muitas tentativas. Aguarde e tente novamente." },
         {

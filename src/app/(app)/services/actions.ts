@@ -7,7 +7,15 @@ import { internalError } from "@/lib/errors";
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { branches, categories, serviceBranches, services } from "@/db/schema";
+import {
+  branches,
+  categories,
+  productVariants,
+  products,
+  serviceBranches,
+  serviceMaterials,
+  services,
+} from "@/db/schema";
 import { parsePriceToCents } from "@/lib/money";
 import { withUser, type AppTx } from "@/lib/db";
 import { getSession } from "@/lib/session";
@@ -404,4 +412,109 @@ export async function upsertServiceBranchAction(
     status: "success",
     message: isActive ? "Override salvo." : "Serviço desativado nesta filial.",
   };
+}
+
+const materialInput = z.object({
+  serviceId: z.string().trim(),
+  variantId: z.string().trim(),
+  quantity: z.coerce
+    .number()
+    .int("Use quantidades inteiras.")
+    .min(1, "Quantidade mínima de 1.")
+    .max(100000, "Quantidade muito alta."),
+});
+
+export async function addServiceMaterialAction(
+  _prev: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  const ctx = await context();
+  if ("error" in ctx) return { status: "error", message: ctx.error };
+
+  const parsed = materialInput.safeParse({
+    serviceId: formData.get("serviceId") ?? "",
+    variantId: formData.get("variantId") ?? "",
+    quantity: formData.get("quantity") ?? "1",
+  });
+  if (!parsed.success) {
+    return { status: "error", fieldErrors: toFieldErrors(parsed.error) };
+  }
+
+  try {
+    await withUser(ctx.userId, async (tx) => {
+      const [service] = await tx
+        .select({ id: services.id })
+        .from(services)
+        .where(
+          and(
+            eq(services.id, parsed.data.serviceId),
+            eq(services.tenantId, ctx.tenant.id),
+          ),
+        )
+        .limit(1);
+      const [variant] = await tx
+        .select({ id: productVariants.id })
+        .from(productVariants)
+        .innerJoin(products, eq(products.id, productVariants.productId))
+        .where(
+          and(
+            eq(productVariants.id, parsed.data.variantId),
+            eq(productVariants.tenantId, ctx.tenant.id),
+            eq(products.kind, "internal"),
+          ),
+        )
+        .limit(1);
+      if (!service || !variant) throw new Error("Serviço ou insumo inválidos.");
+
+      await tx
+        .insert(serviceMaterials)
+        .values({
+          tenantId: ctx.tenant.id,
+          serviceId: parsed.data.serviceId,
+          variantId: parsed.data.variantId,
+          quantity: parsed.data.quantity,
+        })
+        .onConflictDoUpdate({
+          target: [serviceMaterials.serviceId, serviceMaterials.variantId],
+          set: { quantity: parsed.data.quantity },
+        });
+    });
+  } catch (cause) {
+    if (errorCode(cause) === "42501") {
+      return { status: "error", message: "Seu papel não permite alterar." };
+    }
+    return { status: "error", message: internalError(cause) };
+  }
+
+  revalidatePath("/services");
+  return { status: "success", message: "Insumo vinculado." };
+}
+
+export async function removeServiceMaterialAction(
+  _prev: CatalogActionState,
+  formData: FormData,
+): Promise<CatalogActionState> {
+  const id = String(formData.get("id") ?? "");
+  if (!isUuid(id)) return { status: "error", message: "Insumo inválido." };
+
+  const ctx = await context();
+  if ("error" in ctx) return { status: "error", message: ctx.error };
+
+  try {
+    await withUser(ctx.userId, async (tx) => {
+      await tx
+        .delete(serviceMaterials)
+        .where(
+          and(
+            eq(serviceMaterials.id, id),
+            eq(serviceMaterials.tenantId, ctx.tenant.id),
+          ),
+        );
+    });
+  } catch (cause) {
+    return { status: "error", message: internalError(cause) };
+  }
+
+  revalidatePath("/services");
+  return { status: "success", message: "Insumo removido." };
 }

@@ -36,3 +36,18 @@ export type ServiceBranchOverride = {
   durationMinutes: number | null;
   isActive: boolean;
 };
+
+export type InsumoOption = {
+  variantId: string;
+  label: string;
+  unit: string;
+  costCents: number;
+};
+
+export type ServiceMaterial = {
+  id: string;
+  variantId: string;
+  label: string;
+  unit: string;
+  quantity: number;
+};

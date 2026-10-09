@@ -4,13 +4,16 @@ import { useState, useTransition } from "react";
 import { formatCentsBRL, formatCentsToInput } from "@/lib/money";
 import { setServiceActiveAction, updateServiceAction } from "./actions";
 import { ServiceBranchList } from "./service-branch-list";
+import { ServiceMaterials } from "./service-materials";
 import {
   initialCatalogActionState,
   type BranchOption,
   type CatalogActionState,
   type Category,
+  type InsumoOption,
   type Service,
   type ServiceBranchOverride,
+  type ServiceMaterial,
 } from "./types";
 
 const inputClass =
@@ -21,12 +24,16 @@ export function ServiceCard({
   categories,
   branches,
   overrides,
+  materials,
+  insumos,
   canManage,
 }: {
   service: Service;
   categories: Category[];
   branches: BranchOption[];
   overrides: ServiceBranchOverride[];
+  materials: ServiceMaterial[];
+  insumos: InsumoOption[];
   canManage: boolean;
 }) {
   const [editing, setEditing] = useState(false);
@@ -254,6 +261,14 @@ export function ServiceCard({
           service={service}
           branches={branches}
           overrides={overrides}
+        />
+      )}
+
+      {canManage && !editing && (
+        <ServiceMaterials
+          serviceId={service.id}
+          materials={materials}
+          insumos={insumos}
         />
       )}
     </article>

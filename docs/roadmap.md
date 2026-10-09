@@ -34,6 +34,8 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 ## Fase 4 — Financeiro (concluída)
 - [x] Chart of accounts + **ledger de partidas dobradas** (centavos)
 - [x] Cobrança de atendimento (`charges`/`charge_items`; serviços; produtos/pacotes via `kind`)
+- [x] Comanda: adicionar/remover produtos numa cobrança aberta, com receita dedicada
+  (`revenue_product`), baixa de estoque na inclusão e estorno + devolução na remoção
 - [x] Pagamentos **idempotentes** + webhooks + conciliação (tela `/reconciliation`; gateway real a integrar)
 - [x] Gorjeta, comissão e repasses
 - [x] Carteira do cliente (crédito pré-pago; pagamento por carteira)
@@ -51,11 +53,29 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Website público / agendamento online (`/book`, por subdomínio/slug)
 - [ ] App do cliente (mobile)
 
+## Fase 7 — Relatórios & Inteligência de Negócio (BI)
+- [x] CRM de clientes: aniversário, tags e preferências no cadastro; segmentação
+  (novo/ativo/em risco/inativo) e VIP (percentil 90 de gasto); ticket médio,
+  frequência, LTV, recência e "próximo retorno sugerido"; filtros/abas na lista
+  e resumo na ficha do cliente (`src/lib/crm.ts`)
+- [x] Custo & insumos (fundação): `product_variants.cost_cents`/`min_stock`/`unit`,
+  produtos com `kind` (revenda/insumo), ficha técnica do serviço
+  (`service_materials`), movimentos de estoque append-only (`stock_movements`),
+  fornecedores + entrada de estoque com custo médio, baixa automática e CMV na
+  cobrança, e alerta de reposição (`src/lib/inventory.ts`, `/inventory`)
+- [x] Lucratividade & DRE: DRE (bruto→deduções→CMV→líquido), margem por
+  serviço/produto com ranking lucro/prejuízo e **fluxo de caixa** vs. resultado
+  (`src/lib/profitability.ts`, `/reports/profitability`)
+- [x] Fidelização: gift cards (valor fixo + código; venda = passivo, resgate =
+  receita), programa de pontos (acúmulo na comanda quitada, resgate como crédito
+  na carteira) e campanhas por segmento (e-mail com opt-in via caixa de saída)
+  (`src/lib/loyalty.ts`, `/loyalty`)
+
 ## Transversal (em todas as fases)
 - [x] Onboarding de tenant (cadastro cria empresa + filial + owner)
 - [x] CI (lint + typecheck + build no GitHub Actions)
 - [x] Testes unitários (vitest) + e2e (Playwright: login demo, minha agenda, histórico do cliente, booking, assinaturas, fechamento, axe/a11y)
-- [x] Observabilidade in-app (logger estruturado, `/api/health`, logs de webhook); métricas/alertas externos pendentes
+- [x] Observabilidade in-app (logger estruturado, `/api/health`, logs de webhook); métricas e alertas externos (`/api/metrics`, sink HTTP `METRICS_WEBHOOK_URL`, `sendAlert`/`ALERT_WEBHOOK_URL`)
 - [x] Segurança (rate limiting no Better Auth, tabela interna `rate_limits`; revisão contínua de policies)
 - [x] Acessibilidade (foco visível, skip link, labels/aria, contraste AA, axe e2e). Projeto **somente pt-BR** (sem i18n)
 - [ ] Provedor de e-mail (verificação, convites, lembretes)

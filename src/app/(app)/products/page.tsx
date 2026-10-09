@@ -92,6 +92,7 @@ export default async function ProductsPage({
           description: products.description,
           imageUrl: products.imageUrl,
           categoryId: products.categoryId,
+          kind: products.kind,
           isActive: products.isActive,
         })
         .from(products)
@@ -106,8 +107,11 @@ export default async function ProductsPage({
           productId: productVariants.productId,
           name: productVariants.name,
           sku: productVariants.sku,
+          unit: productVariants.unit,
           priceCents: productVariants.priceCents,
+          costCents: productVariants.costCents,
           stockQuantity: productVariants.stockQuantity,
+          minStock: productVariants.minStock,
           isActive: productVariants.isActive,
         })
         .from(productVariants)
@@ -132,8 +136,11 @@ export default async function ProductsPage({
           id: row.id,
           name: row.name,
           sku: row.sku ?? null,
+          unit: row.unit,
           priceCents: row.priceCents,
+          costCents: row.costCents,
           stockQuantity: row.stockQuantity,
+          minStock: row.minStock,
           isActive: row.isActive,
         });
         variantsByProduct.set(row.productId, list);
@@ -145,6 +152,7 @@ export default async function ProductsPage({
         description: row.description ?? null,
         imageUrl: row.imageUrl ?? null,
         categoryId: row.categoryId ?? null,
+        kind: row.kind,
         isActive: row.isActive,
         variants: variantsByProduct.get(row.id) ?? [],
       }));

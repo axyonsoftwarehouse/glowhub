@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { logger } from "@/lib/logger";
+import { sendAlert } from "@/lib/alerts";
+import { recordMetric } from "@/lib/metrics";
 
 export type RateLimitResult = {
   allowed: boolean;
@@ -46,7 +47,12 @@ export async function checkRateLimit(params: {
     }
     return { allowed: true, remaining: limit - count, retryAfterSeconds: 0 };
   } catch (cause) {
-    logger.error("rate_limit_error", { key, error: String(cause) });
+    recordMetric("rate_limit_error", 1, { key });
+    sendAlert({
+      level: "error",
+      title: "rate_limit_error",
+      context: { key, error: String(cause) },
+    });
     return { allowed: true, remaining: limit, retryAfterSeconds: 0 };
   }
 }

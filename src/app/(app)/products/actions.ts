@@ -38,14 +38,18 @@ const productBase = {
       "Informe uma URL http(s) válida.",
     )
     .optional(),
+  kind: z.enum(["resale", "internal"]),
 };
 
 const productInput = z.object(productBase);
 const createProductInput = z.object({
   ...productBase,
   variantName: z.string().trim().max(80, "No máximo 80 caracteres.").optional(),
+  variantUnit: z.string().trim().max(10, "No máximo 10 caracteres.").optional(),
   price: z.string().trim(),
+  cost: z.string().trim().optional(),
   stock: z.string().trim(),
+  minStock: z.string().trim().optional(),
 });
 
 const variantInput = z.object({
@@ -55,8 +59,11 @@ const variantInput = z.object({
     .min(1, "Informe o nome da variação.")
     .max(80, "No máximo 80 caracteres."),
   sku: z.string().trim().max(60, "No máximo 60 caracteres.").optional(),
+  unit: z.string().trim().max(10, "No máximo 10 caracteres.").optional(),
   price: z.string().trim(),
+  cost: z.string().trim().optional(),
   stock: z.string().trim(),
+  minStock: z.string().trim().optional(),
 });
 
 function toFieldErrors(error: z.ZodError): Record<string, string[]> {
@@ -113,30 +120,52 @@ async function resolveProductCategoryId(
 }
 
 type VariantParse =
-  | { data: { name: string; sku: string | null; priceCents: number; stock: number } }
+  | {
+      data: {
+        name: string;
+        sku: string | null;
+        unit: string;
+        priceCents: number;
+        costCents: number;
+        stock: number;
+        minStock: number;
+      };
+    }
   | { error: Record<string, string[]> };
 
 function readVariant(formData: FormData): VariantParse {
   const parsed = variantInput.safeParse({
     name: formData.get("variantName") ?? formData.get("name") ?? "",
     sku: formData.get("sku") ?? "",
+    unit: formData.get("unit") ?? "",
     price: formData.get("price") ?? "",
+    cost: formData.get("cost") ?? "",
     stock: formData.get("stock") ?? "",
+    minStock: formData.get("minStock") ?? "",
   });
   if (!parsed.success) return { error: toFieldErrors(parsed.error) };
 
   const priceCents = parsePriceToCents(parsed.data.price);
   if (priceCents === null) return { error: { price: ["Preço inválido."] } };
 
+  const costCents = parsePriceToCents(parsed.data.cost ?? "");
+  if (costCents === null) return { error: { cost: ["Custo inválido."] } };
+
   const stock = parseStock(parsed.data.stock);
   if (stock === null) return { error: { stock: ["Estoque inválido."] } };
+
+  const minStock = parseStock(parsed.data.minStock ?? "");
+  if (minStock === null) return { error: { minStock: ["Mínimo inválido."] } };
 
   return {
     data: {
       name: parsed.data.name,
       sku: nullIfEmpty(parsed.data.sku),
+      unit: nullIfEmpty(parsed.data.unit) ?? "un",
       priceCents,
+      costCents,
       stock,
+      minStock,
     },
   };
 }
@@ -153,9 +182,13 @@ export async function createProductAction(
     description: formData.get("description") ?? "",
     categoryId: formData.get("categoryId") ?? "",
     imageUrl: formData.get("imageUrl") ?? "",
+    kind: formData.get("kind") ?? "resale",
     variantName: formData.get("variantName") ?? "",
+    variantUnit: formData.get("variantUnit") ?? "",
     price: formData.get("price") ?? "",
+    cost: formData.get("cost") ?? "",
     stock: formData.get("stock") ?? "",
+    minStock: formData.get("minStock") ?? "",
   });
   if (!parsed.success) {
     return { status: "error", fieldErrors: toFieldErrors(parsed.error) };
@@ -165,9 +198,17 @@ export async function createProductAction(
   if (priceCents === null) {
     return { status: "error", fieldErrors: { price: ["Preço inválido."] } };
   }
+  const costCents = parsePriceToCents(parsed.data.cost ?? "");
+  if (costCents === null) {
+    return { status: "error", fieldErrors: { cost: ["Custo inválido."] } };
+  }
   const stock = parseStock(parsed.data.stock);
   if (stock === null) {
     return { status: "error", fieldErrors: { stock: ["Estoque inválido."] } };
+  }
+  const minStock = parseStock(parsed.data.minStock ?? "");
+  if (minStock === null) {
+    return { status: "error", fieldErrors: { minStock: ["Mínimo inválido."] } };
   }
 
   try {
@@ -187,6 +228,7 @@ export async function createProductAction(
           name: parsed.data.name,
           description: nullIfEmpty(parsed.data.description),
           imageUrl: nullIfEmpty(parsed.data.imageUrl),
+          kind: parsed.data.kind,
         })
         .returning({ id: products.id });
 
@@ -194,8 +236,11 @@ export async function createProductAction(
         tenantId: ctx.tenant.id,
         productId: product.id,
         name: nullIfEmpty(parsed.data.variantName) ?? "Padrão",
+        unit: nullIfEmpty(parsed.data.variantUnit) ?? "un",
         priceCents,
+        costCents,
         stockQuantity: stock,
+        minStock,
       });
     });
   } catch (cause) {
@@ -227,6 +272,7 @@ export async function updateProductAction(
     description: formData.get("description") ?? "",
     categoryId: formData.get("categoryId") ?? "",
     imageUrl: formData.get("imageUrl") ?? "",
+    kind: formData.get("kind") ?? "resale",
   });
   if (!parsed.success) {
     return { status: "error", fieldErrors: toFieldErrors(parsed.error) };
@@ -248,6 +294,7 @@ export async function updateProductAction(
           name: parsed.data.name,
           description: nullIfEmpty(parsed.data.description),
           imageUrl: nullIfEmpty(parsed.data.imageUrl),
+          kind: parsed.data.kind,
         })
         .where(and(eq(products.id, id), eq(products.tenantId, ctx.tenant.id)))
         .returning({ id: products.id });
@@ -328,8 +375,11 @@ export async function createVariantAction(
         productId,
         name: variant.data.name,
         sku: variant.data.sku,
+        unit: variant.data.unit,
         priceCents: variant.data.priceCents,
+        costCents: variant.data.costCents,
         stockQuantity: variant.data.stock,
+        minStock: variant.data.minStock,
       });
     });
   } catch (cause) {
@@ -365,8 +415,11 @@ export async function updateVariantAction(
         .set({
           name: variant.data.name,
           sku: variant.data.sku,
+          unit: variant.data.unit,
           priceCents: variant.data.priceCents,
+          costCents: variant.data.costCents,
           stockQuantity: variant.data.stock,
+          minStock: variant.data.minStock,
         })
         .where(
           and(

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { and, asc, eq, gte, lte, ne } from "drizzle-orm";
 import {
   appointments,
@@ -382,6 +383,14 @@ export default async function ReportsPage({
         <h1 className="mt-2 text-2xl font-semibold">Relatórios</h1>
         <p className="mt-1 text-sm text-foreground/60">
           Período de {from} a {to} · {tenant.name}
+        </p>
+        <p className="mt-2 text-sm">
+          <Link
+            href="/reports/profitability"
+            className="font-medium text-brand hover:underline"
+          >
+            Ver lucratividade & DRE →
+          </Link>
         </p>
       </header>
 

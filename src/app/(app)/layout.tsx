@@ -77,6 +77,9 @@ export default async function AppLayout({
           <Link href="/products" className="rounded-lg px-3 py-2 hover:bg-muted">
             Produtos
           </Link>
+          <Link href="/inventory" className="rounded-lg px-3 py-2 hover:bg-muted">
+            Estoque
+          </Link>
           <Link
             href="/professionals"
             className="rounded-lg px-3 py-2 hover:bg-muted"
@@ -108,6 +111,9 @@ export default async function AppLayout({
           </Link>
           <Link href="/coupons" className="rounded-lg px-3 py-2 hover:bg-muted">
             Cupons
+          </Link>
+          <Link href="/loyalty" className="rounded-lg px-3 py-2 hover:bg-muted">
+            Fidelidade
           </Link>
           <Link href="/notifications" className="rounded-lg px-3 py-2 hover:bg-muted">
             Mensagens

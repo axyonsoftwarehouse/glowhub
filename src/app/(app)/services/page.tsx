@@ -1,9 +1,12 @@
-import { and, asc, count, eq, ilike, isNull } from "drizzle-orm";
+import { and, asc, count, eq, ilike, inArray, isNull } from "drizzle-orm";
 import {
   branches,
   categories,
   memberships,
+  productVariants,
+  products,
   serviceBranches,
+  serviceMaterials,
   services,
 } from "@/db/schema";
 import { Pagination } from "@/components/pagination";
@@ -23,8 +26,10 @@ import { ServiceCreateForm } from "./service-create-form";
 import type {
   BranchOption,
   Category,
+  InsumoOption,
   Service,
   ServiceBranchOverride,
+  ServiceMaterial,
 } from "./types";
 
 export const dynamic = "force-dynamic";
@@ -60,7 +65,7 @@ export default async function ServicesPage({
   const q = first(sp.q)?.trim() || undefined;
   const page = parsePage(first(sp.page));
 
-  const { categories: categoryList, services: serviceList, branches: branchList, overridesByService, total, canManage } =
+  const { categories: categoryList, services: serviceList, branches: branchList, overridesByService, materialsByService, insumos, total, canManage } =
     await withUser(userId, async (tx) => {
       const categoryRows = await tx
         .select({
@@ -129,6 +134,63 @@ export default async function ServicesPage({
         .from(serviceBranches)
         .where(eq(serviceBranches.tenantId, tenant.id));
 
+      const serviceIds = serviceRows.map((row) => row.id);
+
+      const materialRows = serviceIds.length
+        ? await tx
+            .select({
+              id: serviceMaterials.id,
+              serviceId: serviceMaterials.serviceId,
+              variantId: serviceMaterials.variantId,
+              quantity: serviceMaterials.quantity,
+            })
+            .from(serviceMaterials)
+            .where(
+              and(
+                eq(serviceMaterials.tenantId, tenant.id),
+                inArray(serviceMaterials.serviceId, serviceIds),
+              ),
+            )
+        : [];
+
+      const insumoRows = await tx
+        .select({
+          variantId: productVariants.id,
+          productName: products.name,
+          variantName: productVariants.name,
+          unit: productVariants.unit,
+          costCents: productVariants.costCents,
+        })
+        .from(productVariants)
+        .innerJoin(products, eq(products.id, productVariants.productId))
+        .where(
+          and(
+            eq(productVariants.tenantId, tenant.id),
+            eq(products.kind, "internal"),
+            eq(productVariants.isActive, true),
+          ),
+        )
+        .orderBy(asc(products.name), asc(productVariants.name));
+
+      const materialVariantIds = [...new Set(materialRows.map((row) => row.variantId))];
+      const materialLabels = materialVariantIds.length
+        ? await tx
+            .select({
+              variantId: productVariants.id,
+              productName: products.name,
+              variantName: productVariants.name,
+              unit: productVariants.unit,
+            })
+            .from(productVariants)
+            .innerJoin(products, eq(products.id, productVariants.productId))
+            .where(
+              and(
+                eq(productVariants.tenantId, tenant.id),
+                inArray(productVariants.id, materialVariantIds),
+              ),
+            )
+        : [];
+
       const [membership] = await tx
         .select({ role: memberships.role })
         .from(memberships)
@@ -152,11 +214,40 @@ export default async function ServicesPage({
         grouped.set(row.serviceId, list);
       }
 
+      const labelByVariant = new Map(
+        materialLabels.map((row) => [
+          row.variantId,
+          { label: `${row.productName} · ${row.variantName}`, unit: row.unit },
+        ]),
+      );
+      const materialsByService = new Map<string, ServiceMaterial[]>();
+      for (const row of materialRows) {
+        const info = labelByVariant.get(row.variantId);
+        const list = materialsByService.get(row.serviceId) ?? [];
+        list.push({
+          id: row.id,
+          variantId: row.variantId,
+          label: info?.label ?? "Insumo",
+          unit: info?.unit ?? "un",
+          quantity: row.quantity,
+        });
+        materialsByService.set(row.serviceId, list);
+      }
+
+      const insumos: InsumoOption[] = insumoRows.map((row) => ({
+        variantId: row.variantId,
+        label: `${row.productName} · ${row.variantName}`,
+        unit: row.unit,
+        costCents: row.costCents,
+      }));
+
       return {
         categories: categoryRows as Category[],
         services: serviceRows as Service[],
         branches: branchRows as BranchOption[],
         overridesByService: grouped,
+        materialsByService,
+        insumos,
         total: Number(serviceTotals?.value ?? 0),
         canManage: MANAGE_ROLES.includes(membership?.role ?? ""),
       };
@@ -215,6 +306,8 @@ export default async function ServicesPage({
               categories={categoryList}
               branches={branchList}
               overrides={overridesByService.get(service.id) ?? []}
+              materials={materialsByService.get(service.id) ?? []}
+              insumos={insumos}
               canManage={canManage}
             />
           ))}

@@ -1,4 +1,5 @@
-import { logger } from "@/lib/logger";
+import { sendAlert } from "@/lib/alerts";
+import { recordMetric } from "@/lib/metrics";
 
 const GENERIC_ERROR_MESSAGE = "Ocorreu um erro inesperado. Tente novamente.";
 
@@ -13,6 +14,7 @@ export function internalError(cause: unknown): string {
   if (raw.includes("tenant_read_only")) {
     return "Ambiente de demonstração: esta ação está desabilitada (somente leitura).";
   }
-  logger.error("server_error", { error: raw });
+  recordMetric("server_error");
+  sendAlert({ level: "error", title: "server_error", context: { error: raw } });
   return GENERIC_ERROR_MESSAGE;
 }

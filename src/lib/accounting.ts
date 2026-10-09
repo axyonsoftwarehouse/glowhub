@@ -7,6 +7,7 @@ export type TrialBalanceRow = {
   code: string;
   name: string;
   type: string;
+  systemKey: string | null;
   debit: number;
   credit: number;
   net: number;
@@ -29,6 +30,7 @@ export async function computeTrialBalance(
       code: ledgerAccounts.code,
       name: ledgerAccounts.name,
       type: ledgerAccounts.type,
+      systemKey: ledgerAccounts.systemKey,
     })
     .from(ledgerAccounts)
     .where(eq(ledgerAccounts.tenantId, tenantId))
@@ -75,6 +77,7 @@ export async function computeTrialBalance(
         code: account.code,
         name: account.name,
         type: account.type,
+        systemKey: account.systemKey ?? null,
         debit: balance.debit,
         credit: balance.credit,
         net,

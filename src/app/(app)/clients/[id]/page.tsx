@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sum } from "drizzle-orm";
 import {
   appointments,
   branches,
@@ -12,6 +12,16 @@ import {
   walletTransactions,
 } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import {
+  averageTicketCents,
+  classifyClient,
+  CLIENT_SEGMENT_LABELS,
+  daysBetween,
+  frequencyDays,
+  isVip,
+  suggestedNextVisit,
+  vipThresholdCents,
+} from "@/lib/crm";
 import { formatCentsBRL } from "@/lib/money";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
@@ -110,6 +120,10 @@ export default async function ClientHistoryPage({
         name: clients.name,
         email: clients.email,
         phone: clients.phone,
+        birthday: clients.birthday,
+        tags: clients.tags,
+        preferences: clients.preferences,
+        marketingOptIn: clients.marketingOptIn,
         notes: clients.notes,
         isActive: clients.isActive,
       })
@@ -211,6 +225,21 @@ export default async function ClientHistoryPage({
       )
       .orderBy(desc(walletTransactions.createdAt));
 
+    const spendRows = await tx
+      .select({
+        clientId: charges.clientId,
+        total: sum(payments.amountCents),
+      })
+      .from(payments)
+      .innerJoin(charges, eq(charges.id, payments.chargeId))
+      .where(
+        and(
+          eq(payments.tenantId, tenant.id),
+          eq(payments.status, "confirmed"),
+        ),
+      )
+      .groupBy(charges.clientId);
+
     return {
       client,
       appointmentRows,
@@ -218,6 +247,7 @@ export default async function ClientHistoryPage({
       paymentRows,
       itemRows,
       walletRows,
+      spendRows,
     };
   });
 
@@ -268,6 +298,53 @@ export default async function ClientHistoryPage({
       0,
     );
 
+  const attended = data.appointmentRows.filter(
+    (row) => row.status !== "cancelled" && row.status !== "no_show",
+  );
+  const firstVisitAt = attended.length
+    ? new Date(Math.min(...attended.map((row) => row.startsAt.getTime())))
+    : null;
+  const lastVisitAt = attended.length
+    ? new Date(Math.max(...attended.map((row) => row.startsAt.getTime())))
+    : null;
+  const now = new Date();
+  const visitMetrics = {
+    visits: attended.length,
+    firstVisitAt,
+    lastVisitAt,
+  };
+  const vipThreshold = vipThresholdCents(
+    data.spendRows.map((row) => Number(row.total ?? 0)),
+  );
+  const segment = classifyClient(visitMetrics, now);
+  const segmentFrequency = frequencyDays(visitMetrics);
+  const nextVisit = suggestedNextVisit(visitMetrics);
+  const insights = [
+    {
+      label: "Segmento",
+      value: CLIENT_SEGMENT_LABELS[segment] + (isVip(totalPaid, vipThreshold) ? " · VIP" : ""),
+    },
+    { label: "Visitas", value: String(attended.length) },
+    { label: "Ticket médio", value: formatCentsBRL(averageTicketCents(totalPaid, attended.length)) },
+    { label: "Total gasto (LTV)", value: formatCentsBRL(totalPaid) },
+    {
+      label: "Frequência",
+      value: segmentFrequency !== null ? `${segmentFrequency} dias` : "—",
+    },
+    {
+      label: "Última visita",
+      value: lastVisitAt
+        ? `há ${Math.max(0, daysBetween(lastVisitAt, now))} dia(s)`
+        : "—",
+    },
+    {
+      label: "Próximo retorno sugerido",
+      value: nextVisit
+        ? new Intl.DateTimeFormat("pt-BR", { timeZone: TZ }).format(nextVisit)
+        : "—",
+    },
+  ];
+
   const summary = [
     { label: "Saldo na carteira", value: walletBalance },
     { label: "Total cobrado", value: totalCharged },
@@ -291,6 +368,32 @@ export default async function ClientHistoryPage({
         {client.notes && (
           <p className="mt-2 text-sm text-foreground/70">{client.notes}</p>
         )}
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-foreground/70">
+          {client.birthday && (
+            <span className="rounded-full bg-muted px-2 py-0.5">
+              Aniversário:{" "}
+              {new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(
+                new Date(`${client.birthday}T00:00:00Z`),
+              )}
+            </span>
+          )}
+          {(client.tags ?? []).map((value) => (
+            <span key={value} className="rounded-full bg-muted px-2 py-0.5">
+              {value}
+            </span>
+          ))}
+          {client.marketingOptIn && (
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-emerald-700">
+              Aceita comunicações
+            </span>
+          )}
+        </div>
+        {client.preferences && (
+          <p className="mt-2 text-sm text-foreground/70">
+            <span className="font-medium text-foreground/60">Preferências: </span>
+            {client.preferences}
+          </p>
+        )}
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -307,6 +410,25 @@ export default async function ClientHistoryPage({
             </p>
           </div>
         ))}
+      </section>
+
+      <section>
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
+          Inteligência do cliente
+        </h2>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {insights.map((card) => (
+            <div
+              key={card.label}
+              className="rounded-2xl border border-border bg-white/70 p-4"
+            >
+              <p className="text-xs uppercase tracking-wide text-foreground/70">
+                {card.label}
+              </p>
+              <p className="mt-1 text-lg font-semibold">{card.value}</p>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section>

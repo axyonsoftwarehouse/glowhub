@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 import { webhookEvents } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { logger } from "@/lib/logger";
+import { recordMetric } from "@/lib/metrics";
+import { sendAlert } from "@/lib/alerts";
 
 /** Limite de tamanho do corpo (evita payloads gigantes / abuso da tabela). */
 const MAX_BODY_BYTES = 256 * 1024;
@@ -69,6 +71,7 @@ export async function POST(
   if (!secret) {
     // Sem segredo nao ha como autenticar: nao aceitar eventos (safe by default).
     logger.warn("webhook_not_configured", { provider });
+    recordMetric("webhook_event", 1, { provider, status: "not_configured" });
     return Response.json(
       { error: "Webhook não configurado." },
       { status: 503 },
@@ -80,6 +83,7 @@ export async function POST(
     request.headers.get("x-signature");
   if (!verifySignature(raw, signature, secret)) {
     logger.warn("webhook_invalid_signature", { provider });
+    recordMetric("webhook_event", 1, { provider, status: "invalid_signature" });
     return Response.json({ error: "Assinatura inválida." }, { status: 401 });
   }
 
@@ -105,6 +109,7 @@ export async function POST(
 
     if (inserted.length === 0) {
       logger.info("webhook_duplicate", { provider, eventId });
+      recordMetric("webhook_event", 1, { provider, status: "duplicate" });
       return Response.json({ received: true, duplicate: true }, { status: 200 });
     }
 
@@ -116,9 +121,15 @@ export async function POST(
       .where(eq(webhookEvents.id, inserted[0].id));
 
     logger.info("webhook_received", { provider, eventId });
+    recordMetric("webhook_event", 1, { provider, status: "received" });
     return Response.json({ received: true }, { status: 200 });
   } catch (cause) {
-    logger.error("webhook_failed", { provider, eventId, error: String(cause) });
+    recordMetric("webhook_event", 1, { provider, status: "failed" });
+    sendAlert({
+      level: "error",
+      title: "webhook_failed",
+      context: { provider, eventId, error: String(cause) },
+    });
     return Response.json(
       { error: "Falha ao processar webhook." },
       { status: 500 },
