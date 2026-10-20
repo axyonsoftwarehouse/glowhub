@@ -15,6 +15,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:install": "playwright install chromium",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
     "seed:demo": "node --env-file=.env.local scripts/seed-demo.mjs"
   },
   "dependencies": {
