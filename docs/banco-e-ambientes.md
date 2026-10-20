@@ -57,6 +57,19 @@ banco antes de agir.
    demo: `node --env-file=.env.main scripts/migrate.mjs`. As migrations são
    aplicadas à mão; nem o CI nem a Vercel têm a credencial de owner.
 
+### Checklist antes do merge em `master`
+O merge dispara o deploy da demo (`glowhub-silk.vercel.app`). Antes dele:
+
+- [ ] Migrations aplicadas no banco da demo
+      (`node --env-file=.env.main scripts/migrate.mjs`, com `scripts/baseline.mjs`
+      antes, se for a primeira vez nesse banco).
+- [ ] Vercel com `APP_ENV`: **Production** = `demo`, **Preview** = `dev`. Sem
+      `APP_ENV`, o app assume `production` e o botão da conta demo some. A Vercel
+      lê as variáveis no build, então mudar uma variável depois do deploy exige
+      um redeploy.
+- [ ] Depois do deploy: abrir `/login` no site, ver o botão "Entrar com conta
+      demo" e entrar.
+
 `.env.main` é um arquivo local, não versionado, com as connection strings do
 branch `production` e `APP_ENV=demo`.
 
