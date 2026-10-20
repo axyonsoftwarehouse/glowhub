@@ -20,6 +20,8 @@ const accountIds = [];
 const withClaims = (fn) =>
   app.begin(async (tx) => {
     await tx`select set_config('request.jwt.claims', ${JSON.stringify({ sub: userId })}, true)`;
+    // O tenant demo e somente leitura; este smoke usa a excecao de teste.
+    await tx`select set_config('app.demo_readonly', 'off', true)`;
     return fn(tx);
   });
 
