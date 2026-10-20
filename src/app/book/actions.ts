@@ -1,6 +1,7 @@
 "use server";
 
 import { internalError } from "@/lib/errors";
+import { overlapMessage } from "@/lib/appointment-errors";
 
 import { headers } from "next/headers";
 import { and, eq, sql } from "drizzle-orm";
@@ -180,8 +181,7 @@ export async function createPublicBookingAction(input: {
       label: `${input.date} às ${input.time}`,
     };
   } catch (cause) {
-    const message = String(cause);
-    if (message.includes("23P01")) {
+    if (overlapMessage(cause)) {
       return { error: "Esse horário acabou de ser reservado. Escolha outro." };
     }
     return { error: "Não foi possível concluir o agendamento." };

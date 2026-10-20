@@ -28,6 +28,14 @@ jobs:
           cache: npm
       - name: Install
         run: npm ci
+      - name: Migrations em dia
+        run: |
+          npx drizzle-kit generate
+          if [ -n "$(git status --porcelain drizzle)" ]; then
+            git status --porcelain drizzle
+            echo "::error::Schema mudou sem migration: rode npm run db:generate e commite."
+            exit 1
+          fi
       - name: Generate types
         run: npx next typegen
       - name: Lint

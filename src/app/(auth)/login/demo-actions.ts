@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { and, asc, eq, isNull } from "drizzle-orm";
+import { isDemoLoginEnabled } from "@/lib/app-env";
 import { auth } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import { checkRateLimit, clientKey } from "@/lib/rate-limit";
@@ -66,19 +67,17 @@ async function ensureDemoAccount(
  * acesso), vincula como owner dos tenants demo e entra. Para a equipe testar sem
  * criar conta.
  *
- * Desativado por padrao: so funciona com `NEXT_PUBLIC_DEMO_LOGIN=true` E
- * `DEMO_PASSWORD` definido. O botao na tela e apenas a UI; esta action valida o
- * flag no servidor, entao desliga-la nao depende de esconder o botao.
+ * Desativado por padrao: so funciona com `APP_ENV` demo/dev,
+ * `NEXT_PUBLIC_DEMO_LOGIN=true` E `DEMO_PASSWORD` definido (`isDemoLoginEnabled`).
+ * O botao na tela e apenas a UI; esta action valida no servidor, entao
+ * desliga-la nao depende de esconder o botao.
  */
 export async function demoLoginAction(): Promise<DemoLoginResult | void> {
-  if (process.env.NEXT_PUBLIC_DEMO_LOGIN !== "true") {
+  if (!isDemoLoginEnabled()) {
     return { error: "O login de demonstração está desativado." };
   }
 
-  const password = process.env.DEMO_PASSWORD;
-  if (!password) {
-    return { error: "O login de demonstração não está configurado." };
-  }
+  const password = process.env.DEMO_PASSWORD as string;
 
   const requestHeaders = await headers();
 

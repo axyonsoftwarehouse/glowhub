@@ -2,9 +2,18 @@
 // completo e financeiramente consistente (ledger balanceado), incluindo vendas
 // de produtos e historico de agendamentos para relatorios.
 // Idempotente: apaga e recria apenas esses tenants.
-// Rodar: npm run seed:demo
+// Rodar: npm run seed:demo (APP_ENV=dev). Na vitrine (APP_ENV=demo) exige
+// --confirm-demo; em qualquer outro ambiente recusa (scripts/lib/seed-guard.mjs).
 
 import postgres from "postgres";
+import { assertSeedAllowed } from "./lib/seed-guard.mjs";
+
+try {
+  assertSeedAllowed(process.env.APP_ENV, process.argv.slice(2));
+} catch (cause) {
+  console.error(cause.message);
+  process.exit(1);
+}
 
 const sql = postgres(process.env.DATABASE_URL, {
   prepare: false,

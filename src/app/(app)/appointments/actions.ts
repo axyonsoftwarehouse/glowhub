@@ -1,6 +1,7 @@
 "use server";
 
 import { internalError } from "@/lib/errors";
+import { dbErrorCode, overlapMessage } from "@/lib/appointment-errors";
 
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
@@ -30,9 +31,6 @@ function error(message?: string): AppointmentActionState {
   return { status: "error", message: message ?? "Erro inesperado." };
 }
 
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
-}
 
 export async function getAvailabilityAction(input: {
   branchId: string;
@@ -142,10 +140,9 @@ export async function createAppointmentAction(
 
     if ("error" in outcome) return error(outcome.error);
   } catch (cause) {
-    if (errorCode(cause) === "23P01") {
-      return error("Já existe um agendamento nesse horário para o profissional.");
-    }
-    if (errorCode(cause) === "42501") {
+    const overlap = overlapMessage(cause);
+    if (overlap) return error(overlap);
+    if (dbErrorCode(cause) === "42501") {
       return error("Seu papel não permite agendar.");
     }
     return error(internalError(cause));
@@ -242,7 +239,7 @@ export async function setAppointmentStatusAction(
 
     if ("error" in result) return error(result.error);
   } catch (cause) {
-    return error(internalError(cause));
+    return error(overlapMessage(cause) ?? internalError(cause));
   }
 
   revalidatePath("/appointments");

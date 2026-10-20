@@ -81,5 +81,14 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Observabilidade in-app (logger estruturado, `/api/health`, logs de webhook); métricas e alertas externos (`/api/metrics`, sink HTTP `METRICS_WEBHOOK_URL`, `sendAlert`/`ALERT_WEBHOOK_URL`)
 - [x] Segurança (rate limiting no Better Auth, tabela interna `rate_limits`; revisão contínua de policies)
 - [x] Acessibilidade (foco visível, skip link, labels/aria, contraste AA, axe e2e). Projeto **somente pt-BR** (sem i18n)
-- [ ] Provedor de e-mail (verificação, convites, lembretes)
+- [x] Migrations versionadas (`drizzle/` + `npm run db:migrate`; sem `drizzle-kit push`) e guarda no CI
+- [x] Ambientes separados: demo (branch Neon `production`) e dev (branch `dev`), `APP_ENV` travando login demo e seed (`docs/banco-e-ambientes.md`)
+- [x] Trava no banco contra agendamento duplo (`appointments_no_overlap`, migration `0002`)
+- [ ] Provedor de e-mail (verificação, convites, lembretes) — depende do domínio
+
+## Lançamento (pendente; decidido deixar para quando o produto estiver completo)
+- [ ] Domínio próprio e subdomínio por tenant
+- [ ] Banco de produção limpo (`npm run db:migrate`), sem conta demo (`APP_ENV=production`)
+- [ ] Demo em endereço próprio (ex.: `demo.<domínio>`)
+- [ ] E-mail real (verificação de conta, convites, lembretes)
 - [x] Gateway de pagamento online (adapter portável: mock + Mercado Pago; ver Fase 4)

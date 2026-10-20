@@ -73,8 +73,11 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   `pending → confirmed → check_in → checkout → completed`, com `cancelled` e
   `no_show`) e `price_cents` como *snapshot* (preço do serviço já com override da
   filial). Conversão wall-clock ↔ UTC em `src/lib/timezone.ts`.
-- **Sem sobreposição**: *exclusion constraint* (btree_gist) por profissional em
-  `tstzrange(starts_at, ends_at)`, ignorando cancelados.
+- **Sem sobreposição**: *exclusion constraint* `appointments_no_overlap`
+  (btree_gist, migration `drizzle/0002_appointments_no_overlap.sql`) por
+  profissional em `tstzrange(starts_at, ends_at, '[)')`, ignorando `cancelled` e
+  `no_show`. Atendimentos encostados são permitidos. A violação (`23P01`) vira
+  mensagem amigável via `src/lib/appointment-errors.ts`.
 - O formulário busca disponibilidade (slots) e o servidor revalida o horário
   antes de inserir.
 
@@ -244,8 +247,11 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
 
 ## Convenções
 - Toda tabela de domínio: `tenant_id` + RLS + índices.
-- O schema Drizzle (`src/db/schema`) é a **fonte de verdade** das tabelas;
-  `db/rls.sql` traz funções, triggers, policies, a *exclusion constraint* e grants.
+- O schema Drizzle (`src/db/schema`) é a **fonte de verdade** das tabelas, e
+  cada mudança vira uma migration versionada em `drizzle/` (constraints que o
+  Drizzle não expressa, como a de sobreposição, vão em migration custom);
+  `db/rls.sql` traz funções, triggers, policies e grants, reaplicado pelo
+  `npm run db:migrate`.
 - Nada de lógica de dinheiro no client.
 
 ## Convites de equipe (decisão tomada)

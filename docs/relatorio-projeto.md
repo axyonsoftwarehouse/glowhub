@@ -124,7 +124,7 @@ Browser ──► Next (RSC + Server Actions)
   `professional_branches`, `professional_services`.
 - **Produtos:** `products`, `product_variants`.
 - **Agenda:** `branch_hours`, `professional_hours`, `branch_closures`.
-- **Atendimento:** `clients`, `appointments` (status + *exclusion constraint*).
+- **Atendimento:** `clients`, `appointments` (status + *exclusion constraint* `appointments_no_overlap`, migration `0002`).
 - **Financeiro:** `ledger_accounts`, `journal_entries`, `journal_lines`,
   `accounting_periods` (fechamento), `charges`, `charge_items`, `payments`,
   `webhook_events`, `earnings`, `payouts`, `wallet_transactions`.
@@ -154,8 +154,9 @@ Browser ──► Next (RSC + Server Actions)
 ### 2.6 Convenções
 - Schema Drizzle em `src/db/schema` é a **fonte de verdade**; funções, triggers,
   policies e grants em `db/rls.sql`.
-- **Ordem ao mexer no schema:** `npx drizzle-kit push` **e depois** aplicar
-  `db/rls.sql`.
+- **Ao mexer no schema:** `npm run db:generate` (gera a migration em `drizzle/`)
+  e `npm run db:migrate` (aplica migrations + `db/rls.sql`); nunca
+  `drizzle-kit push`. Fluxo completo em `docs/banco-e-ambientes.md`.
 - Dinheiro sempre em centavos; sem lógica de dinheiro no client.
 - Quality gate: `npx tsc --noEmit`, `npx eslint .`, `npm test`, `npm run build`.
 - e2e: `npm run test:e2e` (Playwright; sobe o dev server e exige `.env.local`
@@ -168,16 +169,21 @@ Browser ──► Next (RSC + Server Actions)
    `DATABASE_URL`, `DATABASE_AUTHENTICATED_URL`, `BETTER_AUTH_SECRET`,
    `BETTER_AUTH_URL` (opcional: `RESEND_API_KEY`, `EMAIL_FROM`, `CRON_SECRET`).
 3. Aplicar schema/RLS/seed:
-   `npx drizzle-kit push`
-   → `node --env-file=.env.local scripts/apply-sql.mjs db/rls.sql`
-   → `... db/seed.sql`
+   `npm run db:migrate` (migrations + `db/rls.sql`)
+   → `node --env-file=.env.local scripts/apply-sql.mjs db/seed.sql`
    → **`npm run seed:demo`** (cenário demo completo: catálogo, agenda,
    financeiro com ledger balanceado, pacotes/assinatura/cupons, notificações).
 4. `npm run dev`; cadastrar em `/login`; criar a empresa em `/onboarding`.
-- Scripts: `scripts/apply-sql.mjs`, `scripts/smoke-rls.mjs`, `scripts/smoke-ledger.mjs`.
+- Scripts: `scripts/migrate.mjs`, `scripts/baseline.mjs`, `scripts/apply-sql.mjs`,
+  `scripts/schema-snapshot.mjs`, `scripts/check-overlaps.mjs`,
+  `scripts/smoke-rls.mjs`, `scripts/smoke-ledger.mjs`, `scripts/smoke-overlap.mjs`.
 
 ### 2.8 Infra & deploy
-- **Vercel** + **Neon**; **CI** (lint/typecheck/test/build) no GitHub Actions.
+- **Vercel** + **Neon**; **CI** (migrations em dia/lint/typecheck/test/build) no GitHub Actions.
+- **Ambientes:** o site no ar é a **demo** (`APP_ENV=demo`, branch Neon
+  `production`); desenvolvimento, e2e e Preview usam o branch Neon `dev`
+  (`APP_ENV=dev`). O banco de produção real só será criado no lançamento.
+  Detalhes em `docs/banco-e-ambientes.md`.
 - **Git**: `axyonsoftwarehouse/glowhub` (branch de produção `master`), conectado ao
   projeto Vercel `glowhub` (time `torinoorbit-dev`) para deploy automático a cada push.
 - **Cron** (`vercel.json`): `/api/cron/subscriptions` (diário, renova assinaturas
@@ -189,13 +195,14 @@ Browser ──► Next (RSC + Server Actions)
   usuário como **owner de 3 tenants** (`demo`, `studio-bella`, `clinica-lumina`)
   → use o seletor **Empresa**. Também vincula a um profissional de `demo`,
   habilitando a visão **Minha agenda**. Desativado por padrão: só funciona com
-  `NEXT_PUBLIC_DEMO_LOGIN=true` **e** `DEMO_PASSWORD` definidos (validado no
+  `APP_ENV` `demo`/`dev`, `NEXT_PUBLIC_DEMO_LOGIN=true` **e** `DEMO_PASSWORD` definidos (validado no
   servidor, não apenas no botão); tem rate limit. Em produção está **habilitado
   para demonstrações**: qualquer visitante vira `owner` apenas dos tenants demo
   (dados de exemplo, isolados por RLS).
 - **Dados demo:** `npm run seed:demo` recria os 3 tenants com cenário completo e
   ledger balanceado (catálogo, agenda, financeiro, pacotes, assinatura, cupons,
-  gateway mock). Idempotente (não toca em outros dados).
+  gateway mock). Idempotente (não toca em outros dados). Roda livre com
+  `APP_ENV=dev`; no banco da demo exige `--confirm-demo`.
 - **Conciliação:** `/reconciliation` casa cobrança ↔ pagamento ↔ gateway e permite
   confirmar pagamentos pendentes (efeito de webhook).
 
@@ -303,12 +310,13 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 2. **Dependências**: `npm install`.
 3. **Env**: criar `.env.local` a partir de `.env.example` (Neon owner + role do
    app + `BETTER_AUTH_SECRET`). Ver `docs/neon-migration.md` para o setup do Neon.
-4. **Banco**: `npx drizzle-kit push` → aplicar `db/rls.sql` → `db/seed.sql`
-   (via `scripts/apply-sql.mjs`) → `npm run seed:demo` (cenário demo).
+4. **Banco**: `npm run db:migrate` → `db/seed.sql` (via `scripts/apply-sql.mjs`)
+   → `npm run seed:demo` (cenário demo). Ver `docs/banco-e-ambientes.md`.
 5. **Qualidade**: `npx tsc --noEmit` && `npx eslint .` && `npm test` && `npm run build`.
 6. **e2e** (opcional): `npm run test:e2e:install` uma vez; depois `npm run test:e2e`
    (sobe o dev server; exige `.env.local` e seed demo).
-7. **Smoke**: `node --env-file=.env.local scripts/smoke-rls.mjs` e `...smoke-ledger.mjs`.
+7. **Smoke**: `node --env-file=.env.local scripts/smoke-rls.mjs`, `...smoke-ledger.mjs`
+   e `...smoke-overlap.mjs`.
 8. **Rodar**: `npm run dev` (app em `/dashboard`; público em `/book`).
 
 Pontos de entrada úteis:
