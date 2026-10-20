@@ -48,7 +48,7 @@ src/
     (app)/schedule|appointments|clients|team|profile/
     invite/[token]/            # aceite de convite
 db/
-  rls.sql                      # funções, triggers, RLS e grants
+  rls.sql                      # funções, triggers, RLS e grants (idempotente)
   seed.sql                     # tenant/filial de exemplo
 ```
 
@@ -80,11 +80,14 @@ e `BETTER_AUTH_URL`.
 
 ### 3. Aplicar o schema
 ```bash
-npx drizzle-kit push          # cria as tabelas
-node --env-file=.env.local scripts/apply-sql.mjs db/rls.sql   # RLS, funções, grants
+npm run db:migrate            # migrations (drizzle/) + RLS, funções, grants
 node --env-file=.env.local scripts/apply-sql.mjs db/seed.sql  # tenant/filial mínimo
-npm run seed:demo             # (opcional) cenário demo completo e financeiro
+npm run seed:demo             # (opcional) cenário demo completo (APP_ENV=dev)
 ```
+
+Migrations versionadas, ambientes (demo/dev/production), `APP_ENV` e como
+resetar o dev: **[docs/banco-e-ambientes.md](docs/banco-e-ambientes.md)**.
+Não use `drizzle-kit push`.
 
 O `npm run seed:demo` recria o tenant `demo` com catálogo, profissionais,
 horários, clientes, agendamentos e o financeiro completo (cobranças, pagamentos,

@@ -1,5 +1,6 @@
 -- GlowHub - Funcoes, triggers, RLS e grants (Neon)
--- Aplique DEPOIS de criar as tabelas (drizzle-kit push).
+-- Idempotente. Aplicado pelo `npm run db:migrate` depois das migrations
+-- (drizzle/). Ver docs/banco-e-ambientes.md.
 -- O app usa a role `glowhub_app` (sem BYPASSRLS) e injeta
 -- `request.jwt.claims` = {"sub": "<user id>"} por transacao.
 

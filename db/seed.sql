@@ -1,5 +1,5 @@
 -- GlowHub - Dados de exemplo (tenant + filiais)
--- Aplique depois de criar o schema (drizzle-kit push) e o db/rls.sql.
+-- Aplique depois do `npm run db:migrate` (migrations + db/rls.sql).
 
 insert into public.tenants (slug, name, logo_url)
 values ('demo', 'GlowHub Demo', null)
