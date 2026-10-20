@@ -3,6 +3,7 @@
 import { sql } from "drizzle-orm";
 import { profiles } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { dbErrorMessage } from "@/lib/db-errors";
 import { getSession } from "@/lib/session";
 
 export type AcceptInviteResult = { ok: true } | { error: string };
@@ -56,6 +57,6 @@ export async function acceptInviteAction(
     if (!tenantId) return { error: "Não foi possível aceitar o convite." };
     return { ok: true };
   } catch (cause) {
-    return { error: mapError(String(cause)) };
+    return { error: mapError(dbErrorMessage(cause)) };
   }
 }

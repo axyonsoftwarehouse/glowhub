@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { branches, memberships, profiles, tenants } from "@/db/schema";
 import { getDb } from "@/lib/db";
+import { dbErrorMessage } from "@/lib/db-errors";
 import { getSession } from "@/lib/session";
 import type { TenantActionState } from "./types";
 
@@ -109,7 +110,7 @@ export async function createTenantAction(
         });
     });
   } catch (cause) {
-    const message = String(cause);
+    const message = dbErrorMessage(cause);
     if (message.includes("tenants_slug_key")) {
       return { status: "error", fieldErrors: { slug: ["Este identificador já está em uso."] } };
     }

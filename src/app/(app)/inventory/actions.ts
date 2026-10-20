@@ -7,6 +7,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { productVariants, suppliers } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { dbErrorCode } from "@/lib/db-errors";
 import { parsePriceToCents } from "@/lib/money";
 import { recordAdjustment, recordPurchase } from "@/lib/inventory";
 import { getSession } from "@/lib/session";
@@ -24,10 +25,6 @@ function toFieldErrors(error: z.ZodError): Record<string, string[]> {
 
 function nullIfEmpty(value: string | undefined): string | null {
   return value && value.length > 0 ? value : null;
-}
-
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
 }
 
 async function context() {
@@ -74,10 +71,10 @@ export async function createSupplierAction(
       });
     });
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { name: ["Já existe esse fornecedor."] } };
     }
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite cadastrar." };
     }
     return { status: "error", message: internalError(cause) };
@@ -151,7 +148,7 @@ export async function recordPurchaseAction(
       });
     });
   } catch (cause) {
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite movimentar estoque." };
     }
     return { status: "error", message: internalError(cause) };
@@ -215,7 +212,7 @@ export async function recordAdjustmentAction(
       });
     });
   } catch (cause) {
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite movimentar estoque." };
     }
     return { status: "error", message: internalError(cause) };

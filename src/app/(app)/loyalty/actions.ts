@@ -17,6 +17,7 @@ import {
   walletTransactions,
 } from "@/db/schema";
 import { withUser, type AppTx } from "@/lib/db";
+import { dbErrorCode } from "@/lib/db-errors";
 import { internalError } from "@/lib/errors";
 import { isUuid } from "@/lib/validation";
 import { classifyClient, isVip, vipThresholdCents } from "@/lib/crm";
@@ -37,12 +38,8 @@ function toFieldErrors(error: z.ZodError): Record<string, string[]> {
   return fieldErrors;
 }
 
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
-}
-
 function friendly(cause: unknown): string {
-  const code = errorCode(cause);
+  const code = dbErrorCode(cause);
   const message = cause instanceof Error ? cause.message : "";
   if (!code && message && !message.includes("_")) return message;
   return internalError(cause);
