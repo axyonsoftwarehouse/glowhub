@@ -124,7 +124,7 @@ Browser ──► Next (RSC + Server Actions)
   `professional_branches`, `professional_services`.
 - **Produtos:** `products`, `product_variants`.
 - **Agenda:** `branch_hours`, `professional_hours`, `branch_closures`.
-- **Atendimento:** `clients`, `appointments` (status + *exclusion constraint*).
+- **Atendimento:** `clients`, `appointments` (status + *exclusion constraint* `appointments_no_overlap`, migration `0002`).
 - **Financeiro:** `ledger_accounts`, `journal_entries`, `journal_lines`,
   `accounting_periods` (fechamento), `charges`, `charge_items`, `payments`,
   `webhook_events`, `earnings`, `payouts`, `wallet_transactions`.

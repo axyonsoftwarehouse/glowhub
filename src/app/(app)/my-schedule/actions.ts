@@ -1,6 +1,7 @@
 "use server";
 
 import { internalError } from "@/lib/errors";
+import { dbErrorCode, overlapMessage } from "@/lib/appointment-errors";
 
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
@@ -161,8 +162,9 @@ export async function setMyAppointmentStatusAction(
 
     if ("error" in result) return error(result.error ?? "Erro inesperado.");
   } catch (cause) {
-    const code = (cause as { code?: string })?.code;
-    if (code === "42501") {
+    const overlap = overlapMessage(cause);
+    if (overlap) return error(overlap);
+    if (dbErrorCode(cause) === "42501") {
       return error("Seu papel não permite alterar o status.");
     }
     return error(internalError(cause));
