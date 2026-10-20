@@ -17,6 +17,7 @@ import {
   services,
 } from "@/db/schema";
 import { withUser, type AppTx } from "@/lib/db";
+import { dbErrorCode } from "@/lib/db-errors";
 import { getSystemAccountId, postEntry } from "@/lib/ledger";
 import { parsePriceToCents } from "@/lib/money";
 import { getSession } from "@/lib/session";
@@ -47,10 +48,6 @@ function toFieldErrors(error: z.ZodError): Record<string, string[]> {
     (fieldErrors[key] ??= []).push(issue.message);
   }
   return fieldErrors;
-}
-
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
 }
 
 async function context() {
@@ -115,10 +112,10 @@ export async function createPackageAction(payload: {
       );
     });
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", message: "Já existe um pacote com esse nome." };
     }
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar pacotes." };
     }
     return { status: "error", message: internalError(cause) };

@@ -26,6 +26,7 @@ import {
   walletTransactions,
 } from "@/db/schema";
 import { withUser, type AppTx } from "@/lib/db";
+import { dbErrorCode, dbErrorMessage } from "@/lib/db-errors";
 import {
   consumeChargeItem,
   consumeForCharge,
@@ -64,10 +65,6 @@ function toFieldErrors(error: z.ZodError): Record<string, string[]> {
     (fieldErrors[key] ??= []).push(issue.message);
   }
   return fieldErrors;
-}
-
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
 }
 
 async function context() {
@@ -136,10 +133,10 @@ export async function createAccountAction(
       });
     });
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { code: ["Já existe uma conta com esse código."] } };
     }
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar contas." };
     }
     return { status: "error", message: internalError(cause) };
@@ -312,7 +309,7 @@ export async function postJournalEntryAction(payload: {
       );
     });
   } catch (cause) {
-    const message = String(cause);
+    const message = dbErrorMessage(cause);
     if (message.includes("not balanced")) {
       return { status: "error", message: "O lançamento não fecha (débitos ≠ créditos)." };
     }
@@ -517,7 +514,7 @@ export async function createChargeAction(
       message: result.already ? "Este atendimento já foi cobrado." : "Cobrança gerada.",
     };
   } catch (cause) {
-    const message = String(cause);
+    const message = dbErrorMessage(cause);
     if (message.includes("charges_appointment_key")) {
       return { status: "success", message: "Este atendimento já foi cobrado." };
     }
@@ -539,7 +536,7 @@ const chargeItemInput = z.object({
 });
 
 function itemErrorMessage(cause: unknown): string {
-  const code = (cause as { code?: string })?.code;
+  const code = dbErrorCode(cause);
   const message = cause instanceof Error ? cause.message : "";
   if (!code && message && !message.includes("_")) return message;
   return internalError(cause);

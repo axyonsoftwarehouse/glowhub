@@ -9,6 +9,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { charges, coupons, couponRedemptions } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { dbErrorCode } from "@/lib/db-errors";
 import { getSystemAccountId, postEntry } from "@/lib/ledger";
 import { parsePriceToCents } from "@/lib/money";
 import { getSession } from "@/lib/session";
@@ -37,10 +38,6 @@ function toFieldErrors(error: z.ZodError): Record<string, string[]> {
     (fieldErrors[key] ??= []).push(issue.message);
   }
   return fieldErrors;
-}
-
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
 }
 
 async function context() {
@@ -122,7 +119,7 @@ export async function createCouponAction(
       });
     });
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { code: ["Já existe um cupom com esse código."] } };
     }
     return { status: "error", message: internalError(cause) };

@@ -9,6 +9,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { clients } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { dbErrorCode } from "@/lib/db-errors";
 import { parseTags } from "@/lib/crm";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
@@ -61,10 +62,6 @@ function nullIfEmpty(value: string | undefined): string | null {
   return value && value.length > 0 ? value : null;
 }
 
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
-}
-
 function readInput(formData: FormData) {
   return clientInput.safeParse({
     name: formData.get("name") ?? "",
@@ -115,10 +112,10 @@ export async function createClientAction(
       });
     });
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { email: ["Já existe um cliente com esse e-mail."] } };
     }
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar clientes." };
     }
     return { status: "error", message: internalError(cause) };
@@ -164,7 +161,7 @@ export async function updateClientAction(
       return { status: "error", message: "Sem permissão para editar este cliente." };
     }
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { email: ["Já existe um cliente com esse e-mail."] } };
     }
     return { status: "error", message: internalError(cause) };

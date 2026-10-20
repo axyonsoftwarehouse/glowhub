@@ -18,6 +18,7 @@ import {
 } from "@/db/schema";
 import { parsePriceToCents } from "@/lib/money";
 import { withUser, type AppTx } from "@/lib/db";
+import { dbErrorCode } from "@/lib/db-errors";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import type { CatalogActionState } from "./types";
@@ -74,10 +75,6 @@ function toFieldErrors(error: z.ZodError): Record<string, string[]> {
 
 function nullIfEmpty(value: string | undefined): string | null {
   return value && value.length > 0 ? value : null;
-}
-
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
 }
 
 async function context() {
@@ -144,10 +141,10 @@ export async function createCategoryAction(
       });
     });
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", message: "Já existe uma categoria com esse nome." };
     }
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar categorias." };
     }
     return { status: "error", message: internalError(cause) };
@@ -224,10 +221,10 @@ export async function createServiceAction(
       });
     });
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { name: ["Já existe um serviço com esse nome."] } };
     }
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar serviços." };
     }
     return { status: "error", message: internalError(cause) };
@@ -280,7 +277,7 @@ export async function updateServiceAction(
       return { status: "error", message: "Sem permissão para editar este serviço." };
     }
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { name: ["Já existe um serviço com esse nome."] } };
     }
     return { status: "error", message: internalError(cause) };
@@ -401,7 +398,7 @@ export async function upsertServiceBranchAction(
         });
     });
   } catch (cause) {
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite alterar." };
     }
     return { status: "error", message: internalError(cause) };
@@ -480,7 +477,7 @@ export async function addServiceMaterialAction(
         });
     });
   } catch (cause) {
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite alterar." };
     }
     return { status: "error", message: internalError(cause) };

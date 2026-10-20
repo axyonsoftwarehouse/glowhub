@@ -9,6 +9,7 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { branches } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { dbErrorCode } from "@/lib/db-errors";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import type { BranchActionState } from "./types";
@@ -54,10 +55,6 @@ function normalizeAddress(address: string | undefined): string | null {
   return address && address.length > 0 ? address : null;
 }
 
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
-}
-
 async function context() {
   const tenant = await getCurrentTenant();
   if (!tenant) return { error: "Empresa não resolvida." as const };
@@ -89,13 +86,13 @@ export async function createBranchAction(
       });
     });
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return {
         status: "error",
         fieldErrors: { slug: ["Já existe uma filial com este identificador."] },
       };
     }
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar filiais." };
     }
     return { status: "error", message: internalError(cause) };
@@ -141,7 +138,7 @@ export async function updateBranchAction(
       return { status: "error", message: "Sem permissão para editar esta filial." };
     }
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return {
         status: "error",
         fieldErrors: { slug: ["Já existe uma filial com este identificador."] },

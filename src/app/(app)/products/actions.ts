@@ -10,6 +10,7 @@ import { z } from "zod";
 import { categories, productVariants, products } from "@/db/schema";
 import { parsePriceToCents } from "@/lib/money";
 import { withUser, type AppTx } from "@/lib/db";
+import { dbErrorCode } from "@/lib/db-errors";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import type { ProductActionState } from "./types";
@@ -84,10 +85,6 @@ function parseStock(raw: string): number | null {
   const value = Number(raw);
   if (!Number.isInteger(value) || value < 0) return null;
   return value;
-}
-
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
 }
 
 async function context() {
@@ -244,10 +241,10 @@ export async function createProductAction(
       });
     });
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", message: "Já existe um produto ou variação com esse nome." };
     }
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar produtos." };
     }
     return { status: "error", message: internalError(cause) };
@@ -304,7 +301,7 @@ export async function updateProductAction(
       return { status: "error", message: "Sem permissão para editar este produto." };
     }
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { name: ["Já existe um produto com esse nome."] } };
     }
     return { status: "error", message: internalError(cause) };
@@ -383,7 +380,7 @@ export async function createVariantAction(
       });
     });
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", message: "Já existe uma variação com esse nome ou SKU." };
     }
     return { status: "error", message: internalError(cause) };
@@ -433,7 +430,7 @@ export async function updateVariantAction(
       return { status: "error", message: "Sem permissão para editar esta variação." };
     }
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", message: "Já existe uma variação com esse nome ou SKU." };
     }
     return { status: "error", message: internalError(cause) };

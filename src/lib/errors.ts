@@ -1,4 +1,5 @@
 import { sendAlert } from "@/lib/alerts";
+import { dbErrorMessage } from "@/lib/db-errors";
 import { recordMetric } from "@/lib/metrics";
 
 const GENERIC_ERROR_MESSAGE = "Ocorreu um erro inesperado. Tente novamente.";
@@ -10,7 +11,7 @@ const GENERIC_ERROR_MESSAGE = "Ocorreu um erro inesperado. Tente novamente.";
  * erro cru do Postgres/Neon expoe nomes de tabela, constraint e policy.
  */
 export function internalError(cause: unknown): string {
-  const raw = cause instanceof Error ? cause.message : String(cause);
+  const raw = dbErrorMessage(cause);
   if (raw.includes("tenant_read_only")) {
     return "Ambiente de demonstração: esta ação está desabilitada (somente leitura).";
   }

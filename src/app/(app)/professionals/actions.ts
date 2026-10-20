@@ -16,6 +16,7 @@ import {
   services,
 } from "@/db/schema";
 import { withUser, type AppTx } from "@/lib/db";
+import { dbErrorCode } from "@/lib/db-errors";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import type { ProfessionalActionState } from "./types";
@@ -44,10 +45,6 @@ function toFieldErrors(error: z.ZodError): Record<string, string[]> {
     (fieldErrors[key] ??= []).push(issue.message);
   }
   return fieldErrors;
-}
-
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
 }
 
 async function context() {
@@ -86,10 +83,10 @@ export async function createProfessionalAction(
       });
     });
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { name: ["Já existe um profissional com esse nome."] } };
     }
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite criar profissionais." };
     }
     return { status: "error", message: internalError(cause) };
@@ -138,7 +135,7 @@ export async function updateProfessionalAction(
       return { status: "error", message: "Sem permissão para editar este profissional." };
     }
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", fieldErrors: { name: ["Já existe um profissional com esse nome."] } };
     }
     return { status: "error", message: internalError(cause) };

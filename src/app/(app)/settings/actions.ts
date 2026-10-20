@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { tenants } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { dbErrorCode } from "@/lib/db-errors";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import type { SettingsActionState } from "./types";
@@ -31,10 +32,6 @@ function toFieldErrors(error: z.ZodError): Record<string, string[]> {
     (fieldErrors[key] ??= []).push(issue.message);
   }
   return fieldErrors;
-}
-
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
 }
 
 export async function updateTenantSettingsAction(
@@ -72,7 +69,7 @@ export async function updateTenantSettingsAction(
       };
     }
   } catch (cause) {
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return {
         status: "error",
         message: "Seu papel não permite alterar as configurações.",

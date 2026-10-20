@@ -13,6 +13,7 @@ import {
   type TrialBalanceRow,
 } from "@/lib/accounting";
 import { withUser } from "@/lib/db";
+import { dbErrorCode } from "@/lib/db-errors";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import type { ClosingActionState } from "./types";
@@ -32,10 +33,6 @@ function toFieldErrors(error: z.ZodError): Record<string, string[]> {
     (fieldErrors[key] ??= []).push(issue.message);
   }
   return fieldErrors;
-}
-
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
 }
 
 async function context() {
@@ -136,7 +133,7 @@ export async function closePeriodAction(
 
     if ("error" in result) return { status: "error", message: result.error };
   } catch (cause) {
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite fechar períodos." };
     }
     return { status: "error", message: internalError(cause) };
@@ -191,7 +188,7 @@ export async function reopenPeriodAction(
 
     if ("error" in result) return { status: "error", message: result.error };
   } catch (cause) {
-    if (errorCode(cause) === "42501") {
+    if (dbErrorCode(cause) === "42501") {
       return { status: "error", message: "Seu papel não permite reabrir períodos." };
     }
     return { status: "error", message: internalError(cause) };

@@ -17,6 +17,7 @@ import {
   subscriptionRedemptions,
 } from "@/db/schema";
 import { withUser, type AppTx } from "@/lib/db";
+import { dbErrorCode } from "@/lib/db-errors";
 import { getSystemAccountId, postEntry } from "@/lib/ledger";
 import { parsePriceToCents } from "@/lib/money";
 import { getSession } from "@/lib/session";
@@ -52,10 +53,6 @@ function toFieldErrors(error: z.ZodError): Record<string, string[]> {
     (fieldErrors[key] ??= []).push(issue.message);
   }
   return fieldErrors;
-}
-
-function errorCode(cause: unknown): string | undefined {
-  return (cause as { code?: string })?.code;
 }
 
 async function context() {
@@ -113,7 +110,7 @@ export async function createPlanAction(payload: {
       }
     });
   } catch (cause) {
-    if (errorCode(cause) === "23505") {
+    if (dbErrorCode(cause) === "23505") {
       return { status: "error", message: "Já existe um plano com esse nome." };
     }
     return { status: "error", message: internalError(cause) };
