@@ -1,3 +1,4 @@
+import { isDemoLoginEnabled } from "@/lib/app-env";
 import { isConfigured } from "@/lib/env";
 import { SetupNotice } from "@/components/setup-notice";
 import { LoginForm } from "./login-form";
@@ -36,7 +37,7 @@ export default async function LoginPage({
       {isConfigured() ? (
         <>
           <LoginForm redirectTo={safeNext(next)} />
-          {process.env.NEXT_PUBLIC_DEMO_LOGIN === "true" && <DemoLoginButton />}
+          {isDemoLoginEnabled() && <DemoLoginButton />}
         </>
       ) : (
         <SetupNotice />
