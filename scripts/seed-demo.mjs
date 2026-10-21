@@ -5,6 +5,7 @@
 // Rodar: npm run seed:demo (APP_ENV=dev). Na vitrine (APP_ENV=demo) exige
 // --confirm-demo; em qualquer outro ambiente recusa (scripts/lib/seed-guard.mjs).
 
+import { randomUUID } from "node:crypto";
 import postgres from "postgres";
 import { assertSeedAllowed } from "./lib/seed-guard.mjs";
 
@@ -63,6 +64,9 @@ async function postEntry(tx, { tenantId, description, idem, refType = null, refI
 }
 
 const TABLES = [
+  // fidelizacao e estoque primeiro (referenciam cobrancas, clientes e variacoes)
+  "campaigns", "gift_card_redemptions", "gift_cards", "loyalty_points", "loyalty_settings",
+  "stock_movements", "service_materials", "suppliers",
   "accounting_periods",
   "journal_lines", "journal_entries", "coupon_redemptions", "coupons",
   "wallet_transactions", "package_redemptions", "client_packages",
@@ -90,22 +94,33 @@ async function wipeTenants(slugs) {
   await sql`delete from public.tenants where id = any(${ids})`;
 }
 
+// Mesmo plano de contas padrao do app (DEFAULT_CHART em
+// src/app/(app)/finance/actions.ts): estoque/CMV e fidelizacao dependem dele.
 const CHART = [
   ["1", "Caixa", "asset", "cash"],
   ["1.1", "Banco", "asset", "bank"],
   ["1.2", "Contas a Receber", "asset", "accounts_receivable"],
+  ["1.3", "Estoque", "asset", "asset_inventory"],
+  ["2.1", "Contas a Pagar", "liability", "liability_payable"],
   ["2.2", "Comissões a Pagar", "liability", "liability_commission"],
   ["2.3", "Gorjetas a Pagar", "liability", "liability_tip"],
   ["2.4", "Carteira de Clientes", "liability", "liability_wallet"],
   ["2.5", "Pacotes a Resgatar", "liability", "liability_package"],
   ["2.6", "Receitas a Apropriar", "liability", "liability_deferred_revenue"],
+  ["2.7", "Gift Cards a Resgatar", "liability", "liability_gift_card"],
   ["3.1", "Capital / Resultados", "equity", null],
   ["4.1", "Receita de Serviços", "revenue", "revenue_service"],
   ["4.2", "Receita de Produtos", "revenue", "revenue_product"],
   ["4.3", "Receita de Pacotes", "revenue", "revenue_package"],
   ["4.4", "Receita de Assinaturas", "revenue", "revenue_subscription"],
+  ["4.5", "Receita de Gift Cards", "revenue", "revenue_gift_card"],
+  ["5.1", "Despesas Operacionais", "expense", null],
   ["5.2", "Comissões", "expense", "expense_commission"],
+  ["5.3", "Taxas de Cartão", "expense", null],
   ["5.4", "Descontos e Estornos", "expense", "expense_discount"],
+  ["5.5", "Custo de Produtos e Serviços", "expense", "expense_cogs"],
+  ["5.6", "Perdas e Ajustes de Estoque", "expense", "expense_inventory_loss"],
+  ["5.7", "Despesa de Fidelidade", "expense", "expense_loyalty"],
 ];
 
 async function seedChart(tx, tenantId) {
@@ -161,20 +176,131 @@ async function seedDemo(tx) {
   const durationOf = (n) => serviceDefs.find((s) => s[0] === n)[2];
   const priceOf = (n) => money(serviceDefs.find((s) => s[0] === n)[3]);
 
-  // produtos + variacoes
+  // produtos (revenda) e insumos (uso interno). O estoque entra pelas compras
+  // abaixo (custo medio), nao direto no cadastro.
+  // [nome, kind, [[variacao, preco, unidade, estoque minimo]]]
   const productDefs = [
-    ["Shampoo profissional", "Cosméticos", [["300ml", 45, 20], ["1L", 90, 8]]],
-    ["Máscara de hidratação", "Cosméticos", [["250g", 70, 15]]],
-    ["Esmalte gel", "Cosméticos", [["Unidade", 25, 40]]],
+    ["Shampoo profissional", "resale", [["300ml", 45, "un", 6], ["1L", 90, "un", 3]]],
+    ["Máscara de hidratação", "resale", [["250g", 70, "un", 5]]],
+    ["Esmalte gel", "resale", [["Unidade", 25, "un", 10]]],
+    ["Coloração em creme", "internal", [["Tubo 60g", 0, "tubo", 5]]],
+    ["Luvas descartáveis", "internal", [["Par", 0, "par", 30]]],
+    ["Máscara facial descartável", "internal", [["Unidade", 0, "un", 4]]],
   ];
   const variants = {};
-  for (const [name, category, vars] of productDefs) {
-    const [product] = await tx`insert into public.products ${tx({ tenant_id: tenantId, category_id: cat[category], name, description: `${name} para venda no balcão.`, image_url: `https://picsum.photos/seed/${encodeURIComponent(name)}/600/400` })} returning id`;
+  for (const [name, kind, vars] of productDefs) {
+    const description = kind === "resale" ? `${name} para venda no balcão.` : `${name} (insumo de uso interno).`;
+    const [product] = await tx`insert into public.products ${tx({ tenant_id: tenantId, category_id: cat["Cosméticos"], name, kind, description, image_url: `https://picsum.photos/seed/${encodeURIComponent(name)}/600/400` })} returning id`;
     variants[name] = [];
-    for (const [vname, price, stock] of vars) {
-      const [v] = await tx`insert into public.product_variants ${tx({ tenant_id: tenantId, product_id: product.id, name: vname, sku: `${name.slice(0, 3).toUpperCase()}-${vname}`, price_cents: money(price), stock_quantity: stock })} returning id`;
+    for (const [vname, price, unit, minStock] of vars) {
+      const [v] = await tx`insert into public.product_variants ${tx({ tenant_id: tenantId, product_id: product.id, name: vname, sku: `${name.slice(0, 3).toUpperCase()}-${vname}`, price_cents: money(price), stock_quantity: 0, unit, min_stock: minStock })} returning id`;
       variants[name].push({ id: v.id, price: money(price) });
     }
+  }
+  const variantOf = (name, index = 0) => variants[name][index].id;
+
+  // fornecedores + compras (D Estoque / C Caixa ou Contas a Pagar), com custo
+  // medio, como recordPurchase (src/lib/inventory.ts)
+  const suppliers = {};
+  for (const [name, contact] of [["Distribuidora Beleza Pro", "vendas@belezapro.example.com"], ["Atacado Estética Sul", "(11) 3333-0000"]]) {
+    const [row] = await tx`insert into public.suppliers ${tx({ tenant_id: tenantId, name, contact })} returning id`;
+    suppliers[name] = row.id;
+  }
+
+  async function addStock(variantId, quantity, unitCost) {
+    const [v] = await tx`select stock_quantity, cost_cents from public.product_variants where id = ${variantId}`;
+    const stock = Number(v.stock_quantity);
+    const cost = Number(v.cost_cents);
+    // Mesma regra de movingAverageCost (src/lib/inventory.ts).
+    const nextCost = stock <= 0 || cost <= 0 ? unitCost : Math.round((stock * cost + quantity * unitCost) / (stock + quantity));
+    await tx`update public.product_variants set stock_quantity = stock_quantity + ${quantity}, cost_cents = ${nextCost} where id = ${variantId}`;
+  }
+
+  // items: [[variantId, quantidade, custo unitario]]
+  async function purchase({ days, supplier, items, method = "cash" }) {
+    const occurredAt = sp(addDays(today, days), "09:00");
+    const purchaseId = randomUUID();
+    let total = 0;
+    for (const [variantId, quantity, unitCost] of items) {
+      await tx`insert into public.stock_movements ${tx({ tenant_id: tenantId, variant_id: variantId, kind: "purchase", quantity_delta: quantity, unit_cost_cents: unitCost, supplier_id: suppliers[supplier], reference_type: "stock_purchase", reference_id: purchaseId, created_at: occurredAt })}`;
+      await addStock(variantId, quantity, unitCost);
+      total += quantity * unitCost;
+    }
+    await postEntry(tx, { tenantId, description: "Entrada de estoque", idem: `purchase-${purchaseId}`, refType: "stock_purchase", refId: purchaseId, occurredAt, lines: [
+      { accountId: accounts.asset_inventory, direction: "debit", amount: total },
+      { accountId: method === "payable" ? accounts.liability_payable : accounts.cash, direction: "credit", amount: total },
+    ] });
+  }
+
+  await purchase({ days: -50, supplier: "Distribuidora Beleza Pro", items: [
+    [variantOf("Shampoo profissional"), 24, money(20)],
+    [variantOf("Shampoo profissional", 1), 8, money(42)],
+    [variantOf("Máscara de hidratação"), 18, money(30)],
+    [variantOf("Esmalte gel"), 30, money(9)],
+    [variantOf("Coloração em creme"), 12, money(18)],
+  ] });
+  await purchase({ days: -48, supplier: "Atacado Estética Sul", method: "payable", items: [
+    [variantOf("Luvas descartáveis"), 40, money(0.9)],
+    [variantOf("Máscara facial descartável"), 6, money(6)],
+  ] });
+  // reposicao com custo maior: o custo medio do esmalte sobe
+  await purchase({ days: -20, supplier: "Atacado Estética Sul", method: "payable", items: [
+    [variantOf("Esmalte gel"), 15, money(10)],
+  ] });
+
+  // perda: um esmalte quebrado (D Perdas / C Estoque), como recordAdjustment
+  {
+    const occurredAt = sp(addDays(today, -10), "18:00");
+    const variantId = variantOf("Esmalte gel");
+    const [v] = await tx`select cost_cents from public.product_variants where id = ${variantId}`;
+    const cost = Number(v.cost_cents);
+    const [movement] = await tx`insert into public.stock_movements ${tx({ tenant_id: tenantId, variant_id: variantId, kind: "loss", quantity_delta: -1, unit_cost_cents: cost, notes: "Frasco quebrado na reposição", created_at: occurredAt })} returning id`;
+    await tx`update public.product_variants set stock_quantity = stock_quantity - 1 where id = ${variantId}`;
+    await postEntry(tx, { tenantId, description: "Perda de estoque", idem: `stock-adjustment-${movement.id}`, refType: "stock_movement", refId: movement.id, occurredAt, lines: [
+      { accountId: accounts.expense_inventory_loss, direction: "debit", amount: cost },
+      { accountId: accounts.asset_inventory, direction: "credit", amount: cost },
+    ] });
+  }
+
+  // ficha tecnica: insumos consumidos por servico
+  const materials = {
+    "Coloração": [["Coloração em creme", 1], ["Luvas descartáveis", 1]],
+    "Manicure": [["Luvas descartáveis", 1]],
+    "Pedicure": [["Luvas descartáveis", 1]],
+    "Limpeza de pele": [["Máscara facial descartável", 1], ["Luvas descartáveis", 1]],
+  };
+  for (const [service, items] of Object.entries(materials)) {
+    for (const [name, quantity] of items) {
+      await tx`insert into public.service_materials ${tx({ tenant_id: tenantId, service_id: services[service], variant_id: variantOf(name), quantity })}`;
+    }
+  }
+
+  // Baixa de estoque de um item da cobranca + CMV (D Custo / C Estoque), como
+  // consumeChargeItem (src/lib/inventory.ts). consumption: [[variantId, qtd]]
+  async function consumeItem({ chargeItemId, kind, consumption, occurredAt }) {
+    let cogs = 0;
+    for (const [variantId, quantity] of consumption) {
+      const [v] = await tx`select cost_cents from public.product_variants where id = ${variantId}`;
+      const cost = Number(v.cost_cents);
+      await tx`insert into public.stock_movements ${tx({ tenant_id: tenantId, variant_id: variantId, kind, quantity_delta: -quantity, unit_cost_cents: cost, reference_type: "charge_item", reference_id: chargeItemId, created_at: occurredAt })}`;
+      await tx`update public.product_variants set stock_quantity = stock_quantity - ${quantity} where id = ${variantId}`;
+      cogs += quantity * cost;
+    }
+    if (cogs > 0) {
+      await postEntry(tx, { tenantId, description: "Custo de produtos e serviços (CMV)", idem: `cogs-item-${chargeItemId}`, refType: "charge_item", refId: chargeItemId, occurredAt, lines: [
+        { accountId: accounts.expense_cogs, direction: "debit", amount: cogs },
+        { accountId: accounts.asset_inventory, direction: "credit", amount: cogs },
+      ] });
+    }
+  }
+
+  // programa de pontos: 1 ponto por real; 100 pontos = R$ 1,00
+  await tx`insert into public.loyalty_settings ${tx({ tenant_id: tenantId, is_active: true, points_per_real: 1, redeem_points_per_real: 100 })}`;
+  // Como awardChargePoints (src/lib/loyalty.ts): pontos ao quitar a comanda.
+  async function awardPoints({ chargeId, clientId, amount, occurredAt }) {
+    const points = Math.floor(amount / 100);
+    if (points <= 0) return;
+    await tx`insert into public.loyalty_points ${tx({ tenant_id: tenantId, client_id: clientId, points_delta: points, kind: "earn", reference_type: "charge", reference_id: chargeId, created_at: occurredAt })}`;
   }
 
   // profissionais
@@ -209,15 +335,18 @@ async function seedDemo(tx) {
 
   // clientes
   const clients = {};
-  for (const [name, phone, email] of [
-    ["Mariana Alves", "11987650001", "mariana@example.com"],
-    ["João Pedro", "11987650002", "joao@example.com"],
-    ["Beatriz Rocha", "11987650003", "bia@example.com"],
-    ["Rafael Nunes", "11987650004", "rafael@example.com"],
-    ["Camila Dias", "11987650005", "camila@example.com"],
-    ["Lucas Ferreira", "11987650006", null],
+  // CRM: aniversario (um no mes corrente, aba "Aniversariantes"), tags,
+  // preferencias e opt-in de marketing (campanhas)
+  const birthdayThisMonth = `1990-${today.slice(5, 7)}-${today.slice(8, 10)}`;
+  for (const [name, phone, email, birthday, tags, preferences, optIn] of [
+    ["Mariana Alves", "11987650001", "mariana@example.com", birthdayThisMonth, ["cabelo", "fiel"], "Prefere horários pela manhã.", true],
+    ["João Pedro", "11987650002", "joao@example.com", "1988-03-12", ["estética"], null, true],
+    ["Beatriz Rocha", "11987650003", "bia@example.com", "1995-07-25", ["unhas"], "Alergia a acetona.", false],
+    ["Rafael Nunes", "11987650004", "rafael@example.com", null, ["unhas", "produtos"], null, true],
+    ["Camila Dias", "11987650005", "camila@example.com", "1992-11-03", ["cabelo", "coloração"], "Coloração castanho iluminado.", true],
+    ["Lucas Ferreira", "11987650006", null, null, null, null, false],
   ]) {
-    const [c] = await tx`insert into public.clients ${tx({ tenant_id: tenantId, name, phone, email })} returning id`;
+    const [c] = await tx`insert into public.clients ${tx({ tenant_id: tenantId, name, phone, email, birthday, tags, preferences, marketing_opt_in: optIn })} returning id`;
     clients[name] = c.id;
   }
 
@@ -235,7 +364,11 @@ async function seedDemo(tx) {
   async function chargeCompleted(appt, { pay, tip, method }) {
     const commission = Math.round((appt.price * ({ "Ana Souza": 4000, "Bruno Lima": 3000, "Carla Mendes": 5000 }[appt.proName] || 0)) / 10000);
     const [charge] = await tx`insert into public.charges ${tx({ tenant_id: tenantId, appointment_id: appt.id, client_id: appt.clientId, status: pay ? "paid" : "open", total_cents: appt.price })} returning id`;
-    await tx`insert into public.charge_items ${tx({ tenant_id: tenantId, charge_id: charge.id, kind: "service", reference_id: appt.serviceId, description: appt.serviceName, quantity: 1, unit_price_cents: appt.price, total_cents: appt.price })}`;
+    const [item] = await tx`insert into public.charge_items ${tx({ tenant_id: tenantId, charge_id: charge.id, kind: "service", reference_id: appt.serviceId, description: appt.serviceName, quantity: 1, unit_price_cents: appt.price, total_cents: appt.price })} returning id`;
+    const serviceMaterials = materials[appt.serviceName] ?? [];
+    if (serviceMaterials.length > 0) {
+      await consumeItem({ chargeItemId: item.id, kind: "service_consumption", consumption: serviceMaterials.map(([name, q]) => [variantOf(name), q]), occurredAt: appt.occurredAt });
+    }
     const revenueEntry = await postEntry(tx, { tenantId, description: `Cobrança: ${appt.serviceName}`, idem: `demo-charge-${charge.id}`, refType: "charge", refId: charge.id, occurredAt: appt.occurredAt, lines: [
       { accountId: accounts.accounts_receivable, direction: "debit", amount: appt.price },
       { accountId: accounts.revenue_service, direction: "credit", amount: appt.price },
@@ -260,6 +393,7 @@ async function seedDemo(tx) {
       ] });
       await tx`update public.payments set entry_id = ${payEntry} where id = ${payment.id}`;
       await tx`update public.charges set status = 'paid', settlement_entry_id = ${payEntry} where id = ${charge.id}`;
+      await awardPoints({ chargeId: charge.id, clientId: appt.clientId, amount: appt.price, occurredAt: appt.occurredAt });
       if (tip > 0) {
         await tx`insert into public.earnings ${tx({ tenant_id: tenantId, professional_id: appt.proId, kind: "tip", amount_cents: tip, status: "pending", reference_type: "payment", reference_id: payment.id, entry_id: payEntry })}`;
       }
@@ -310,8 +444,10 @@ async function seedDemo(tx) {
   async function sellProducts({ client, items, pay, method = "cash" }) {
     const total = items.reduce((s, it) => s + it.unit * it.qty, 0);
     const [charge] = await tx`insert into public.charges ${tx({ tenant_id: tenantId, client_id: clients[client], status: pay ? "paid" : "open", total_cents: total })} returning id`;
+    const occurredAt = sp(addDays(today, -3), "15:00");
     for (const it of items) {
-      await tx`insert into public.charge_items ${tx({ tenant_id: tenantId, charge_id: charge.id, kind: "product", reference_id: it.variantId, description: it.description, quantity: it.qty, unit_price_cents: it.unit, total_cents: it.unit * it.qty })}`;
+      const [item] = await tx`insert into public.charge_items ${tx({ tenant_id: tenantId, charge_id: charge.id, kind: "product", reference_id: it.variantId, description: it.description, quantity: it.qty, unit_price_cents: it.unit, total_cents: it.unit * it.qty })} returning id`;
+      await consumeItem({ chargeItemId: item.id, kind: "sale", consumption: [[it.variantId, it.qty]], occurredAt });
     }
     const debit = pay ? (method === "cash" ? accounts.cash : accounts.bank) : accounts.accounts_receivable;
     const entry = await postEntry(tx, { tenantId, description: "Venda de produtos", idem: `demo-product-${charge.id}`, refType: "charge", refId: charge.id, lines: [
@@ -319,6 +455,7 @@ async function seedDemo(tx) {
       { accountId: accounts.revenue_product, direction: "credit", amount: total },
     ] });
     await tx`update public.charges set revenue_entry_id = ${entry} where id = ${charge.id}`;
+    if (pay) await awardPoints({ chargeId: charge.id, clientId: clients[client], amount: total, occurredAt });
   }
   await sellProducts({ client: "Rafael Nunes", items: [{ variantId: variants["Shampoo profissional"][0].id, description: "Shampoo profissional 300ml", unit: money(45), qty: 2 }], pay: true, method: "credit" });
   await sellProducts({ client: "Beatriz Rocha", items: [{ variantId: variants["Máscara de hidratação"][0].id, description: "Máscara de hidratação 250g", unit: money(70), qty: 1 }], pay: false });
@@ -394,6 +531,63 @@ async function seedDemo(tx) {
     // Consumo dentro do periodo (limite de 2 por servico).
     await tx`insert into public.subscription_redemptions ${tx({ tenant_id: tenantId, subscription_id: sub.id, service_id: services["Corte feminino"], amount_cents: money(80), redeemed_at: new Date(Date.now() - 20 * 86400000) })}`;
     await tx`insert into public.subscription_redemptions ${tx({ tenant_id: tenantId, subscription_id: sub.id, service_id: services["Escova"], amount_cents: money(70), redeemed_at: new Date(Date.now() - 10 * 86400000) })}`;
+  }
+
+  // gift cards: venda (D Caixa / C Gift Cards a Resgatar) e resgate
+  // (D Gift Cards a Resgatar / C Receita de Gift Cards), como em /loyalty
+  {
+    const cards = [
+      { code: "GC-ENCAN-T0001", value: money(100), client: "Mariana Alves", days: -30, redeem: [[money(40), -12]] },
+      { code: "GC-ENCAN-T0002", value: money(50), client: "João Pedro", days: -25, redeem: [[money(50), -8]] },
+      { code: "GC-ENCAN-T0003", value: money(150), client: null, days: -4, redeem: [] },
+    ];
+    for (const card of cards) {
+      const soldAt = sp(addDays(today, card.days), "12:00");
+      const clientId = card.client ? clients[card.client] : null;
+      const redeemedTotal = card.redeem.reduce((sum, [amount]) => sum + amount, 0);
+      const [gc] = await tx`insert into public.gift_cards ${tx({ tenant_id: tenantId, code: card.code, initial_value_cents: card.value, client_id: clientId, status: redeemedTotal >= card.value ? "redeemed" : "active", expires_at: new Date(soldAt.getTime() + 365 * 86400000), created_at: soldAt })} returning id`;
+      const saleEntry = await postEntry(tx, { tenantId, description: `Venda de gift card ${card.code}`, idem: `gift-card-sale-${gc.id}`, refType: "gift_card", refId: gc.id, occurredAt: soldAt, lines: [
+        { accountId: accounts.cash, direction: "debit", amount: card.value },
+        { accountId: accounts.liability_gift_card, direction: "credit", amount: card.value },
+      ] });
+      await tx`update public.gift_cards set entry_id = ${saleEntry} where id = ${gc.id}`;
+      for (const [amount, days] of card.redeem) {
+        const redeemedAt = sp(addDays(today, days), "16:00");
+        const [r] = await tx`insert into public.gift_card_redemptions ${tx({ tenant_id: tenantId, gift_card_id: gc.id, client_id: clientId, amount_cents: amount, created_at: redeemedAt })} returning id`;
+        const entry = await postEntry(tx, { tenantId, description: "Resgate de gift card", idem: `gift-card-redeem-${r.id}`, refType: "gift_card_redemption", refId: r.id, occurredAt: redeemedAt, lines: [
+          { accountId: accounts.liability_gift_card, direction: "debit", amount },
+          { accountId: accounts.revenue_gift_card, direction: "credit", amount },
+        ] });
+        await tx`update public.gift_card_redemptions set entry_id = ${entry} where id = ${r.id}`;
+      }
+    }
+  }
+
+  // resgate de pontos: Camila troca 500 pontos por R$ 5,00 na carteira
+  // (D Despesa de Fidelidade / C Carteira de Clientes)
+  {
+    const points = 500;
+    const credit = Math.floor((points * 100) / 100); // redeem_points_per_real = 100
+    const redemptionId = randomUUID();
+    const redeemedAt = sp(addDays(today, -6), "11:00");
+    const entry = await postEntry(tx, { tenantId, description: "Resgate de pontos de fidelidade", idem: `loyalty-redeem-${redemptionId}`, refType: "loyalty_redemption", refId: redemptionId, occurredAt: redeemedAt, lines: [
+      { accountId: accounts.expense_loyalty, direction: "debit", amount: credit },
+      { accountId: accounts.liability_wallet, direction: "credit", amount: credit },
+    ] });
+    await tx`insert into public.wallet_transactions ${tx({ tenant_id: tenantId, client_id: clients["Camila Dias"], amount_cents: credit, kind: "topup", reference_type: "loyalty_redemption", reference_id: redemptionId, entry_id: entry })}`;
+    await tx`insert into public.loyalty_points ${tx({ tenant_id: tenantId, client_id: clients["Camila Dias"], points_delta: -points, kind: "redeem", reference_type: "loyalty_redemption", reference_id: redemptionId, created_at: redeemedAt })}`;
+  }
+
+  // campanha por segmento: e-mail so para quem deu opt-in (caixa de saida)
+  {
+    const optIn = await tx`select name, email from public.clients where tenant_id = ${tenantId} and marketing_opt_in and email is not null order by name`;
+    const subject = "Sentimos sua falta: 10% na próxima visita";
+    const body = "Use o cupom BEMVINDO10 no seu próximo agendamento.";
+    const sentAt = sp(addDays(today, -2), "10:05");
+    await tx`insert into public.campaigns ${tx({ tenant_id: tenantId, name: "Retorno de clientes", segment: "todos", subject, body, audience_count: optIn.length, sent_count: optIn.length, created_at: sp(addDays(today, -2), "10:00") })}`;
+    for (const c of optIn) {
+      await tx`insert into public.notifications ${tx({ tenant_id: tenantId, channel: "email", recipient: c.email, subject, body: `Olá ${c.name.split(" ")[0]}, ${body.charAt(0).toLowerCase()}${body.slice(1)}`, status: "sent", sent_at: sentAt })}`;
+    }
   }
 
   // cupons
