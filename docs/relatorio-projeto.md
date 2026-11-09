@@ -231,7 +231,7 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 `/finance`, `/reconciliation`, `/reports`, `/reports/profitability`, `/closing`,
 `/settings`, `/profile`, `/book`, `/pay/mock`, `/api/auth/[...all]`,
 `/api/webhooks/[provider]`, `/api/cron/subscriptions`, `/api/cron/daily`,
-`/api/cron/webhooks`, `/api/health`, `/api/metrics`.
+`/api/cron/webhooks`, `/api/health`, `/api/metrics`, `/api/v1/*`.
 
 - Auth/sessão, convites por link, **edição/remoção de membros**, troca de empresa,
   **onboarding**.
@@ -246,18 +246,24 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
   append-only) e **fidelização** (gift cards, pontos e campanhas).
 - **Agendamento online**, **convite por e-mail** e **notificações por e-mail**
   (caixa de saída, lembretes diários).
-- **CI** + **115 testes unitários** (18 arquivos) e **13 cenários e2e** (+ setup;
+- **API v1** para app: login Bearer, tenant ativo, agenda da equipe e catálogo/
+  disponibilidade/booking público (sem login).
+- **CI** + **115 testes unitários** (18 arquivos) e **15 cenários e2e** (+ setup;
   Playwright: login demo, minha agenda + status, histórico do cliente, booking,
-  assinaturas, fechamento e **7 verificações de acessibilidade com axe**);
-  `tsc`/`eslint`/`build` verdes.
+  API v1 pública, assinaturas, fechamento e **7 verificações de acessibilidade
+  com axe**); `tsc`/`eslint`/`build` verdes.
 
 ---
 
 ## 4. O que falta (backlog priorizado)
 
 ### Fase 6 — Canais
-- [ ] **App do cliente (mobile)** — projeto separado (Expo/React Native), consumindo
-      a mesma API/DB (avaliar expor uma API dedicada ou usar o Supabase-like).
+- [x] **API v1** para app: login Bearer (`/api/v1/auth/login`), `/me`, troca de
+      tenant, agenda (`/appointments`) e booking público
+      (`/public/catalog|availability|bookings`). Contrato em
+      [`api-mobile.md`](api-mobile.md).
+- [ ] **App do cliente (mobile)** — projeto separado (Expo/React Native),
+      consumindo a API v1.
 
 ### Financeiro / comercial
 - [x] **Gateway online** (adapter portável: mock + Mercado Pago), link de

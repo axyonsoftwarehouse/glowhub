@@ -1,0 +1,175 @@
+import { and, eq, sql } from "drizzle-orm";
+import { appointments, clients } from "@/db/schema";
+import { overlapMessage } from "@/lib/appointment-errors";
+import { computeSlotsForDay } from "@/lib/availability-data";
+import { getDb } from "@/lib/db";
+import { enqueueEmail } from "@/lib/notifications";
+import {
+  formatReminderWhen,
+  reminderDedupeKey,
+  reminderScheduledFor,
+} from "@/lib/reminders";
+import { zonedTimeToUtc } from "@/lib/timezone";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export type PublicBookingInput = {
+  branchId: string;
+  professionalId: string;
+  serviceId: string;
+  date: string;
+  time: string;
+  name: string;
+  phone: string;
+  email?: string;
+  notes?: string;
+};
+
+export type PublicBookingResult =
+  | { ok: true; label: string }
+  | { error: string; code?: "INVALID" | "SLOT_TAKEN" | "SLOT_INVALID" | "UNKNOWN" };
+
+/**
+ * Núcleo do agendamento público, compartilhado entre a Server Action de `/book`
+ * e a API v1 do app. Usa a conexão admin com escopo explícito de tenant.
+ */
+export async function createPublicBooking(params: {
+  tenant: { id: string; name: string };
+  input: PublicBookingInput;
+}): Promise<PublicBookingResult> {
+  const { tenant, input } = params;
+  const name = input.name.trim();
+  const phone = input.phone.trim();
+  const email = (input.email ?? "").trim();
+
+  if (
+    !UUID_RE.test(input.branchId) ||
+    !UUID_RE.test(input.professionalId) ||
+    !UUID_RE.test(input.serviceId) ||
+    !DATE_RE.test(input.date) ||
+    !TIME_RE.test(input.time)
+  ) {
+    return { error: "Dados do agendamento inválidos.", code: "INVALID" };
+  }
+  if (name.length < 2) {
+    return { error: "Informe seu nome.", code: "INVALID" };
+  }
+  if (phone.length < 8) {
+    return { error: "Informe um telefone válido.", code: "INVALID" };
+  }
+
+  try {
+    const result = await getDb().transaction(async (tx) => {
+      const ctx = await computeSlotsForDay(tx, tenant.id, {
+        branchId: input.branchId,
+        professionalId: input.professionalId,
+        serviceId: input.serviceId,
+        date: input.date,
+      });
+      if ("error" in ctx) return { error: ctx.error, code: "SLOT_INVALID" as const };
+      if (!ctx.slots.includes(input.time)) {
+        return {
+          error: "Horário indisponível. Busque novamente.",
+          code: "SLOT_TAKEN" as const,
+        };
+      }
+
+      const [existing] = await tx
+        .select({ id: clients.id })
+        .from(clients)
+        .where(
+          and(
+            eq(clients.tenantId, tenant.id),
+            orPhoneOrEmail(phone, email),
+          ),
+        )
+        .limit(1);
+
+      let clientId = existing?.id ?? null;
+      if (!clientId) {
+        const [created] = await tx
+          .insert(clients)
+          .values({
+            tenantId: tenant.id,
+            name,
+            phone,
+            email: email.length > 0 ? email : null,
+          })
+          .returning({ id: clients.id });
+        clientId = created.id;
+      }
+
+      const startsAt = zonedTimeToUtc(input.date, input.time, ctx.timezone);
+      const endsAt = new Date(
+        startsAt.getTime() + ctx.durationMinutes * 60_000,
+      );
+
+      const [appointment] = await tx
+        .insert(appointments)
+        .values({
+          tenantId: tenant.id,
+          branchId: input.branchId,
+          professionalId: input.professionalId,
+          serviceId: input.serviceId,
+          clientId,
+          startsAt,
+          endsAt,
+          priceCents: ctx.priceCents,
+          status: "pending",
+          notes:
+            input.notes && input.notes.length > 0
+              ? `Online: ${input.notes}`
+              : "Agendamento online",
+        })
+        .returning({ id: appointments.id });
+
+      if (email.length > 0) {
+        await enqueueEmail(tx, {
+          tenantId: tenant.id,
+          recipient: email,
+          subject: `Agendamento confirmado - ${input.date} às ${input.time}`,
+          body: `Olá ${name}, seu agendamento foi reservado para ${input.date} às ${input.time}. Até logo!`,
+        });
+        await enqueueEmail(tx, {
+          tenantId: tenant.id,
+          recipient: email,
+          subject: `Lembrete do seu horário em ${tenant.name}`,
+          body: `Olá ${name}, seu horário está marcado para ${formatReminderWhen(
+            startsAt,
+            ctx.timezone,
+          )}. Se precisar remarcar, entre em contato com ${tenant.name}.`,
+          scheduledFor: reminderScheduledFor(startsAt),
+          dedupeKey: reminderDedupeKey(appointment.id),
+        });
+      }
+
+      return { ok: true as const };
+    });
+
+    if ("error" in result) {
+      return {
+        error: result.error ?? "Não foi possível concluir o agendamento.",
+        code: result.code ?? "SLOT_INVALID",
+      };
+    }
+    return { ok: true, label: `${input.date} às ${input.time}` };
+  } catch (cause) {
+    if (overlapMessage(cause)) {
+      return {
+        error: "Esse horário acabou de ser reservado. Escolha outro.",
+        code: "SLOT_TAKEN",
+      };
+    }
+    return { error: "Não foi possível concluir o agendamento.", code: "UNKNOWN" };
+  }
+}
+
+function orPhoneOrEmail(phone: string, email: string) {
+  if (email.length > 0) {
+    return sql`lower(${clients.email}) = lower(${email}) or ${clients.phone} = ${phone}`;
+  }
+  return sql`${clients.phone} = ${phone}`;
+}
