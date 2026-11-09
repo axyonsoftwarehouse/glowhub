@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { bearer } from "better-auth/plugins/bearer";
 import { getDb } from "@/lib/db";
 import * as schema from "@/db/schema";
 
@@ -30,7 +31,7 @@ function buildAuth() {
         generateId: () => crypto.randomUUID(),
       },
     },
-    plugins: [nextCookies()],
+    plugins: [bearer(), nextCookies()],
   });
 }
 
@@ -50,6 +51,9 @@ export const auth = new Proxy({} as Auth, {
     const instance = resolveAuth();
     const value = Reflect.get(instance as object, property);
     return typeof value === "function" ? value.bind(instance) : value;
+  },
+  has(_target, property) {
+    return property in resolveAuth();
   },
 });
 

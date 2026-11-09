@@ -213,6 +213,18 @@ a trava real é no banco.
   agendamento público ainda não está ligado ao fluxo (o gateway existe para a
   comanda; integrar no `/book` é evolução futura).
 
+## API para app mobile (v1)
+- **Autenticação**: Better Auth + plugin `bearer`; login encapsulado em
+  `/api/v1/auth/login` devolve o token de sessão (o app nativo não envia
+  `Origin`). Rotas do painel aceitam cookie ou `Authorization: Bearer`.
+- **Painel**: `/api/v1/me`, `/api/v1/tenant` (troca validada por membership) e
+  `/api/v1/appointments` (agenda com `mine=1` para o profissional).
+- **Canal público**: `/api/v1/public/tenant|catalog|availability|bookings` com
+  tenant por `x-tenant-slug`/subdomínio, rate limit e sem cookie. O booking
+  reutiliza o núcleo de `/book`.
+- **CORS**: `API_ALLOWED_ORIGINS` restringe clientes web; o padrão `*` serve ao
+  app nativo com Bearer. Contrato completo em [`api-mobile.md`](api-mobile.md).
+
 ## Notificações
 - **Caixa de saída** (`notifications`): canal (`email/sms/push`), destinatário,
   assunto, corpo, `scheduled_for` e `status` (pending/sent/failed). É

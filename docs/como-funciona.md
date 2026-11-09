@@ -243,7 +243,8 @@ segurança — a trava real está no banco.
 - A reserva roda na conexão admin com `tenant_id` explícito, porque não há
   sessão. O cliente é reaproveitado por telefone **ou** e-mail; se não existir,
   é criado. O agendamento nasce `pending` e, havendo e-mail, uma mensagem é
-  enfileirada em `notifications`.
+  enfileirada em `notifications`. A mesma rotina é usada pela API v1 em
+  `/api/v1/public/bookings` (`src/lib/public-booking.ts`).
 
 ### 5.4 Estados e políticas
 
@@ -486,6 +487,7 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
 | `/api/cron/webhooks` | `Bearer CRON_SECRET` | reprocessa webhooks sob demanda (não agendado na Vercel) |
 | `/api/webhooks/<provider>` | assinatura HMAC | confirma/estorna pagamentos |
 | `/api/auth/[...all]` | Better Auth + rate limit | login/cadastro/sessão |
+| `/api/v1/*` | Bearer/cookie ou slug público | API do app (ver [`api-mobile.md`](api-mobile.md)) |
 
 - **Métricas** (`src/lib/metrics.ts`): `recordMetric` acumula em memória **e**
   sempre emite um log JSON (`message: "metric"`). Com `METRICS_WEBHOOK_URL`,
@@ -522,9 +524,10 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
   disponibilidade, erros de banco/agendamento, estoque, fidelidade, CRM,
   lucratividade, assinatura/retry de webhook, estorno de cobrança, lembretes,
   métricas, alertas e `APP_ENV`.
-- **e2e (Playwright, 13 cenários + setup de auth)**: login demo, minha agenda
+- **e2e (Playwright, 15 cenários + setup de auth)**: login demo, minha agenda
   (vínculo e mudança de status), histórico do cliente, booking público,
-  assinaturas, fechamento e 7 verificações de acessibilidade com axe.
+  assinaturas, fechamento, API v1 pública e 7 verificações de acessibilidade
+  com axe.
 - **Smoke scripts** (`scripts/`): `smoke-rls`, `smoke-ledger`, `smoke-overlap`,
   `check-overlaps` e `schema-snapshot`.
 - Quality gate: `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build`.

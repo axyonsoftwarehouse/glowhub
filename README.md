@@ -58,6 +58,7 @@ src/
     schema/*.ts                # schema Drizzle (fonte de verdade das tabelas)
   app/
     api/auth/[...all]/route.ts # handler do Better Auth (+ rate limit)
+    api/v1/*                   # API versionada para app mobile (ver docs/api-mobile.md)
     api/webhooks/[provider]/   # webhooks de pagamento
     api/cron/subscriptions/    # renovação diária de assinaturas
     api/cron/daily/            # webhooks + lembretes + envio de notificações
@@ -198,5 +199,6 @@ Acesse: http://localhost:3000/dashboard
 - [x] Fechamento contábil (`/closing`) e lucratividade/DRE (`/reports/profitability`)
 - [x] Gateway online (mock + Mercado Pago) com webhooks assinados
 - [x] Estorno formal de cobrança (ledger, estoque, cupom e comissão) e retry de webhooks
-- [ ] App mobile e canais push/SMS
+- [x] API v1 para app (login Bearer, agenda e booking público) — **[contrato](docs/api-mobile.md)**
+- [ ] App mobile (Expo/React Native), push e login do cliente final
 - [ ] Verificação de e-mail, canais push/SMS e storage de arquivos

@@ -57,7 +57,8 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 
 ## Fase 6 — Canais
 - [x] Website público / agendamento online (`/book`, por subdomínio/slug)
-- [ ] App do cliente (mobile)
+- [x] API v1 para app: login Bearer, agenda da equipe e booking público
+- [ ] App do cliente (mobile) consumindo a API
 
 ## Fase 7 — Relatórios & Inteligência de Negócio (BI)
 - [x] CRM de clientes: aniversário, tags e preferências no cadastro; segmentação
@@ -80,7 +81,7 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 ## Transversal (em todas as fases)
 - [x] Onboarding de tenant (cadastro cria empresa + filial + owner)
 - [x] CI (lint + typecheck + build no GitHub Actions)
-- [x] Testes unitários (vitest) + e2e (Playwright: login demo, minha agenda, histórico do cliente, booking, assinaturas, fechamento, axe/a11y)
+- [x] Testes unitários (vitest) + e2e (Playwright: login demo, minha agenda, histórico do cliente, booking, API v1 pública, assinaturas, fechamento, axe/a11y)
 - [x] Observabilidade in-app (logger estruturado, `/api/health`, logs de webhook); métricas e alertas externos (`/api/metrics`, sink HTTP `METRICS_WEBHOOK_URL`, `sendAlert`/`ALERT_WEBHOOK_URL`)
 - [x] Segurança (rate limiting no Better Auth, tabela interna `rate_limits`; revisão contínua de policies)
 - [x] Acessibilidade (foco visível, skip link, labels/aria, contraste AA, axe e2e). Projeto **somente pt-BR** (sem i18n)
