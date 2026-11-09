@@ -36,6 +36,13 @@
       "when": 1794258281246,
       "tag": "0004_lembretes_dedupe",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794261562838,
+      "tag": "0005_modo_solo",
+      "breakpoints": true
     }
   ]
 }

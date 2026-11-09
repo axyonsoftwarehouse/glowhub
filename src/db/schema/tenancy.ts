@@ -30,6 +30,7 @@ export const tenants = pgTable(
     logoUrl: text("logo_url"),
     isActive: boolean("is_active").notNull().default(true),
     isReadOnly: boolean("is_read_only").notNull().default(false),
+    isSolo: boolean("is_solo").notNull().default(false),
     cancellationWindowHours: integer("cancellation_window_hours")
       .notNull()
       .default(0),

@@ -4,6 +4,7 @@ import { isConfigured } from "@/lib/env";
 import { getCurrentTenant, getMyProfessional, getUserTenants } from "@/lib/tenant";
 import { getSession } from "@/lib/session";
 import { SetupNotice } from "@/components/setup-notice";
+import { MobileNav } from "./mobile-nav";
 import { SignOutButton } from "./sign-out-button";
 import { TenantSwitcher } from "./tenant-switcher";
 
@@ -167,7 +168,7 @@ export default async function AppLayout({
           </Link>
           <SignOutButton />
         </header>
-        <main id="conteudo" className="flex-1 px-6 py-8">
+        <main id="conteudo" className="flex-1 px-4 pb-28 pt-6 sm:px-6 sm:py-8">
           {tenant?.isReadOnly && (
             <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               Modo demonstração: este ambiente é somente leitura para catálogo,
@@ -178,6 +179,12 @@ export default async function AppLayout({
           {children}
         </main>
       </div>
+
+      <MobileNav
+        isSolo={Boolean(tenant?.isSolo)}
+        canManageTenant={canManageTenant}
+        hasProfessional={Boolean(myProfessional)}
+      />
     </div>
   );
 }

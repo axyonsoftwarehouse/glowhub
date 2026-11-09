@@ -15,9 +15,9 @@ setup("login com a conta demo", async ({ page }) => {
   await demoButton.click();
 
   await page.waitForURL("**/dashboard");
-  await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "Encanto Studio",
-  );
+  await expect(
+    page.getByRole("main").getByText("Encanto Studio").first(),
+  ).toBeVisible();
 
   mkdirSync(dirname(authFile), { recursive: true });
   await page.context().storageState({ path: authFile });

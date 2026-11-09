@@ -21,6 +21,7 @@ export const GET = handleApi(async (request) => {
         slug: tenants.slug,
         logoUrl: tenants.logoUrl,
         isReadOnly: tenants.isReadOnly,
+        isSolo: tenants.isSolo,
         role: memberships.role,
       })
       .from(memberships)

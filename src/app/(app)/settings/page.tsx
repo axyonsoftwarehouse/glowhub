@@ -26,13 +26,13 @@ export default async function SettingsPage() {
   const session = await getSession();
   const userId = session?.user?.id ?? "";
 
-  const { cancellationWindowHours, noShowFeePercent, role } = await withUser(
-    userId,
-    async (tx) => {
+  const { cancellationWindowHours, noShowFeePercent, isSolo, role } =
+    await withUser(userId, async (tx) => {
       const [policy] = await tx
         .select({
           cancellationWindowHours: tenants.cancellationWindowHours,
           noShowFeePercent: tenants.noShowFeePercent,
+          isSolo: tenants.isSolo,
         })
         .from(tenants)
         .where(eq(tenants.id, tenant.id))
@@ -52,10 +52,10 @@ export default async function SettingsPage() {
       return {
         cancellationWindowHours: policy?.cancellationWindowHours ?? 0,
         noShowFeePercent: policy?.noShowFeePercent ?? 0,
+        isSolo: policy?.isSolo ?? false,
         role: membership?.role ?? "",
       };
-    },
-  );
+    });
 
   const canEdit = EDIT_ROLES.includes(role);
 
@@ -73,6 +73,7 @@ export default async function SettingsPage() {
         <SettingsForm
           cancellationWindowHours={cancellationWindowHours}
           noShowFeePercent={noShowFeePercent}
+          isSolo={isSolo}
           canEdit
         />
       ) : (

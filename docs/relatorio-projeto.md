@@ -125,8 +125,8 @@ Browser ──► Next (RSC + Server Actions)
 
 ### 2.4 Modelo de dados (por domínio)
 - **Auth:** `user`, `session`, `account`, `verification`.
-- **Tenancy:** `tenants` (inclui `is_read_only`, políticas de cancelamento/no-show),
-  `branches`, `memberships`, `invitations`, `profiles`.
+- **Tenancy:** `tenants` (inclui `is_read_only`, `is_solo` e políticas de
+  cancelamento/no-show), `branches`, `memberships`, `invitations`, `profiles`.
 - **Catálogo:** `categories`, `services`, `service_branches`, `professionals`,
   `professional_branches`, `professional_services`.
 - **Produtos e estoque:** `products`, `product_variants`, `suppliers`,
@@ -248,10 +248,13 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
   (caixa de saída, lembretes diários).
 - **API v1** para app: login Bearer, tenant ativo, agenda da equipe e catálogo/
   disponibilidade/booking público (sem login).
-- **CI** + **115 testes unitários** (18 arquivos) e **15 cenários e2e** (+ setup;
+- **Pacote mobile solo**: navegação inferior, painel “Hoje” com ações rápidas e
+  checklist, modo solo (`tenants.is_solo`) e onboarding que cria profissional,
+  serviço, horários e plano de contas.
+- **CI** + **115 testes unitários** (18 arquivos) e **16 cenários e2e** (+ setup;
   Playwright: login demo, minha agenda + status, histórico do cliente, booking,
-  API v1 pública, assinaturas, fechamento e **7 verificações de acessibilidade
-  com axe**); `tsc`/`eslint`/`build` verdes.
+  API v1 pública, navegação mobile, assinaturas, fechamento e **7 verificações
+  de acessibilidade com axe**); `tsc`/`eslint`/`build` verdes.
 
 ---
 
@@ -262,6 +265,8 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
       tenant, agenda (`/appointments`) e booking público
       (`/public/catalog|availability|bookings`). Contrato em
       [`api-mobile.md`](api-mobile.md).
+- [x] **Web mobile solo**: navegação inferior, painel “Hoje”, modo solo e
+      onboarding assistido.
 - [ ] **App do cliente (mobile)** — projeto separado (Expo/React Native),
       consumindo a API v1.
 

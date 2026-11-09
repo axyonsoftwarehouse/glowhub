@@ -94,6 +94,7 @@ branch `production` e `APP_ENV=demo`.
   continuam fora da fila.
 - `0004_lembretes_dedupe`: `notifications.dedupe_key` + índice único parcial por
   tenant, usado para não duplicar lembretes/convites.
+- `0005_modo_solo`: `tenants.is_solo` para o pacote de navegação/painel solo.
 
 ## Banco do zero
 Num banco vazio (com a role `glowhub_app` criada, ver `docs/neon-migration.md`):

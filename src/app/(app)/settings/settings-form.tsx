@@ -13,10 +13,12 @@ const inputClass =
 export function SettingsForm({
   cancellationWindowHours,
   noShowFeePercent,
+  isSolo,
   canEdit,
 }: {
   cancellationWindowHours: number;
   noShowFeePercent: number;
+  isSolo: boolean;
   canEdit: boolean;
 }) {
   const [result, setResult] = useState<SettingsActionState>(
@@ -45,6 +47,23 @@ export function SettingsForm({
       <p className="mt-1 text-xs text-foreground/70">
         Aplica-se a cancelamentos e faltas no painel e na visão do profissional.
       </p>
+
+      <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-muted/40 p-3">
+        <input
+          type="checkbox"
+          name="isSolo"
+          defaultChecked={isSolo}
+          disabled={!canEdit}
+          className="mt-0.5 h-4 w-4 rounded border-border"
+        />
+        <span>
+          <span className="block text-sm font-medium">Modo solo</span>
+          <span className="mt-0.5 block text-xs text-foreground/70">
+            Simplifica a navegação e o painel para quem atende sozinho. Você
+            continua com acesso a todos os módulos pelo menu “Mais”.
+          </span>
+        </span>
+      </label>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <div>

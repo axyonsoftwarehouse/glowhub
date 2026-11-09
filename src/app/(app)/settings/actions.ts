@@ -50,6 +50,7 @@ export async function updateTenantSettingsAction(
   if (!tenant) return { status: "error", message: "Empresa não resolvida." };
   const session = await getSession();
   if (!session?.user) return { status: "error", message: "Sessão expirada." };
+  const isSolo = formData.get("isSolo") === "on";
 
   try {
     const updated = await withUser(session.user.id, async (tx) =>
@@ -58,6 +59,7 @@ export async function updateTenantSettingsAction(
         .set({
           cancellationWindowHours: parsed.data.cancellationWindowHours,
           noShowFeePercent: parsed.data.noShowFeePercent,
+          isSolo,
         })
         .where(eq(tenants.id, tenant.id))
         .returning({ id: tenants.id }),
@@ -79,5 +81,7 @@ export async function updateTenantSettingsAction(
   }
 
   revalidatePath("/settings");
+  revalidatePath("/dashboard");
+  revalidatePath("/", "layout");
   return { status: "success", message: "Configurações salvas." };
 }

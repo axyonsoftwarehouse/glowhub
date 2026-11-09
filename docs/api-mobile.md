@@ -36,7 +36,7 @@ curl "https://SEU_DOMINIO/api/v1/public/catalog" -H "x-tenant-slug: demo"
 
 | Método | Rota | Descrição |
 |---|---|---|
-| `GET` | `/me` | Usuário, tenant ativo, papel, profissional vinculado e lista de tenants |
+| `GET` | `/me` | Usuário, tenant ativo (inclui `isSolo`), papel, profissional vinculado e lista de tenants |
 | `POST` | `/tenant` | Troca o tenant ativo (`{ "tenantId": "..." }`), validando o vínculo |
 | `GET` | `/appointments` | Agenda do tenant; filtros `from`, `to`, `status`, `professionalId`, `mine=1`, `limit` |
 | `POST` | `/auth/login` | Login do app; devolve token de sessão |

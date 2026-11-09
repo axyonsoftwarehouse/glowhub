@@ -21,6 +21,7 @@ export type ApiTenant = {
   slug: string;
   logoUrl: string | null;
   isReadOnly: boolean;
+  isSolo: boolean;
 };
 
 export type ApiContext = {
@@ -140,6 +141,7 @@ export async function requireApiContext(
         slug: tenants.slug,
         logoUrl: tenants.logoUrl,
         isReadOnly: tenants.isReadOnly,
+        isSolo: tenants.isSolo,
       })
       .from(tenants)
       .where(and(eq(tenants.id, tenantId), eq(tenants.isActive, true)))
