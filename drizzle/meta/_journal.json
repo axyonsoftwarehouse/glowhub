@@ -22,6 +22,20 @@
       "when": 1792507681552,
       "tag": "0002_appointments_no_overlap",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1794256845257,
+      "tag": "0003_estorno_e_webhook_retry",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794258281246,
+      "tag": "0004_lembretes_dedupe",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,9 @@ evoluir com um **financeiro contábil** (partidas dobradas) e app do cliente.
 > Este projeto é **clean-room**: não reutiliza código, layout ou assets de
 > terceiros licenciados.
 
+📚 **Documentação:** [índice](docs/README.md) · [como o código funciona](docs/como-funciona.md)
+· [escopo e backlog](docs/relatorio-projeto.md)
+
 ## Arquitetura
 
 - **Tenant (empresa)** → N **Branches (filiais)** → **Memberships** (usuário +
@@ -29,28 +32,56 @@ evoluir com um **financeiro contábil** (partidas dobradas) e app do cliente.
 
 ```
 src/
-  proxy.ts                     # resolução de tenant por subdomínio
+  proxy.ts                     # resolução de tenant por subdomínio (middleware do Next 16)
   lib/
     env.ts                     # leitura/validação de env
     db.ts                      # getDb (admin) + withUser (RLS por transação)
-    auth.ts                    # Better Auth (server)
-    auth-client.ts             # Better Auth (client)
+    auth.ts / auth-client.ts   # Better Auth (server/client)
     session.ts                 # getSession/getUser
-    tenant.ts                  # resolve o tenant atual
+    tenant.ts                  # tenant ativo + tenant público + profissional do usuário
+    ledger.ts                  # postEntry (único caminho para o livro)
+    charge-void.ts             # estorno formal de cobrança
+    webhook-events.ts          # fila/retry de webhooks
+    webhook-retry.ts           # backoff de tentativas
+    accounting.ts              # balancete e resultado
+    inventory.ts               # movimentos, custo médio, CMV
+    loyalty.ts                 # pontos e gift cards
+    profitability.ts           # DRE, margem e fluxo de caixa
+    subscription-billing.ts    # renovação/receita diferida
+    notifications.ts           # caixa de saída e envio do que está vencido
+    reminders.ts               # janela e dedupe de lembretes
+    payments/*                 # adapters (mock, Mercado Pago), assinatura e confirmação
+    availability.ts            # cálculo puro de slots
+    availability-data.ts       # slots a partir do banco
+    rate-limit.ts / metrics.ts / alerts.ts / logger.ts
   db/
-    schema/*.ts                # schema Drizzle (tenancy, catálogo, agenda...)
+    schema/*.ts                # schema Drizzle (fonte de verdade das tabelas)
   app/
-    api/auth/[...all]/route.ts # handler do Better Auth
+    api/auth/[...all]/route.ts # handler do Better Auth (+ rate limit)
+    api/webhooks/[provider]/   # webhooks de pagamento
+    api/cron/subscriptions/    # renovação diária de assinaturas
+    api/cron/daily/            # webhooks + lembretes + envio de notificações
+    api/health/ | api/metrics/ # health check e scrape de métricas
     page.tsx                   # landing
-    (auth)/login/              # login/cadastro
-    (app)/dashboard/           # shell autenticado + visão geral
-    (app)/branches|services|products|professionals/
-    (app)/schedule|appointments|clients|team|profile/
+    (auth)/login/              # login/cadastro (+ conta demo)
+    (app)/                     # shell autenticado:
+      dashboard, branches, services, products, inventory, professionals,
+      schedule, appointments, my-schedule, clients, clients/[id], packages,
+      subscriptions, coupons, loyalty, notifications, team, finance,
+      reconciliation, reports, reports/profitability, closing, settings, profile
+    book/                      # agendamento online (canal público)
     invite/[token]/            # aceite de convite
+    pay/mock/                  # checkout simulado (dev/teste)
 db/
   rls.sql                      # funções, triggers, RLS e grants (idempotente)
   seed.sql                     # tenant/filial de exemplo
+docs/
+  como-funciona.md             # comportamento real do código, fluxo a fluxo
 ```
+
+Cada página tem um `actions.ts` com as Server Actions do módulo; os
+componentes `"use client"` cuidam só da interação. O fluxo completo (sessão,
+RLS, ledger, agenda) está em **[docs/como-funciona.md](docs/como-funciona.md)**.
 
 ## Configuração
 
@@ -92,7 +123,12 @@ Não use `drizzle-kit push`.
 O `npm run seed:demo` recria o tenant `demo` com catálogo, profissionais,
 horários, clientes, agendamentos e o financeiro completo (cobranças, pagamentos,
 comissões, gorjeta, repasse, carteira, pacotes, assinatura e cupons) — ideal para
-testar sem montar dados à mão. É idempotente (apaga e recria só o tenant `demo`).
+testar sem montar dados à mão. É idempotente (apaga e recria só os tenants demo).
+
+Os tenants criados pelo seed nascem **somente leitura** (`is_read_only`): dá para
+navegar e agendar, mas não alterar catálogo, financeiro, equipe ou
+configurações. Para liberar escrita em dev/preview, defina `DEMO_READ_ONLY=false`
+(exceção de teste; o padrão é ligado).
 
 ### 4. Criar usuário e vinculá-lo ao tenant
 1. Cadastre-se pela tela `/login` (Better Auth cria o usuário).
@@ -115,11 +151,19 @@ Acesse: http://localhost:3000/dashboard
 - O app usa a role `glowhub_app` (sem `BYPASSRLS`). `withUser(userId, cb)` abre
   uma transação e faz `set_config('request.jwt.claims', '{"sub": userId}', true)`;
   as policies usam `public.auth_uid()`.
-- `tenants`: leitura pública de ativos (branding); escrita `owner/admin`.
+- `tenants`: leitura só por membros; escrita `owner/admin`. O branding público
+  (`/book`) lê pela conexão admin, com escopo de tenant.
 - Demais tabelas de domínio: leitura por membros; escrita por papel (catálogo:
   `owner/admin/manager`; agenda/clientes: também `staff`).
 - **Aceite de convite** via `SECURITY DEFINER` (`public.accept_invitation`).
-- A conexão admin (`DATABASE_URL`) ignora RLS — use só no servidor.
+- A conexão admin (`DATABASE_URL`) ignora RLS — use só no servidor e sempre com
+  filtro explícito de `tenant_id` (auth, `/book`, webhooks, cron, seed).
+- **Ledger append-only**: a role do app não tem `UPDATE`/`DELETE` e um trigger
+  bloqueia alteração; um constraint trigger deferido exige débitos = créditos.
+- **Modo demonstração**: os tenants do seed têm `is_read_only = true`; catálogo,
+  financeiro, equipe e configurações recusam escrita no banco, enquanto agenda e
+  clientes seguem liberados. `DEMO_READ_ONLY=false` desliga a trava em
+  testes/preview. Detalhes em [docs/como-funciona.md](docs/como-funciona.md).
 
 ## Deploy
 
@@ -144,8 +188,15 @@ Acesse: http://localhost:3000/dashboard
 - [x] Cupons/promoções (desconto em cobranças abertas, com ledger)
 - [x] Website público / agendamento online (`/book`)
 - [x] Onboarding de tenant (cadastro cria empresa) + CI (lint/typecheck/test/build)
-- [x] Testes unitários (vitest) de dinheiro, disponibilidade e fuso
-- [x] Notificações por e-mail (caixa de saída em `/notifications`)
+- [x] Testes unitários (vitest) de dinheiro, disponibilidade, fuso, estoque,
+      fidelidade e CRM; e2e (Playwright) dos fluxos críticos
+- [x] Notificações por e-mail (caixa de saída em `/notifications`), convite de
+      equipe por e-mail e lembretes diários
 - [x] Conciliação (`/reconciliation`) e relatórios visuais (receita/dia, ocupação)
-- [ ] App mobile, gateway online e lembretes agendados
-- [ ] Notificações, website público e app do cliente
+- [x] Estoque e insumos (ficha técnica, custo médio, CMV e alertas em `/inventory`)
+- [x] Fidelização (gift cards, pontos e campanhas em `/loyalty`)
+- [x] Fechamento contábil (`/closing`) e lucratividade/DRE (`/reports/profitability`)
+- [x] Gateway online (mock + Mercado Pago) com webhooks assinados
+- [x] Estorno formal de cobrança (ledger, estoque, cupom e comissão) e retry de webhooks
+- [ ] App mobile e canais push/SMS
+- [ ] Verificação de e-mail, canais push/SMS e storage de arquivos

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { formatCentsBRL } from "@/lib/money";
-import { confirmPaymentAction } from "./actions";
+import { cancelPendingPaymentAction, confirmPaymentAction } from "./actions";
 import {
   initialReconcileState,
   type PaymentRow,
@@ -19,13 +19,34 @@ const METHOD_LABELS: Record<string, string> = {
   other: "Outro",
 };
 
-export function PendingPayments({ payments }: { payments: PaymentRow[] }) {
+export function PendingPayments({
+  payments,
+  canManage,
+}: {
+  payments: PaymentRow[];
+  canManage: boolean;
+}) {
   const [result, setResult] = useState<ReconcileState>(initialReconcileState);
   const [pending, startTransition] = useTransition();
 
   function confirm(formData: FormData) {
     startTransition(async () => {
       setResult(await confirmPaymentAction(initialReconcileState, formData));
+    });
+  }
+
+  function cancel(formData: FormData) {
+    if (
+      !window.confirm(
+        "Cancelar este pagamento pendente? A cobrança continua aberta para nova tentativa.",
+      )
+    ) {
+      return;
+    }
+    startTransition(async () => {
+      setResult(
+        await cancelPendingPaymentAction(initialReconcileState, formData),
+      );
     });
   }
 
@@ -63,10 +84,20 @@ export function PendingPayments({ payments }: { payments: PaymentRow[] }) {
               <input type="hidden" name="paymentId" value={payment.id} />
               <button
                 type="submit"
-                disabled={pending}
+                disabled={pending || !canManage}
                 className="rounded-full bg-brand px-3 py-1 text-xs font-medium text-brand-foreground disabled:opacity-60"
               >
                 {pending ? "..." : "Confirmar conciliação"}
+              </button>
+            </form>
+            <form action={cancel}>
+              <input type="hidden" name="paymentId" value={payment.id} />
+              <button
+                type="submit"
+                disabled={pending || !canManage}
+                className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground/70 hover:bg-muted disabled:opacity-60"
+              >
+                {pending ? "..." : "Cancelar pendente"}
               </button>
             </form>
           </div>

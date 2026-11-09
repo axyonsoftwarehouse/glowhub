@@ -14,5 +14,6 @@ export type Notification = {
   subject: string;
   status: "pending" | "sent" | "failed";
   error: string | null;
+  scheduledFor: string | null;
   createdAt: string;
 };

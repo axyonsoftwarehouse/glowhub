@@ -71,6 +71,7 @@ export const couponRedemptions = pgTable(
     entryId: uuid("entry_id").references(() => journalEntries.id, {
       onDelete: "set null",
     }),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
     createdBy: text("created_by"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

@@ -17,6 +17,13 @@ Como o schema evolui (migrations versionadas) e qual banco cada ambiente usa.
   `scripts/lib/seed-guard.mjs`).
 - O login demo exige **as três** condições: `APP_ENV` igual a `demo` ou `dev`,
   `NEXT_PUBLIC_DEMO_LOGIN=true` e `DEMO_PASSWORD` definido.
+- Os tenants demo criados pelo seed têm `is_read_only = true`. O trigger
+  `enforce_readonly_tenant` (`db/rls.sql`) bloqueia escrita da role do app em
+  catálogo, configuração, equipe, financeiro, cupons, pacotes, assinaturas e
+  mensagens; `clients` e `appointments` continuam liberados para a demo ser
+  interativa. Seed, login demo, onboarding, cron e `/book` usam a conexão admin
+  e não são afetados. Para liberar escrita em dev/preview, defina
+  `DEMO_READ_ONLY=false` (exceção de teste; ausente = trava ligada).
 
 ### Para o lançamento (fora do escopo atual)
 - Criar um banco de produção limpo (`npm run db:migrate` num branch ou projeto
@@ -80,6 +87,13 @@ branch `production` e `APP_ENV=demo`.
   fidelização, que faltavam no banco da demo.
 - `0002_appointments_no_overlap`: trava no banco contra agendamento duplo do
   mesmo profissional.
+- `0003_estorno_e_webhook_retry`: estorno formal (campos `voided_*`, status
+  `void` em `earnings`, `voided_at` no cupom, `service_return` no estoque) e
+  fila de retry de webhooks (`status`, `attempts`, `last_error`,
+  `next_attempt_at`, `request_url`). Eventos antigos com `processed_at`
+  continuam fora da fila.
+- `0004_lembretes_dedupe`: `notifications.dedupe_key` + índice único parcial por
+  tenant, usado para não duplicar lembretes/convites.
 
 ## Banco do zero
 Num banco vazio (com a role `glowhub_app` criada, ver `docs/neon-migration.md`):

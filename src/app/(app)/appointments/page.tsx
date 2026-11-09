@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, lt, ne } from "drizzle-orm";
 import {
   appointments,
   branches,
@@ -214,6 +214,7 @@ export default async function AppointmentsPage({
               and(
                 eq(charges.tenantId, tenant.id),
                 inArray(charges.appointmentId, ids),
+                ne(charges.status, "void"),
               ),
             )
         : [];

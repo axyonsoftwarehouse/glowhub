@@ -158,7 +158,9 @@ export default async function ReconciliationPage() {
     providerRef: row.providerRef ?? null,
   }));
 
-  const totalCharged = chargeList.reduce((sum, c) => sum + c.totalCents, 0);
+  const totalCharged = chargeList
+    .filter((c) => c.status !== "void")
+    .reduce((sum, c) => sum + c.totalCents, 0);
   const totalReceived = paymentList
     .filter((p) => p.status === "confirmed")
     .reduce((sum, p) => sum + p.amountCents, 0);
@@ -214,7 +216,10 @@ export default async function ReconciliationPage() {
           Pendências de conciliação
         </h2>
         <div className="mt-4">
-          <PendingPayments payments={pendingPayments} />
+          <PendingPayments
+            payments={pendingPayments}
+            canManage={data.canManage && !tenant.isReadOnly}
+          />
         </div>
       </section>
 

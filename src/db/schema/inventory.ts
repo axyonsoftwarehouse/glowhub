@@ -41,6 +41,7 @@ export const stockMovementKind = pgEnum("stock_movement_kind", [
   "sale",
   "sale_return",
   "service_consumption",
+  "service_return",
   "adjustment",
   "loss",
   "opening",

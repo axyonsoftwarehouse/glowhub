@@ -1,4 +1,4 @@
-import { and, eq, gte, lt, ne } from "drizzle-orm";
+import { and, eq, gte, lt, notInArray } from "drizzle-orm";
 import {
   appointments,
   branchClosures,
@@ -20,6 +20,9 @@ import type { AppTx } from "@/lib/db";
 import { zonedMinutesOfDay, zonedTimeToUtc } from "@/lib/timezone";
 
 export const STEP_MINUTES = 30;
+
+/** Status que nao ocupam o horario (alinhado a constraint appointments_no_overlap). */
+export const NON_BLOCKING_STATUSES = ["cancelled", "no_show"] as const;
 
 export type SlotsContext =
   | {
@@ -140,7 +143,7 @@ export async function computeSlotsForDay(
       and(
         eq(appointments.tenantId, tenantId),
         eq(appointments.professionalId, params.professionalId),
-        ne(appointments.status, "cancelled"),
+        notInArray(appointments.status, [...NON_BLOCKING_STATUSES]),
         gte(appointments.startsAt, dayStart),
         lt(appointments.startsAt, dayEnd),
       ),

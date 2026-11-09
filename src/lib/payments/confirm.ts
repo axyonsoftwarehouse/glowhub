@@ -35,7 +35,9 @@ export async function confirmPendingPayment(
     )
     .limit(1);
   if (!payment) return { ok: false, error: "Pagamento não encontrado." };
-  if (payment.status !== "pending") return { ok: true, already: true };
+  if (payment.status !== "pending" && payment.status !== "failed") {
+    return { ok: true, already: true };
+  }
 
   const debitAccount = await getSystemAccountId(
     tx,

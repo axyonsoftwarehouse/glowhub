@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { memberships, notifications } from "@/db/schema";
 import { withUser } from "@/lib/db";
 import { getSession } from "@/lib/session";
@@ -52,12 +52,27 @@ export default async function NotificationsPage() {
         subject: notifications.subject,
         status: notifications.status,
         error: notifications.error,
+        scheduledFor: notifications.scheduledFor,
         createdAt: notifications.createdAt,
       })
       .from(notifications)
       .where(eq(notifications.tenantId, tenant.id))
       .orderBy(desc(notifications.createdAt))
       .limit(50);
+
+    const [counts] = await tx
+      .select({
+        dueCount:
+          sql<number>`count(*) filter (where ${notifications.status} = 'pending' and ${notifications.channel} = 'email' and (${notifications.scheduledFor} is null or ${notifications.scheduledFor} <= now()))`.mapWith(
+            Number,
+          ),
+        scheduledCount:
+          sql<number>`count(*) filter (where ${notifications.status} = 'pending' and ${notifications.scheduledFor} is not null and ${notifications.scheduledFor} > now())`.mapWith(
+            Number,
+          ),
+      })
+      .from(notifications)
+      .where(eq(notifications.tenantId, tenant.id));
 
     const [membership] = await tx
       .select({ role: memberships.role })
@@ -72,6 +87,8 @@ export default async function NotificationsPage() {
 
     return {
       rows,
+      dueCount: counts?.dueCount ?? 0,
+      scheduledCount: counts?.scheduledCount ?? 0,
       canManage: MANAGE_ROLES.includes(membership?.role ?? ""),
     };
   });
@@ -83,10 +100,12 @@ export default async function NotificationsPage() {
     subject: row.subject,
     status: row.status,
     error: row.error ?? null,
+    scheduledFor: row.scheduledFor?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
   }));
 
-  const pendingCount = list.filter((n) => n.status === "pending").length;
+  const dueCount = data.dueCount;
+  const scheduledCount = data.scheduledCount;
 
   return (
     <div className="space-y-8">
@@ -97,11 +116,12 @@ export default async function NotificationsPage() {
           </p>
           <h1 className="mt-2 text-2xl font-semibold">Mensagens</h1>
           <p className="mt-1 text-sm text-foreground/60">
-            Caixa de saída de {tenant.name}. {pendingCount} pendente(s).
+            Caixa de saída de {tenant.name}. {dueCount} pronta(s) para envio
+            {scheduledCount > 0 ? ` · ${scheduledCount} agendada(s)` : ""}.
           </p>
         </div>
         {data.canManage && (
-          <ProcessNotificationsButton disabled={pendingCount === 0} />
+          <ProcessNotificationsButton disabled={dueCount === 0} />
         )}
       </header>
 
@@ -116,6 +136,9 @@ export default async function NotificationsPage() {
                 <p className="truncate text-sm font-medium">{item.subject}</p>
                 <p className="truncate text-xs text-foreground/70">
                   {item.channel} · {item.recipient} · {formatDate(item.createdAt)}
+                  {item.status === "pending" && item.scheduledFor
+                    ? ` · agendada para ${formatDate(item.scheduledFor)}`
+                    : ""}
                 </p>
               </div>
               <span

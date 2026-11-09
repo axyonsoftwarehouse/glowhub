@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { chargeItems, charges, services } from "@/db/schema";
 import type { AppTx } from "@/lib/db";
 import { getSystemAccountId, postEntry } from "@/lib/ledger";
@@ -32,6 +32,7 @@ export async function applyNoShowFee(
       and(
         eq(charges.tenantId, params.tenantId),
         eq(charges.appointmentId, params.appointmentId),
+        ne(charges.status, "void"),
       ),
     )
     .limit(1);

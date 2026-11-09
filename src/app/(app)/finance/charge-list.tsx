@@ -8,6 +8,7 @@ import {
   createOnlinePaymentAction,
   registerPaymentAction,
   removeChargeItemAction,
+  voidChargeAction,
 } from "./actions";
 import {
   initialFinanceActionState,
@@ -45,10 +46,12 @@ export function ChargeList({
   charges,
   productOptions,
   canSettle,
+  canVoid,
 }: {
   charges: Charge[];
   productOptions: ProductOption[];
   canSettle: boolean;
+  canVoid: boolean;
 }) {
   const [result, setResult] = useState<FinanceActionState>(
     initialFinanceActionState,
@@ -60,6 +63,9 @@ export function ChargeList({
     initialFinanceActionState,
   );
   const [onlineResult, setOnlineResult] = useState<FinanceActionState>(
+    initialFinanceActionState,
+  );
+  const [voidResult, setVoidResult] = useState<FinanceActionState>(
     initialFinanceActionState,
   );
   const [onlineFor, setOnlineFor] = useState<string | null>(null);
@@ -98,6 +104,21 @@ export function ChargeList({
     startTransition(async () => {
       setOnlineResult(
         await createOnlinePaymentAction(initialFinanceActionState, formData),
+      );
+    });
+  }
+
+  function handleVoid(formData: FormData) {
+    if (
+      !window.confirm(
+        "Estornar esta cobrança? A receita será revertida e o estoque, devolvido.",
+      )
+    ) {
+      return;
+    }
+    startTransition(async () => {
+      setVoidResult(
+        await voidChargeAction(initialFinanceActionState, formData),
       );
     });
   }
@@ -170,6 +191,27 @@ export function ChargeList({
                   </li>
                 ))}
               </ul>
+            )}
+
+            {canVoid && isOpen && charge.paidCents === 0 && (
+              <form
+                action={handleVoid}
+                className="mt-2 flex items-center gap-2 border-t border-border pt-2"
+              >
+                <input type="hidden" name="id" value={charge.id} />
+                <input
+                  name="reason"
+                  placeholder="Motivo do estorno (opcional)"
+                  className={`min-w-0 flex-1 ${smallInput}`}
+                />
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="shrink-0 rounded-full border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-60"
+                >
+                  {pending ? "..." : "Estornar"}
+                </button>
+              </form>
             )}
 
             {canSettle && isOpen && productOptions.length > 0 && (
@@ -326,6 +368,12 @@ export function ChargeList({
         )}
       {itemResult.status === "success" && itemResult.message && (
         <p className="text-xs text-emerald-700">{itemResult.message}</p>
+      )}
+      {voidResult.status === "error" && voidResult.message && (
+        <p className="text-xs text-red-600">{voidResult.message}</p>
+      )}
+      {voidResult.status === "success" && voidResult.message && (
+        <p className="text-xs text-emerald-700">{voidResult.message}</p>
       )}
     </div>
   );

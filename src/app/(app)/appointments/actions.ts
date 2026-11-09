@@ -5,10 +5,16 @@ import { dbErrorCode, overlapMessage } from "@/lib/appointment-errors";
 
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
-import { appointments, clients, memberships, tenants } from "@/db/schema";
+import { appointments, clients, memberships, notifications, tenants } from "@/db/schema";
 import { computeSlotsForDay } from "@/lib/availability-data";
 import { withUser } from "@/lib/db";
 import { applyNoShowFee } from "@/lib/no-show-fee";
+import { enqueueEmail } from "@/lib/notifications";
+import {
+  formatReminderWhen,
+  reminderDedupeKey,
+  reminderScheduledFor,
+} from "@/lib/reminders";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import {
@@ -102,13 +108,17 @@ export async function createAppointmentAction(
       }
 
       let resolvedClientId = UUID_RE.test(clientId) ? clientId : null;
+      let clientName = newClientName;
+      let clientEmail: string | null = null;
       if (resolvedClientId) {
         const [client] = await tx
-          .select({ id: clients.id })
+          .select({ id: clients.id, name: clients.name, email: clients.email })
           .from(clients)
           .where(and(eq(clients.id, resolvedClientId), eq(clients.tenantId, tenant.id)))
           .limit(1);
         if (!client) return { error: "Cliente não encontrado." };
+        clientName = client.name;
+        clientEmail = client.email;
       } else if (newClientName.length >= 2) {
         const [created] = await tx
           .insert(clients)
@@ -122,18 +132,36 @@ export async function createAppointmentAction(
       const startsAt = zonedTimeToUtc(date, time, ctx.timezone);
       const endsAt = new Date(startsAt.getTime() + ctx.durationMinutes * 60_000);
 
-      await tx.insert(appointments).values({
-        tenantId: tenant.id,
-        branchId,
-        professionalId,
-        serviceId,
-        clientId: resolvedClientId,
-        startsAt,
-        endsAt,
-        priceCents: ctx.priceCents,
-        notes: notes.length > 0 ? notes : null,
-        createdBy: userId,
-      });
+      const [appointment] = await tx
+        .insert(appointments)
+        .values({
+          tenantId: tenant.id,
+          branchId,
+          professionalId,
+          serviceId,
+          clientId: resolvedClientId,
+          startsAt,
+          endsAt,
+          priceCents: ctx.priceCents,
+          notes: notes.length > 0 ? notes : null,
+          createdBy: userId,
+        })
+        .returning({ id: appointments.id });
+
+      if (clientEmail) {
+        await enqueueEmail(tx, {
+          tenantId: tenant.id,
+          recipient: clientEmail,
+          subject: `Lembrete do seu horário em ${tenant.name}`,
+          body: `Olá ${clientName}, seu horário está marcado para ${formatReminderWhen(
+            startsAt,
+            ctx.timezone,
+          )}. Se precisar remarcar, entre em contato com ${tenant.name}.`,
+          scheduledFor: reminderScheduledFor(startsAt),
+          dedupeKey: reminderDedupeKey(appointment.id),
+          createdBy: userId,
+        });
+      }
 
       return { ok: true as const };
     });
@@ -221,6 +249,18 @@ export async function setAppointmentStatusAction(
         .update(appointments)
         .set({ status })
         .where(and(eq(appointments.id, id), eq(appointments.tenantId, tenant.id)));
+
+      if (status === "cancelled" || status === "no_show") {
+        await tx
+          .delete(notifications)
+          .where(
+            and(
+              eq(notifications.tenantId, tenant.id),
+              eq(notifications.dedupeKey, reminderDedupeKey(appointment.id)),
+              eq(notifications.status, "pending"),
+            ),
+          );
+      }
 
       if (status === "no_show") {
         await applyNoShowFee(tx, {
