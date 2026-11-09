@@ -177,6 +177,8 @@ export async function createAppointmentAction(
   }
 
   revalidatePath("/appointments");
+  revalidatePath("/dashboard");
+  revalidatePath("/my-schedule");
   return { status: "success", message: "Agendamento criado." };
 }
 
@@ -283,5 +285,7 @@ export async function setAppointmentStatusAction(
   }
 
   revalidatePath("/appointments");
+  revalidatePath("/dashboard");
+  revalidatePath("/my-schedule");
   return { status: "success", message: "Status atualizado." };
 }

@@ -49,6 +49,7 @@ export type CurrentTenant = {
   name: string;
   logoUrl: string | null;
   isReadOnly: boolean;
+  isSolo: boolean;
 };
 
 export type UserTenant = CurrentTenant & {
@@ -68,6 +69,7 @@ function mapTenant(row: {
   name: string;
   logoUrl: string | null;
   isReadOnly: boolean;
+  isSolo: boolean;
 }): CurrentTenant {
   return {
     id: row.id,
@@ -75,6 +77,7 @@ function mapTenant(row: {
     name: row.name,
     logoUrl: row.logoUrl ?? null,
     isReadOnly: row.isReadOnly,
+    isSolo: row.isSolo,
   };
 }
 
@@ -89,6 +92,7 @@ async function loadTenantById(
       name: tenants.name,
       logoUrl: tenants.logoUrl,
       isReadOnly: tenants.isReadOnly,
+      isSolo: tenants.isSolo,
     })
     .from(tenants)
     .where(and(eq(tenants.id, id), eq(tenants.isActive, true)))
@@ -104,6 +108,7 @@ async function loadTenantBySlug(slug: string): Promise<CurrentTenant | null> {
       name: tenants.name,
       logoUrl: tenants.logoUrl,
       isReadOnly: tenants.isReadOnly,
+      isSolo: tenants.isSolo,
     })
     .from(tenants)
     .where(and(eq(tenants.slug, slug), eq(tenants.isActive, true)))
@@ -197,6 +202,7 @@ export const getUserTenants = cache(async (): Promise<UserTenant[]> => {
         name: tenants.name,
         logoUrl: tenants.logoUrl,
         isReadOnly: tenants.isReadOnly,
+        isSolo: tenants.isSolo,
         role: memberships.role,
       })
       .from(memberships)

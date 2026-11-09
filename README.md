@@ -200,5 +200,7 @@ Acesse: http://localhost:3000/dashboard
 - [x] Gateway online (mock + Mercado Pago) com webhooks assinados
 - [x] Estorno formal de cobrança (ledger, estoque, cupom e comissão) e retry de webhooks
 - [x] API v1 para app (login Bearer, agenda e booking público) — **[contrato](docs/api-mobile.md)**
+- [x] Pacote mobile solo: navegação inferior, painel “Hoje”, modo solo e
+      onboarding assistido
 - [ ] App mobile (Expo/React Native), push e login do cliente final
 - [ ] Verificação de e-mail, canais push/SMS e storage de arquivos

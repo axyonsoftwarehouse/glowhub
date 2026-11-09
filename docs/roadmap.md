@@ -58,6 +58,7 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 ## Fase 6 — Canais
 - [x] Website público / agendamento online (`/book`, por subdomínio/slug)
 - [x] API v1 para app: login Bearer, agenda da equipe e booking público
+- [x] Web mobile solo: navegação inferior, painel “Hoje”, modo solo e onboarding assistido
 - [ ] App do cliente (mobile) consumindo a API
 
 ## Fase 7 — Relatórios & Inteligência de Negócio (BI)

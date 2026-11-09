@@ -89,6 +89,20 @@ Consequências práticas:
   `src/lib/appointment-errors.ts` e `src/lib/errors.ts`. Não vaze mensagem crua
   do banco para a tela.
 
+### 2.3 Navegação mobile e modo solo
+
+- Em telas pequenas a sidebar some (`sm:flex`) e entra a `MobileNav`
+  (`src/app/(app)/mobile-nav.tsx`): **Hoje, Agenda, Clientes, Caixa e Mais**. O
+  “Mais” abre uma folha com todos os módulos, inclusive os que não cabem na
+  barra inferior.
+- O layout reserva `pb-28` no mobile para a barra fixa e usa
+  `env(safe-area-inset-bottom)` para aparelhos com gesto.
+- `tenants.is_solo` liga o **modo solo**: o onboarding cria profissional
+  vinculado ao dono, um serviço inicial, horário seg–sáb e o plano de contas;
+  o dashboard vira “Hoje” com checklist do que falta; o menu “Mais” esconde
+  Filiais/Equipe do grupo principal.
+- O modo solo pode ser ligado/desligado depois em `/settings` (owner/admin).
+
 ## 3. Identidade e sessão
 
 - **Better Auth self-hosted** em `src/lib/auth.ts`, com `drizzleAdapter` sobre a
@@ -524,10 +538,10 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
   disponibilidade, erros de banco/agendamento, estoque, fidelidade, CRM,
   lucratividade, assinatura/retry de webhook, estorno de cobrança, lembretes,
   métricas, alertas e `APP_ENV`.
-- **e2e (Playwright, 15 cenários + setup de auth)**: login demo, minha agenda
+- **e2e (Playwright, 16 cenários + setup de auth)**: login demo, minha agenda
   (vínculo e mudança de status), histórico do cliente, booking público,
-  assinaturas, fechamento, API v1 pública e 7 verificações de acessibilidade
-  com axe.
+  assinaturas, fechamento, API v1 pública, navegação mobile e 7 verificações de
+  acessibilidade com axe.
 - **Smoke scripts** (`scripts/`): `smoke-rls`, `smoke-ledger`, `smoke-overlap`,
   `check-overlaps` e `schema-snapshot`.
 - Quality gate: `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build`.

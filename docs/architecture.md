@@ -43,6 +43,14 @@ interativa. A conexão admin (seed, login demo, onboarding, cron, booking) não 
 afetada. `DEMO_READ_ONLY=false` desliga o guard em dev/preview. A UI só avisa —
 a trava real é no banco.
 
+### Modo solo
+`tenants.is_solo` marca operações de uma pessoa. O onboarding solo cria o
+profissional vinculado ao dono, um serviço inicial, horário seg–sáb e o plano de
+contas; o dashboard vira um “Hoje” com agenda, caixa e checklist. A navegação
+mobile (`src/app/(app)/mobile-nav.tsx`) usa barra inferior + folha “Mais”; no
+desktop a sidebar continua disponível. O modo pode ser ligado/desligado em
+`/settings`.
+
 ## Catálogo (decisões de modelo)
 - **Categorias** em uma única tabela `categories`, com `kind` (`service`/`product`)
   e hierarquia via `parent_id` (categoria/subcategoria). Nome único por nível
