@@ -39,7 +39,9 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Pagamentos **idempotentes** + webhooks + conciliação (tela `/reconciliation`)
 - [x] **Gateway online**: adapter portável (mock + Mercado Pago), link de checkout
   por comanda, webhook assinado que confirma/estorna no ledger e conciliação
-  automática (`src/lib/payments/*`, `/pay/mock`)
+  manual em `/reconciliation` (`src/lib/payments/*`, `/pay/mock`)
+- [x] **Estorno formal de cobrança** (reverso no ledger, estoque, cupom e
+  comissão) e **retry de webhooks** com backoff (`/api/cron/webhooks`)
 - [x] Gorjeta, comissão e repasses
 - [x] Carteira do cliente (crédito pré-pago; pagamento por carteira)
 - [x] Relatórios (balancete, resultado, receita/dia, recebimentos por forma, ocupação por profissional, comissões)
@@ -50,7 +52,8 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Renovação automática de assinaturas (cron `/api/cron/subscriptions`) e consumo/limites por período
 - [x] Receita diferida de assinaturas (faturamento em "Receitas a Apropriar", reconhecimento ao fim do período)
 - [x] Cupons e promoções (percentual/fixo, validade, limite de uso)
-- [x] Notificações por e-mail (caixa de saída + adapter portável); push e lembretes agendados pendentes
+- [x] Notificações por e-mail (caixa de saída + adapter portável) e **agendador
+  diário** de lembretes (`/api/cron/daily`); push e SMS pendentes
 
 ## Fase 6 — Canais
 - [x] Website público / agendamento online (`/book`, por subdomínio/slug)
@@ -84,11 +87,16 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Migrations versionadas (`drizzle/` + `npm run db:migrate`; sem `drizzle-kit push`) e guarda no CI
 - [x] Ambientes separados: demo (branch Neon `production`) e dev (branch `dev`), `APP_ENV` travando login demo e seed (`docs/banco-e-ambientes.md`)
 - [x] Trava no banco contra agendamento duplo (`appointments_no_overlap`, migration `0002`)
-- [ ] Provedor de e-mail (verificação, convites, lembretes) — depende do domínio
+- [x] Agendador diário de lembretes e envio da caixa de saída (`/api/cron/daily`)
+- [ ] Provedor de e-mail real (verificação de conta e convites) — depende do domínio
 
 ## Lançamento (pendente; decidido deixar para quando o produto estiver completo)
 - [ ] Domínio próprio e subdomínio por tenant
 - [ ] Banco de produção limpo (`npm run db:migrate`), sem conta demo (`APP_ENV=production`)
 - [ ] Demo em endereço próprio (ex.: `demo.<domínio>`)
 - [ ] E-mail real (verificação de conta, convites, lembretes)
-- [x] Gateway de pagamento online (adapter portável: mock + Mercado Pago; ver Fase 4)
+
+## Concluído fora das fases
+- [x] Gateway de pagamento online (adapter portável: mock + Mercado Pago; Fase 4)
+- [x] Modo demonstração somente leitura (`tenants.is_read_only` + trigger no
+      banco; `DEMO_READ_ONLY=false` libera em dev/preview)

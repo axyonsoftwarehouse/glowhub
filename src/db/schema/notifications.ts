@@ -1,9 +1,11 @@
+import { sql } from "drizzle-orm";
 import {
   index,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { tenants } from "./tenancy";
@@ -33,6 +35,7 @@ export const notifications = pgTable(
     body: text("body").notNull(),
     status: notificationStatus("status").notNull().default("pending"),
     scheduledFor: timestamp("scheduled_for", { withTimezone: true }),
+    dedupeKey: text("dedupe_key"),
     sentAt: timestamp("sent_at", { withTimezone: true }),
     error: text("error"),
     providerMessageId: text("provider_message_id"),
@@ -44,5 +47,8 @@ export const notifications = pgTable(
     index("notifications_tenant_idx").on(t.tenantId),
     index("notifications_status_idx").on(t.status),
     index("notifications_created_idx").on(t.createdAt),
+    uniqueIndex("notifications_tenant_dedupe_key")
+      .on(t.tenantId, t.dedupeKey)
+      .where(sql`${t.dedupeKey} is not null`),
   ],
 );

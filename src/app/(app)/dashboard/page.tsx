@@ -150,8 +150,8 @@ export default async function DashboardPage() {
       <section className="rounded-2xl border border-dashed border-border p-6">
         <h2 className="text-sm font-semibold">Próximos passos</h2>
         <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-foreground/70">
-          <li>Financeiro contábil (ledger de partidas dobradas).</li>
-          <li>Website público / agendamento online.</li>
+          <li>Lembretes agendados e canais push/SMS.</li>
+          <li>Verificação de e-mail e envio de convites por e-mail.</li>
           <li>App do cliente (mobile).</li>
         </ul>
       </section>

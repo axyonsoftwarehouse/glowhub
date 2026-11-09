@@ -7,8 +7,10 @@
 - Repositório: https://github.com/axyonsoftwarehouse/glowhub (público).
 - Estágio: **MVP interno funcional** (Fases 0–5 concluídas; Fase 6 parcial).
   Ainda **não pronto para produção** (ver backlog e riscos).
-- Última atualização: alinhada ao estado atual do código (repo migrado para
-  `axyonsoftwarehouse/glowhub` e deploy reconectado na Vercel).
+- Última atualização: **2026-11-09**, conferida contra o código do commit
+  `3fcd13e` (demo somente leitura, gateway online, estoque, fidelidade e DRE).
+  Para o comportamento detalhado de cada fluxo, veja
+  [`como-funciona.md`](como-funciona.md).
 
 ---
 
@@ -69,9 +71,9 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Comandas | Cobrança aberta por atendimento; **adicionar/remover produtos** com receita (`revenue_product`), baixa de estoque na inclusão e estorno/devolução na remoção; pagamento até quitar | ✅ |
 | Fidelização | **Gift cards** (valor fixo + código; passivo→receita no resgate), **programa de pontos** (acúmulo ao quitar a comanda, resgate como crédito na carteira) e **campanhas por segmento** (e-mail com opt-in) | ✅ |
 | Pacotes & Assinaturas | Pré-pago e recorrente, com ledger, **consumo/limites por período** e **renovação automática** (cron) | ✅ |
-| Notificações | Caixa de saída + e-mail (adapter portável) | 🟡 (push/lembretes agendados pendentes) |
+| Notificações | Caixa de saída + e-mail (adapter portável), convite de equipe e lembretes diários | ✅ (push/SMS e verificação de e-mail pendentes) |
 | Canal cliente | Agendamento online `(/book)`; app mobile | 🟡 |
-| Relatórios & BI | Balancete, resultado, receita/dia, recebimentos por forma, **ocupação por profissional**; **inteligência de clientes** (segmentos/RFM); **lucratividade & DRE** (margem por serviço/produto, ranking e fluxo de caixa vs. competência) | ✅ (fidelização pendente) |
+| Relatórios & BI | Balancete, resultado, receita/dia, recebimentos por forma, **ocupação por profissional**; **inteligência de clientes** (segmentos/RFM); **lucratividade & DRE** (margem por serviço/produto, ranking e fluxo de caixa vs. competência) | ✅ |
 
 Legenda: ✅ pronto · 🟡 parcial · ⛔ não iniciado.
 
@@ -110,19 +112,25 @@ Browser ──► Next (RSC + Server Actions)
   `public.auth_uid()`, `is_tenant_member`, `has_tenant_role`.
 - Tenant ativo em `profiles.active_tenant_id`.
 - **Canal público** (`/book`, `/api/webhooks/*`) usa `getDb()` (owner) com
-  **escopo explícito por `tenant_id`** — decisão consciente.
-- Convites: `SECURITY DEFINER` (`accept_invitation`).
+  **escopo explícito por `tenant_id`** — decisão consciente. No `/book`, o tenant
+  vem só do host (`getPublicTenant`), nunca de header/query.
+- **Convites**: `SECURITY DEFINER` (`accept_invitation`).
+- **Modo demonstração**: tenants do seed têm `is_read_only = true`; um trigger
+  (`enforce_readonly_tenant`) bloqueia escrita em catálogo/configuração/
+  financeiro/equipe, mas libera `clients`/`appointments`. Detalhes em
+  [`como-funciona.md`](como-funciona.md#44-modo-demonstração-somente-leitura).
 - **Rate limiting**: fixed-window em `rate_limits` (tabela interna, role do app
   revogada) aplicado ao sign-in/sign-up via `src/app/api/auth/[...all]`;
   fail-open. Logger estruturado em `src/lib/logger.ts`; `/api/health`.
 
 ### 2.4 Modelo de dados (por domínio)
 - **Auth:** `user`, `session`, `account`, `verification`.
-- **Tenancy:** `tenants` (inclui políticas de cancelamento/no-show), `branches`,
-  `memberships`, `invitations`, `profiles`.
+- **Tenancy:** `tenants` (inclui `is_read_only`, políticas de cancelamento/no-show),
+  `branches`, `memberships`, `invitations`, `profiles`.
 - **Catálogo:** `categories`, `services`, `service_branches`, `professionals`,
   `professional_branches`, `professional_services`.
-- **Produtos:** `products`, `product_variants`.
+- **Produtos e estoque:** `products`, `product_variants`, `suppliers`,
+  `stock_movements`, `service_materials`.
 - **Agenda:** `branch_hours`, `professional_hours`, `branch_closures`.
 - **Atendimento:** `clients`, `appointments` (status + *exclusion constraint* `appointments_no_overlap`, migration `0002`).
 - **Financeiro:** `ledger_accounts`, `journal_entries`, `journal_lines`,
@@ -132,6 +140,8 @@ Browser ──► Next (RSC + Server Actions)
 - **Comercial:** `packages`/`package_items`/`client_packages`/`package_redemptions`,
   `subscription_plans`/`plan_items`/`client_subscriptions`/`subscription_redemptions`,
   `coupons`/`coupon_redemptions`.
+- **Fidelização:** `gift_cards`/`gift_card_redemptions`, `loyalty_settings`,
+  `loyalty_points`, `campaigns`.
 - **Comunicação:** `notifications` (caixa de saída).
 
 ### 2.5 Financeiro (princípios e estado)
@@ -148,8 +158,9 @@ Browser ──► Next (RSC + Server Actions)
 - **Fechamento contábil:** períodos fechados (`accounting_periods`) bloqueiam
   novos lançamentos com data dentro do intervalo (checado em `postEntry`);
   snapshot do balancete guardado no fechamento (`/closing`).
-- **Falta:** gateway online + webhooks assinados + conciliação automática e
-  estorno/void formal.
+- **Falta:** conciliação automática de extrato bancário (a atual é manual em
+  `/reconciliation`), baixa automática de contas a pagar e integração do
+  pagamento online no agendamento público.
 
 ### 2.6 Convenções
 - Schema Drizzle em `src/db/schema` é a **fonte de verdade**; funções, triggers,
@@ -187,7 +198,8 @@ Browser ──► Next (RSC + Server Actions)
 - **Git**: `axyonsoftwarehouse/glowhub` (branch de produção `master`), conectado ao
   projeto Vercel `glowhub` (time `torinoorbit-dev`) para deploy automático a cada push.
 - **Cron** (`vercel.json`): `/api/cron/subscriptions` (diário, renova assinaturas
-  vencidas); protegido por `CRON_SECRET`.
+  vencidas) e `/api/cron/daily` (webhooks, lembretes e envio de notificações);
+  ambos protegidos por `CRON_SECRET`.
 - **Produção:** https://glowhub-silk.vercel.app (também
   `glowhub-torinoorbit-dev.vercel.app`). Env de produção configuradas
   (`DATABASE_URL` pooled).
@@ -198,11 +210,14 @@ Browser ──► Next (RSC + Server Actions)
   `APP_ENV` `demo`/`dev`, `NEXT_PUBLIC_DEMO_LOGIN=true` **e** `DEMO_PASSWORD` definidos (validado no
   servidor, não apenas no botão); tem rate limit. Em produção está **habilitado
   para demonstrações**: qualquer visitante vira `owner` apenas dos tenants demo
-  (dados de exemplo, isolados por RLS).
+  (dados de exemplo, isolados por RLS). Esses tenants são **somente leitura**
+  (`is_read_only`): catálogo, financeiro, equipe e configurações recusam escrita;
+  agenda, clientes e agendamento online seguem liberados.
 - **Dados demo:** `npm run seed:demo` recria os 3 tenants com cenário completo e
   ledger balanceado (catálogo, agenda, financeiro, pacotes, assinatura, cupons,
   gateway mock). Idempotente (não toca em outros dados). Roda livre com
-  `APP_ENV=dev`; no banco da demo exige `--confirm-demo`.
+  `APP_ENV=dev`; no banco da demo exige `--confirm-demo`. Os tenants criados
+  nascem somente leitura; `DEMO_READ_ONLY=false` libera escrita em dev/preview.
 - **Conciliação:** `/reconciliation` casa cobrança ↔ pagamento ↔ gateway e permite
   confirmar pagamentos pendentes (efeito de webhook).
 
@@ -210,11 +225,13 @@ Browser ──► Next (RSC + Server Actions)
 
 ## 3. Status atual (o que está pronto)
 Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
-`/branches`, `/services`, `/products`, `/professionals`, `/schedule`,
-`/appointments`, `/my-schedule`, `/clients`, `/clients/[id]`, `/packages`,
-`/subscriptions`, `/coupons`, `/notifications`, `/finance`, `/reconciliation`,
-`/reports`, `/closing`, `/settings`, `/book`, `/api/auth/[...all]`,
-`/api/webhooks/[provider]`, `/api/cron/subscriptions`, `/api/health`.
+`/branches`, `/services`, `/products`, `/professionals`, `/inventory`,
+`/schedule`, `/appointments`, `/my-schedule`, `/clients`, `/clients/[id]`,
+`/packages`, `/subscriptions`, `/coupons`, `/loyalty`, `/notifications`,
+`/finance`, `/reconciliation`, `/reports`, `/reports/profitability`, `/closing`,
+`/settings`, `/profile`, `/book`, `/pay/mock`, `/api/auth/[...all]`,
+`/api/webhooks/[provider]`, `/api/cron/subscriptions`, `/api/cron/daily`,
+`/api/cron/webhooks`, `/api/health`, `/api/metrics`.
 
 - Auth/sessão, convites por link, **edição/remoção de membros**, troca de empresa,
   **onboarding**.
@@ -223,12 +240,16 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
   **cancelamento/no-show** por tenant (`/settings`).
 - **Financeiro** completo no núcleo: ledger, cobrança, pagamentos idempotentes,
   comissão/gorjeta/repasse, carteira, cupons, pacotes, assinaturas (com
-  **receita diferida**), conciliação, relatórios e **fechamento contábil**.
-- **Agendamento online** e **notificações por e-mail** (caixa de saída).
-- **CI** + **23 testes unitários** e **13 testes e2e** (+ setup; Playwright:
-  login demo, minha agenda + status, histórico do cliente, booking, assinaturas,
-  fechamento e **7 verificações de acessibilidade com axe**); `tsc`/`eslint`/
-  `build` verdes.
+  **receita diferida**), estorno formal de cobrança, conciliação, relatórios e
+  **fechamento contábil**.
+- **Estoque e insumos** (ficha técnica, custo médio, CMV, movimentos
+  append-only) e **fidelização** (gift cards, pontos e campanhas).
+- **Agendamento online**, **convite por e-mail** e **notificações por e-mail**
+  (caixa de saída, lembretes diários).
+- **CI** + **115 testes unitários** (18 arquivos) e **13 cenários e2e** (+ setup;
+  Playwright: login demo, minha agenda + status, histórico do cliente, booking,
+  assinaturas, fechamento e **7 verificações de acessibilidade com axe**);
+  `tsc`/`eslint`/`build` verdes.
 
 ---
 
@@ -239,8 +260,13 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
       a mesma API/DB (avaliar expor uma API dedicada ou usar o Supabase-like).
 
 ### Financeiro / comercial
-- [ ] **Gateway online** (Stripe/Mercado Pago/Pagar.me) + webhooks assinados +
-      conciliação automática; estorno/void.
+- [x] **Gateway online** (adapter portável: mock + Mercado Pago), link de
+      checkout na comanda, webhooks assinados e confirmação/estorno no ledger.
+- [x] **Estorno/void formal** de cobrança aberta (reverso no ledger, devolução
+      de estoque, cupom e comissão) e **retry/fila de webhooks** com backoff
+      (`webhook_events` + `/api/cron/webhooks`).
+- [ ] **Conciliação automática** de extrato bancário (a conciliação do gateway e
+      manual continua em `/reconciliation`).
 - [x] **Recorrência automática de assinaturas** (`/api/cron/subscriptions`,
       cron diário na Vercel + botão manual) e **consumo/limites** por período
       (assinaturas via `subscription_redemptions`; pacotes já por quantidade).
@@ -250,8 +276,10 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
       faturamento e reconhecem a receita ao fim do período (renovação/cron).
 
 ### Comunicação
-- [ ] **Agendador** (pg_cron/Inngest) para **lembretes** de agendamento.
-- [ ] **Verificação de e-mail** no cadastro e envio por e-mail dos **convites**.
+- [x] **Agendador diário** (`/api/cron/daily`) para lembretes de agendamento e
+      envio da caixa de saída.
+- [ ] **Verificação de e-mail** no cadastro (o convite por e-mail já é
+      enfileirado).
 - [ ] Canais **push/SMS**.
 
 ### Produto
@@ -293,12 +321,14 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 ---
 
 ## 5. Riscos e considerações
-- **Produção**: falta e-mail de verificação, CI/CD de deploy e revisão de
-  segurança; observabilidade in-app + métricas/alertas externos já prontos (falta
-  apenas configurar coletor/webhook).
+- **Produção**: falta e-mail de verificação, banco de produção dedicado, domínio
+  próprio e revisão final de segurança; observabilidade in-app +
+  métricas/alertas externos já prontos (falta apenas configurar coletor/webhook).
 - **Financeiro**: mudanças exigem cuidado (imutável, balanceado, idempotente);
   novos lançamentos devem passar por `src/lib/ledger.ts`.
-- **Gateway**: escolha e desenho de webhooks ainda em aberto.
+- **Gateway**: Mercado Pago implementado como adapter; provedor definitivo,
+  conciliação automática de extrato e estorno de pagamento já confirmado ainda
+  em aberto (o estorno de cobrança aberta está pronto).
 - **RLS vs. canal público**: o `/book` usa a conexão admin com escopo explícito;
   manter essa disciplina ao evoluir.
 
@@ -306,18 +336,21 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 
 ## 6. Retomada (handoff) — como continuar em uma nova sessão
 
-1. **Repositório**: `git clone https://github.com/axyonsoftwarehouse/glowhub`; branch `master`.
-2. **Dependências**: `npm install`.
-3. **Env**: criar `.env.local` a partir de `.env.example` (Neon owner + role do
+1. **Comece pela documentação**: [`como-funciona.md`](como-funciona.md) para o
+   comportamento real, [`architecture.md`](architecture.md) para as decisões e
+   este relatório para o backlog.
+2. **Repositório**: `git clone https://github.com/axyonsoftwarehouse/glowhub`; branch `master`.
+3. **Dependências**: `npm install`.
+4. **Env**: criar `.env.local` a partir de `.env.example` (Neon owner + role do
    app + `BETTER_AUTH_SECRET`). Ver `docs/neon-migration.md` para o setup do Neon.
-4. **Banco**: `npm run db:migrate` → `db/seed.sql` (via `scripts/apply-sql.mjs`)
+5. **Banco**: `npm run db:migrate` → `db/seed.sql` (via `scripts/apply-sql.mjs`)
    → `npm run seed:demo` (cenário demo). Ver `docs/banco-e-ambientes.md`.
-5. **Qualidade**: `npx tsc --noEmit` && `npx eslint .` && `npm test` && `npm run build`.
-6. **e2e** (opcional): `npm run test:e2e:install` uma vez; depois `npm run test:e2e`
+6. **Qualidade**: `npx tsc --noEmit` && `npx eslint .` && `npm test` && `npm run build`.
+7. **e2e** (opcional): `npm run test:e2e:install` uma vez; depois `npm run test:e2e`
    (sobe o dev server; exige `.env.local` e seed demo).
-7. **Smoke**: `node --env-file=.env.local scripts/smoke-rls.mjs`, `...smoke-ledger.mjs`
+8. **Smoke**: `node --env-file=.env.local scripts/smoke-rls.mjs`, `...smoke-ledger.mjs`
    e `...smoke-overlap.mjs`.
-8. **Rodar**: `npm run dev` (app em `/dashboard`; público em `/book`).
+9. **Rodar**: `npm run dev` (app em `/dashboard`; público em `/book`).
 
 Pontos de entrada úteis:
 - Multi-tenancy/RLS: `src/lib/db.ts`, `src/lib/tenant.ts`, `db/rls.sql`.
@@ -349,9 +382,9 @@ Pontos de entrada úteis:
   botão "Cobrar online" em `src/app/(app)/finance/*`.
 - e2e: `e2e/*.spec.ts`, `e2e/auth.setup.ts`, `playwright.config.ts`.
 
-Decisões em aberto (ver `docs/architecture.md`): provedor de **pagamento**,
-**e-mail** de verificação/convites, **storage**, e estratégia de **API** para o app
-mobile.
+Decisões em aberto (ver `docs/architecture.md`): **verificação de e-mail**,
+canais **push/SMS**, **storage**, **API** para o app mobile e **billing da
+plataforma**.
 
 ## 7. Glossário
 - **Tenant**: empresa cliente do SaaS. **Branch**: filial.

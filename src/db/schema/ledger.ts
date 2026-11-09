@@ -139,11 +139,16 @@ export const charges = pgTable(
       { onDelete: "set null" },
     ),
     createdBy: text("created_by"),
+    voidedAt: timestamp("voided_at", { withTimezone: true }),
+    voidedBy: text("voided_by"),
+    voidReason: text("void_reason"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
-    uniqueIndex("charges_appointment_key").on(t.appointmentId),
+    uniqueIndex("charges_appointment_key")
+      .on(t.appointmentId)
+      .where(sql`${t.appointmentId} is not null and ${t.status} in ('open', 'paid')`),
     index("charges_tenant_idx").on(t.tenantId),
     check("charges_total_non_negative", sql`${t.totalCents} >= 0`),
   ],

@@ -152,6 +152,7 @@ export default async function ReportsPage({
       .where(
         and(
           eq(earnings.tenantId, tenant.id),
+          ne(earnings.status, "void"),
           gte(earnings.createdAt, start),
           lte(earnings.createdAt, end),
         ),

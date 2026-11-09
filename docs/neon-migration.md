@@ -2,6 +2,11 @@
 
 Status: **concluída** (Neon + Better Auth + Drizzle; Supabase removido).
 
+> **Documento histórico.** Registra o plano da migração, não o desenho atual.
+> Para o estado do código, veja [`architecture.md`](architecture.md) e
+> [`como-funciona.md`](como-funciona.md). As diferenças entre o plano e o que foi
+> implementado estão no fim deste arquivo.
+
 ## Arquitetura alvo
 
 - **Banco**: Neon Postgres.
@@ -77,3 +82,19 @@ grant usage, select on all sequences in schema public to glowhub_app;
 - Verificação de e-mail é responsabilidade nossa (provedor futuro).
 - Sem projeto/segredos o app não roda; o build pode ficar vermelho durante a
   conversão.
+
+## O que mudou em relação a este plano
+
+- A camada de dados não tem `getAuthenticatedDb`/`getAdminDb`: o código usa
+  `getDb()` (admin) e `withUser(userId, cb)` (role do app com RLS), em
+  `src/lib/db.ts`.
+- Os claims injetados contêm **apenas `sub`**; `current_tenant_id()` existe em
+  `db/rls.sql`, mas não é usado. O tenant ativo é resolvido na aplicação
+  (`profiles.active_tenant_id`) e as policies usam `is_tenant_member(tenant_id)`.
+- O client do Better Auth está em `src/lib/auth-client.ts` (não em
+  `lib/auth/client.ts`).
+- O Better Auth é instanciado sob demanda (Proxy) para o build não exigir
+  `DATABASE_URL`.
+- Entraram depois da migração: RLS para todas as tabelas de domínio, ledger
+  append-only, rate limit em banco, modo demonstração somente leitura e o
+  isolamento de migrations por ambiente.

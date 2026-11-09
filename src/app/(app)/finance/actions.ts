@@ -6,7 +6,7 @@ import { internalError } from "@/lib/errors";
 
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
   appointments,
@@ -17,6 +17,7 @@ import {
   journalEntries,
   journalLines,
   ledgerAccounts,
+  memberships,
   payments,
   payouts,
   productVariants,
@@ -27,6 +28,7 @@ import {
 } from "@/db/schema";
 import { withUser, type AppTx } from "@/lib/db";
 import { dbErrorCode, dbErrorMessage } from "@/lib/db-errors";
+import { voidCharge } from "@/lib/charge-void";
 import {
   consumeChargeItem,
   consumeForCharge,
@@ -358,6 +360,7 @@ export async function createChargeAction(
           and(
             eq(charges.appointmentId, appointmentId),
             eq(charges.tenantId, ctx.tenant.id),
+            ne(charges.status, "void"),
           ),
         )
         .limit(1);
@@ -1271,6 +1274,63 @@ export async function payProfessionalAction(
   } catch (cause) {
     return { status: "error", message: internalError(cause) };
   }
+}
+
+const VOID_ROLES = ["owner", "admin", "manager"];
+
+/**
+ * Estorna uma cobrança aberta (lançamento reverso, estoque, cupom e comissão).
+ * Ação restrita a owner/admin/manager; a RLS sozinha deixaria staff escrever.
+ */
+export async function voidChargeAction(
+  _prev: FinanceActionState,
+  formData: FormData,
+): Promise<FinanceActionState> {
+  const id = String(formData.get("id") ?? "");
+  if (!isUuid(id)) return { status: "error", message: "Cobrança inválida." };
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  const ctx = await context();
+  if ("error" in ctx) return { status: "error", message: ctx.error };
+
+  try {
+    const result = await withUser(ctx.userId, async (tx) => {
+      const [membership] = await tx
+        .select({ role: memberships.role })
+        .from(memberships)
+        .where(
+          and(
+            eq(memberships.tenantId, ctx.tenant.id),
+            eq(memberships.userId, ctx.userId),
+          ),
+        )
+        .limit(1);
+      if (!VOID_ROLES.includes(membership?.role ?? "")) {
+        return { error: "Seu papel não permite estornar cobranças." };
+      }
+      return voidCharge(tx, {
+        tenantId: ctx.tenant.id,
+        userId: ctx.userId,
+        chargeId: id,
+        reason: reason || null,
+      });
+    });
+
+    if ("error" in result) {
+      return { status: "error", message: result.error };
+    }
+  } catch (cause) {
+    if (dbErrorCode(cause) === "42501") {
+      return { status: "error", message: "Seu papel não permite estornar cobranças." };
+    }
+    return { status: "error", message: internalError(cause) };
+  }
+
+  revalidatePath("/finance");
+  revalidatePath("/appointments");
+  revalidatePath("/reconciliation");
+  revalidatePath("/reports");
+  return { status: "success", message: "Cobrança estornada." };
 }
 
 export async function addWalletCreditAction(

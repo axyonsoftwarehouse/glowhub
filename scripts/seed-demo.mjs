@@ -466,8 +466,8 @@ async function seedDemo(tx) {
     if (openCharge) {
       await tx`insert into public.payments ${tx({ tenant_id: tenantId, charge_id: openCharge.id, method: "pix", amount_cents: Number(openCharge.total_cents), status: "pending", provider: "mock", provider_ref: "mock_pix_0001", idempotency_key: `demo-gw-${openCharge.id}` })}`;
     }
-    await tx`insert into public.webhook_events ${tx({ provider: "mock", event_id: "evt_demo_payment_created", payload: tx.json({ type: "payment.created", provider_ref: "mock_pix_0001" }) })}`;
-    await tx`insert into public.webhook_events ${tx({ provider: "mock", event_id: "evt_demo_payment_pending", payload: tx.json({ type: "payment.pending", provider_ref: "mock_pix_0001" }) })}`;
+    await tx`insert into public.webhook_events ${tx({ provider: "mock", event_id: "evt_demo_payment_created", payload: tx.json({ type: "payment.created", provider_ref: "mock_pix_0001" }), status: "processed", processed_at: new Date() })}`;
+    await tx`insert into public.webhook_events ${tx({ provider: "mock", event_id: "evt_demo_payment_pending", payload: tx.json({ type: "payment.pending", provider_ref: "mock_pix_0001" }), status: "processed", processed_at: new Date() })}`;
   }
 
   // repasse (Ana)

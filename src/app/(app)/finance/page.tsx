@@ -206,6 +206,7 @@ export default async function FinancePage() {
       earningRows,
       professionalRows,
       canManage: MANAGE_ROLES.includes(membership?.role ?? ""),
+      canVoid: ["owner", "admin", "manager"].includes(membership?.role ?? ""),
     };
   });
 
@@ -345,6 +346,7 @@ export default async function FinancePage() {
             charges={chargeList}
             productOptions={productOptions}
             canSettle={data.canManage}
+            canVoid={data.canVoid && !tenant.isReadOnly}
           />
         </div>
       </section>

@@ -3,6 +3,7 @@ import {
   bigint,
   check,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -63,6 +64,12 @@ export const payments = pgTable(
   ],
 );
 
+export const webhookEventStatus = pgEnum("webhook_event_status", [
+  "pending",
+  "processed",
+  "failed",
+]);
+
 export const webhookEvents = pgTable(
   "webhook_events",
   {
@@ -70,10 +77,16 @@ export const webhookEvents = pgTable(
     provider: text("provider").notNull(),
     eventId: text("event_id").notNull(),
     payload: jsonb("payload").notNull(),
+    status: webhookEventStatus("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    lastError: text("last_error"),
+    nextAttemptAt: timestamp("next_attempt_at", { withTimezone: true }),
+    requestUrl: text("request_url"),
     processedAt: timestamp("processed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     uniqueIndex("webhook_events_provider_event_key").on(t.provider, t.eventId),
+    index("webhook_events_retry_idx").on(t.status, t.nextAttemptAt),
   ],
 );

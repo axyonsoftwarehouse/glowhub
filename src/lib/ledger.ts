@@ -13,6 +13,17 @@ export type LedgerLineInput = {
   amountCents: number;
 };
 
+/** Inverte as partidas de um lançamento (débito ↔ crédito) para estorno. */
+export function reverseLines(
+  lines: readonly LedgerLineInput[],
+): LedgerLineInput[] {
+  return lines.map((line) => ({
+    accountId: line.accountId,
+    direction: line.direction === "debit" ? "credit" : "debit",
+    amountCents: line.amountCents,
+  }));
+}
+
 export async function getSystemAccountId(
   tx: AppTx,
   tenantId: string,

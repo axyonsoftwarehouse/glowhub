@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull, lte, or } from "drizzle-orm";
 import { notifications, memberships } from "@/db/schema";
 import { withUser } from "@/lib/db";
 import { sendEmail } from "@/lib/email";
@@ -45,6 +45,11 @@ export async function processNotificationsAction(): Promise<NotificationActionSt
         and(
           eq(notifications.tenantId, tenant.id),
           eq(notifications.status, "pending"),
+          eq(notifications.channel, "email"),
+          or(
+            isNull(notifications.scheduledFor),
+            lte(notifications.scheduledFor, new Date()),
+          ),
         ),
       )
       .orderBy(asc(notifications.createdAt))

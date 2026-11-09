@@ -1,5 +1,9 @@
 # Arquitetura e decisões
 
+> Decisões e modelo de dados. Para o **comportamento em execução** (fluxo de
+> requisição, RLS na prática, partidas contábeis e armadilhas), veja
+> [`como-funciona.md`](como-funciona.md).
+
 ## Stack
 - **Next.js 16** (App Router, Turbopack) + **TypeScript** na **Vercel**.
 - **Neon** (Postgres). **Better Auth self-hosted** dentro do Next (portável).
@@ -15,7 +19,8 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   `BYPASSRLS`) e, por transação, injeta `request.jwt.claims = {"sub": userId}` via
   `set_config`; as policies usam `public.auth_uid()`.
 - **Resolução de tenant**: por **subdomínio** (`<slug>.dominio`) no `src/proxy.ts`;
-  fallback `DEFAULT_TENANT_SLUG`/`?tenant=` em dev.
+  fallback `DEFAULT_TENANT_SLUG`/`?tenant=` em dev. O canal público (`/book`)
+  ignora header/query e resolve **só pelo host** (`getPublicTenant`).
 - **Troca de tenant ativa**: o tenant ativo fica em `profiles.active_tenant_id`
   (troca = UPDATE; sem refresh de token). `getCurrentTenant` prioriza esse valor e
   cai para o primeiro vínculo do usuário.
@@ -29,6 +34,15 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
 | `withUser(userId, cb)` (role app) | Leituras/escritas do usuário | **Sim** (aplica) |
 | Drizzle `getDb()` (owner) | Auth (Better Auth), migrations/admin | **Não** — filtrar por `tenant_id` |
 
+### Modo demonstração (somente leitura)
+Os tenants do seed têm `is_read_only = true`. Um trigger no banco
+(`enforce_readonly_tenant`) bloqueia escrita da role do app nas tabelas de
+catálogo, configuração, equipe, financeiro, cupons, pacotes, assinaturas e
+mensagens; `clients` e `appointments` ficam de fora para a demo continuar
+interativa. A conexão admin (seed, login demo, onboarding, cron, booking) não é
+afetada. `DEMO_READ_ONLY=false` desliga o guard em dev/preview. A UI só avisa —
+a trava real é no banco.
+
 ## Catálogo (decisões de modelo)
 - **Categorias** em uma única tabela `categories`, com `kind` (`service`/`product`)
   e hierarquia via `parent_id` (categoria/subcategoria). Nome único por nível
@@ -41,11 +55,11 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   guarda exceções de `price_cents`/`duration_minutes` (nullable = usa o padrão) e
   `is_active` (indisponível naquela filial). Linha sem override e ativa é
   removida para manter a tabela enxuta.
-- **Profissionais** (`professionals`): pertencem ao tenant e podem (no futuro)
-  apontar para um `user_id`. Os vínculos são **binários M:N**:
-  `professional_branches` e `professional_services`. A disponibilidade
-  "serviço ↔ profissional ↔ filial" é a **interseção** dos dois vínculos — evita
-  uma tabela ternária e mantém a agenda derivável.
+- **Profissionais** (`professionals`): pertencem ao tenant e podem apontar para
+  um `user_id` — é o vínculo que habilita a visão "Minha agenda". Os vínculos
+  são **binários M:N**: `professional_branches` e `professional_services`. A
+  disponibilidade "serviço ↔ profissional ↔ filial" é a **interseção** dos dois
+  vínculos — evita uma tabela ternária e mantém a agenda derivável.
 - **Produtos** (`products`) com **variações** (`product_variants`): preço
   (`price_cents`, bigint), `sku`, `unit`, custo (`cost_cents`) e estoque
   (`stock_quantity`/`min_stock`) vivem na variação. Todo produto tem ao menos uma
@@ -62,8 +76,9 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   datas, dia inteiro ou intervalo.
 - **Disponibilidade**: função pura `src/lib/availability.ts` (wall-clock, sem
   fuso/DST) — cruza filial ∩ profissional, subtrai bloqueios e compromissos e
-  gera slots por passo de tempo (`stepMinutes`). O parâmetro `busy` será
-  alimentado pelos agendamentos.
+  gera slots por passo de tempo (`stepMinutes`). O `busy` vem dos agendamentos do
+  profissional, exceto `cancelled` e `no_show` (mesma regra da constraint);
+  detalhes em [`como-funciona.md`](como-funciona.md#54-estados-e-políticas).
 
 ## Clientes e agendamentos
 - **Clientes** (`clients`): nome, e-mail/telefone e observações; e-mail único por
@@ -102,6 +117,11 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   gera receita própria (`charge-item-revenue-<item>`, conta `revenue_product`) e a
   baixa de estoque na inclusão; a remoção estorna a receita e devolve o estoque
   (ver **Estoque e insumos**). Não é possível remover item já pago.
+- **Estorno de cobrança** (`charges.status = 'void'`): só para cobrança aberta,
+  sem pagamento pendente/confirmado e sem comissão paga. Lança o reverso de cada
+  partida (receita, cupom, CMV, comissão pendente), devolve o estoque consumido,
+  libera o cupom e grava autor/motivo/data (`voided_*`). A unicidade de cobrança
+  por agendamento ignora `void`, permitindo recobrar o atendimento.
 - **Pagamentos** (`payments`): idempotentes (`idempotency_key`), com `method`
   (cash/debit/credit/pix/transfer/wallet/other), `status`
   (pending/confirmed/failed/refunded) e vínculo ao lançamento. O pagamento manual
@@ -122,10 +142,12 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   (passivo); resgate = **D Pacotes a Resgatar, C Receita de Serviços**. Validade
   opcional em `expires_at`; saldo por serviço derivado dos resgates.
 - **Assinaturas** (`subscription_plans`/`plan_items` + `client_subscriptions`):
-  planos recorrentes (mês/ano). Assinar/renovar emite cobrança com lançamento
-  **D Caixa/Banco, C Receita de Assinaturas** (4.4) e avança o período; cancelar
-  encerra sem nova cobrança. Benefícios/limites por período estão modelados
-  (`plan_items`); o consumo por período ainda não é controlado.
+  planos recorrentes (mês/ano). Assinar/renovar fatura o período com **D
+  Caixa/Banco, C Receitas a Apropriar** (receita diferida) e, no vencimento,
+  reconhece **D Receitas a Apropriar, C Receita de Assinaturas** (4.4). O cron
+  diário (`/api/cron/subscriptions`) faz a renovação; cancelar encerra sem nova
+  cobrança. Benefícios/limites por período (`plan_items`) são controlados por
+  `subscription_redemptions`.
 - **Cupons** (`coupons` + `coupon_redemptions`): desconto percentual (basis points)
   ou fixo, com validade, mínimo e limite de usos. Aplicado a uma **cobrança aberta**:
   reduz `charges.total_cents` e lança **D Descontos e Estornos (despesa) /
@@ -139,7 +161,9 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
 - **Webhooks** (`webhook_events`): eventos do provedor gravados de forma
   idempotente (`provider` + `event_id`); o endpoint `/api/webhooks/<provider>`
   valida a assinatura e, havendo adapter do provedor, despacha a confirmação/
-  estorno no ledger. `webhook_events` é interno (sem acesso pela role do app).
+  estorno no ledger. Eventos falhos ficam com `status`, `attempts`,
+  `last_error` e `next_attempt_at`; `/api/cron/webhooks` reprocessa com backoff.
+  `webhook_events` é interno (sem acesso pela role do app).
 
 ## Estoque e insumos
 - **Produtos** têm `kind` (`resale` | `internal`): insumos internos não são
@@ -185,18 +209,21 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   (`getDb`) com **escopo explícito por `tenant_id`** — decisão consciente para o
   canal público. A reserva cria/associa o cliente e insere o agendamento
   (`pending`); a *exclusion constraint* de sobreposição continua valendo.
-- `pending` cai no painel para confirmação/check-in. Integração com pagamento
-  online fica para a fase de gateway.
+- `pending` cai no painel para confirmação/check-in. O pagamento online do
+  agendamento público ainda não está ligado ao fluxo (o gateway existe para a
+  comanda; integrar no `/book` é evolução futura).
 
 ## Notificações
 - **Caixa de saída** (`notifications`): canal (`email/sms/push`), destinatário,
-  assunto, corpo e `status` (pending/sent/failed). É **enfileirada** (ex.: e-mail
-  de confirmação no agendamento online) e processada por
-  `processNotificationsAction` (drena pendentes e marca enviado/falhou).
+  assunto, corpo, `scheduled_for` e `status` (pending/sent/failed). É
+  **enfileirada** (confirmação/lembrete de agendamento, convite de equipe) e
+  processada por `processNotificationsAction`/`processDueNotifications`, que
+  enviam o que está vencido e marcam `sent`/`failed`. `dedupe_key` impede
+  lembrete repetido por agendamento.
 - **Adapter portável** `src/lib/email.ts`: usa **Resend** se `RESEND_API_KEY`
   existir, senão apenas registra no console (dev). Trocar de provedor = ajustar
-  só essa função. Falta um **agendador** (pg_cron/Inngest) para lembretes no
-  horário certo e canais push/SMS.
+  só essa função. O **agendador** é o cron diário `/api/cron/daily`; canais
+  push/SMS seguem pendentes.
 
 ## Observabilidade (in-app + externa)
 - **Logger** estruturado em JSON (`src/lib/logger.ts`); a saída vai para
@@ -265,6 +292,10 @@ real (filas/pesado, ledger complexo, API única para o app mobile).
   `active_tenant_id`.
 
 ## Decisões em aberto (roadmap de ADRs)
-- Provedor de e-mail para convites/lembretes.
-- Provedor de pagamento e **desenho dos webhooks** (Stripe/Connect?).
-- Isolamento de **arquivos** (Storage buckets por tenant).
+- **Verificação de e-mail** no cadastro e **envio de convites** por e-mail
+  (o adapter Resend já existe; falta ligar o fluxo).
+- Canais **push/SMS** e agendador com granularidade menor que a diária.
+- **Isolamento de arquivos** (Storage buckets por tenant; hoje só URL).
+- **API** para o app mobile (expor uma API dedicada ou consumir o mesmo banco).
+- **Billing da própria plataforma** (planos do SaaS) — hoje as assinaturas são
+  vendidas ao cliente final do salão.

@@ -18,7 +18,7 @@ import { tenants } from "./tenancy";
 
 export const earningKind = pgEnum("earning_kind", ["commission", "tip"]);
 
-export const earningStatus = pgEnum("earning_status", ["pending", "paid"]);
+export const earningStatus = pgEnum("earning_status", ["pending", "paid", "void"]);
 
 export const earnings = pgTable(
   "earnings",

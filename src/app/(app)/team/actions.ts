@@ -6,11 +6,12 @@ import { internalError } from "@/lib/errors";
 
 import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, like } from "drizzle-orm";
 import { z } from "zod";
-import { invitations, memberships } from "@/db/schema";
+import { invitations, memberships, notifications } from "@/db/schema";
 import { withUser } from "@/lib/db";
 import { dbErrorCode } from "@/lib/db-errors";
+import { enqueueEmail } from "@/lib/notifications";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import type { TeamActionState } from "./types";
@@ -70,6 +71,12 @@ export async function inviteMemberAction(
 
   const token = randomBytes(24).toString("base64url");
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
+  const baseUrl = (
+    process.env.NEXT_PUBLIC_APP_URL ??
+    process.env.BETTER_AUTH_URL ??
+    ""
+  ).replace(/\/+$/, "");
+  const inviteUrl = `${baseUrl}/invite/${token}`;
 
   try {
     await withUser(ctx.userId, async (tx) => {
@@ -92,6 +99,26 @@ export async function inviteMemberAction(
             invitedBy: ctx.userId,
           },
         });
+
+      await tx
+        .delete(notifications)
+        .where(
+          and(
+            eq(notifications.tenantId, ctx.tenant.id),
+            eq(notifications.recipient, parsed.data.email),
+            eq(notifications.status, "pending"),
+            like(notifications.dedupeKey, "invite-%"),
+          ),
+        );
+
+      await enqueueEmail(tx, {
+        tenantId: ctx.tenant.id,
+        recipient: parsed.data.email,
+        subject: `Convite para ${ctx.tenant.name}`,
+        body: `Você foi convidado para a equipe de ${ctx.tenant.name} com o papel ${parsed.data.role}. Aceite em: <a href="${inviteUrl}">${inviteUrl}</a>. O convite expira em 7 dias.`,
+        dedupeKey: `invite-${token}`,
+        createdBy: ctx.userId,
+      });
     });
   } catch (cause) {
     if (dbErrorCode(cause) === "42501") {
@@ -101,9 +128,11 @@ export async function inviteMemberAction(
   }
 
   revalidatePath("/team");
+  revalidatePath("/notifications");
   return {
     status: "success",
-    message: "Convite gerado. Copie o link e envie para a pessoa.",
+    message:
+      "Convite gerado e e-mail colocado na caixa de saída. O link também pode ser copiado.",
   };
 }
 

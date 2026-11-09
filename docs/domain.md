@@ -38,14 +38,18 @@ nail/design de unhas, sobrancelhas/cílios e massagem — em geral negócios de
   preços, pacotes, promoções, repasses e relatórios.
 
 ## 4. Estados de agendamento (referência)
-`pending → confirmed → check_in → checkout → completed` (com `cancelled`).
+`pending → confirmed → check_in → checkout → completed`, com `cancelled` e
+`no_show` como saídas (ver a máquina de estados em
+[`como-funciona.md`](como-funciona.md#54-estados-e-políticas)).
 
 ## 5. Regras de negócio comuns
 - **Preço e duração podem variar por filial** (não só por serviço).
 - **Slots** derivam do horário de funcionamento (+ intervalos), feriados e
   agendamentos existentes do profissional.
 - **Pacote/assinatura** cobrem total ou parcialmente um atendimento.
-- **Duplicidade**: evitar dois agendamentos ativos iguais (cliente/filial/horário).
+- **Duplicidade**: o mesmo profissional não pode ter dois atendimentos
+  sobrepostos (atendimentos encostados são permitidos); no-show não ocupa o
+  horário no banco.
 - **Bloqueios**: férias, folgas, feriados e dias fechados.
 - **No-show/cancelamento**: políticas e taxas (definir por tenant).
 

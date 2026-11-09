@@ -1,12 +1,12 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { webhookEvents } from "@/db/schema";
 import { getDb } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { recordMetric } from "@/lib/metrics";
 import { sendAlert } from "@/lib/alerts";
 import { getPaymentProvider } from "@/lib/payments";
-import { processPaymentWebhook } from "@/lib/payments/confirm";
+import { dispatchWebhookEvent } from "@/lib/webhook-events";
 
 /** Limite de tamanho do corpo (evita payloads gigantes / abuso da tabela). */
 const MAX_BODY_BYTES = 256 * 1024;
@@ -117,30 +117,94 @@ export async function POST(
     const db = getDb();
     const inserted = await db
       .insert(webhookEvents)
-      .values({ provider, eventId, payload: payload as object })
+      .values({
+        provider,
+        eventId,
+        payload: payload as object,
+        status: "pending",
+        requestUrl: request.url,
+        // Se a instância cair antes de processar, o cron tenta de novo em 1min.
+        nextAttemptAt: new Date(Date.now() + 60_000),
+      })
       .onConflictDoNothing()
       .returning({ id: webhookEvents.id });
 
+    let existing:
+      | {
+          id: string;
+          provider: string;
+          payload: unknown;
+          requestUrl: string | null;
+          attempts: number;
+          status: "pending" | "processed" | "failed";
+          processedAt: Date | null;
+        }
+      | undefined;
     if (inserted.length === 0) {
+      [existing] = await db
+        .select({
+          id: webhookEvents.id,
+          provider: webhookEvents.provider,
+          payload: webhookEvents.payload,
+          requestUrl: webhookEvents.requestUrl,
+          attempts: webhookEvents.attempts,
+          status: webhookEvents.status,
+          processedAt: webhookEvents.processedAt,
+        })
+        .from(webhookEvents)
+        .where(
+          and(
+            eq(webhookEvents.provider, provider),
+            eq(webhookEvents.eventId, eventId),
+          ),
+        )
+        .limit(1);
+    }
+
+    if (inserted.length === 0 && (!existing || existing.status === "processed" || existing.processedAt)) {
       logger.info("webhook_duplicate", { provider, eventId });
       recordMetric("webhook_event", 1, { provider, status: "duplicate" });
       return Response.json({ received: true, duplicate: true }, { status: 200 });
     }
 
-    if (adapter) {
-      const result = await adapter.parseWebhook({
-        request: webhookRequest,
-        secret,
+    if (inserted.length === 0 && existing) {
+      // Reenvio de um evento que falhou/ficou pendente: tenta de novo.
+      logger.info("webhook_retry", {
+        provider,
+        eventId,
+        attempts: existing.attempts,
       });
-      await db.transaction((tx) =>
-        processPaymentWebhook(tx, { providerId: provider, result }),
-      );
+      const result = await dispatchWebhookEvent(db, existing);
+      if (!result.ok) {
+        recordMetric("webhook_event", 1, { provider, status: "failed" });
+        return Response.json(
+          { error: "Falha ao processar webhook." },
+          { status: 500 },
+        );
+      }
+      recordMetric("webhook_event", 1, { provider, status: "retried" });
+      return Response.json({ received: true, retried: true }, { status: 200 });
     }
 
-    await db
-      .update(webhookEvents)
-      .set({ processedAt: new Date() })
-      .where(eq(webhookEvents.id, inserted[0].id));
+    const result = await dispatchWebhookEvent(db, {
+      id: inserted[0].id,
+      provider,
+      payload,
+      requestUrl: request.url,
+      attempts: 0,
+    });
+    if (!result.ok) {
+      recordMetric("webhook_event", 1, { provider, status: "failed" });
+      sendAlert({
+        level: "error",
+        title: "webhook_failed",
+        context: { provider, eventId, error: result.error },
+      });
+      return Response.json(
+        { error: "Falha ao processar webhook." },
+        { status: 500 },
+      );
+    }
 
     logger.info("webhook_received", { provider, eventId });
     recordMetric("webhook_event", 1, { provider, status: "received" });

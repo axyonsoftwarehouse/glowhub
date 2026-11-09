@@ -9,6 +9,11 @@ import { appointments, clients } from "@/db/schema";
 import { computeSlotsForDay } from "@/lib/availability-data";
 import { getDb } from "@/lib/db";
 import { enqueueEmail } from "@/lib/notifications";
+import {
+  formatReminderWhen,
+  reminderDedupeKey,
+  reminderScheduledFor,
+} from "@/lib/reminders";
 import { checkRateLimit, clientKey } from "@/lib/rate-limit";
 import { getPublicTenant } from "@/lib/tenant";
 import { zonedTimeToUtc } from "@/lib/timezone";
@@ -145,21 +150,24 @@ export async function createPublicBookingAction(input: {
         startsAt.getTime() + ctx.durationMinutes * 60_000,
       );
 
-      await tx.insert(appointments).values({
-        tenantId: tenant.id,
-        branchId: input.branchId,
-        professionalId: input.professionalId,
-        serviceId: input.serviceId,
-        clientId,
-        startsAt,
-        endsAt,
-        priceCents: ctx.priceCents,
-        status: "pending",
-        notes:
-          input.notes && input.notes.length > 0
-            ? `Online: ${input.notes}`
-            : "Agendamento online",
-      });
+      const [appointment] = await tx
+        .insert(appointments)
+        .values({
+          tenantId: tenant.id,
+          branchId: input.branchId,
+          professionalId: input.professionalId,
+          serviceId: input.serviceId,
+          clientId,
+          startsAt,
+          endsAt,
+          priceCents: ctx.priceCents,
+          status: "pending",
+          notes:
+            input.notes && input.notes.length > 0
+              ? `Online: ${input.notes}`
+              : "Agendamento online",
+        })
+        .returning({ id: appointments.id });
 
       if (email.length > 0) {
         await enqueueEmail(tx, {
@@ -167,6 +175,17 @@ export async function createPublicBookingAction(input: {
           recipient: email,
           subject: `Agendamento confirmado - ${input.date} às ${input.time}`,
           body: `Olá ${name}, seu agendamento foi reservado para ${input.date} às ${input.time}. Até logo!`,
+        });
+        await enqueueEmail(tx, {
+          tenantId: tenant.id,
+          recipient: email,
+          subject: `Lembrete do seu horário em ${tenant.name}`,
+          body: `Olá ${name}, seu horário está marcado para ${formatReminderWhen(
+            startsAt,
+            ctx.timezone,
+          )}. Se precisar remarcar, entre em contato com ${tenant.name}.`,
+          scheduledFor: reminderScheduledFor(startsAt),
+          dedupeKey: reminderDedupeKey(appointment.id),
         });
       }
 
