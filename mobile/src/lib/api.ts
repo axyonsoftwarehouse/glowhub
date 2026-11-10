@@ -247,6 +247,18 @@ export async function updateAppointmentStatus(
   );
 }
 
+export async function registerPushToken(
+  token: string,
+  expoPushToken: string,
+  platform: "ios" | "android" | "web" | "unknown",
+) {
+  return request<{ ok: true }>("/api/v1/push-tokens", {
+    method: "POST",
+    token,
+    body: { token: expoPushToken, platform },
+  });
+}
+
 export function publicTenantSlug(): string {
   return process.env.EXPO_PUBLIC_TENANT_SLUG?.trim() || "demo";
 }

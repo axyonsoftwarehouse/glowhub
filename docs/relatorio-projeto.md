@@ -142,7 +142,8 @@ Browser ──► Next (RSC + Server Actions)
   `coupons`/`coupon_redemptions`.
 - **Fidelização:** `gift_cards`/`gift_card_redemptions`, `loyalty_settings`,
   `loyalty_points`, `campaigns`.
-- **Comunicação:** `notifications` (caixa de saída).
+- **Notificações:** `notifications` (caixa de saída), `push_tokens` (tokens Expo
+  por usuário/tenant).
 
 ### 2.5 Financeiro (princípios e estado)
 - **Partidas dobradas**, **append-only** (sem UPDATE/DELETE para a role do app;
@@ -252,9 +253,10 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
   checklist, modo solo (`tenants.is_solo`) e onboarding que cria profissional,
   serviço, horários e plano de contas.
 - **App mobile (Expo)**: login Bearer, agenda Hoje/7 dias, pull-to-refresh,
-  ações de status e **booking público em 4 passos**
-  (`mobile/src/app/book/index.tsx`).
-- **CI** + **115 testes unitários** (18 arquivos) e **16 cenários e2e** (+ setup;
+  ações de status, **booking público em 4 passos** e **registro de push**
+  (`mobile/`). O envio real de push depende de `projectId` EAS e development
+  build.
+- **CI** + **117 testes unitários** (19 arquivos) e **16 cenários e2e** (+ setup;
   Playwright: login demo, minha agenda + status, histórico do cliente, booking,
   API v1 pública, navegação mobile, assinaturas, fechamento e **7 verificações
   de acessibilidade com axe**); `tsc`/`eslint`/`build` verdes.
@@ -271,9 +273,10 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 - [x] **Web mobile solo**: navegação inferior, painel “Hoje”, modo solo e
       onboarding assistido.
 - [x] **App mobile inicial (Expo)**: login Bearer, token no SecureStore, agenda
-      Hoje/7 dias, ações de status e booking público
+      Hoje/7 dias, ações de status, booking público e registro de push
       ([`mobile/`](../mobile/README.md)).
-- [ ] **App mobile completo**: push e login do cliente final.
+- [ ] **App mobile completo**: push validado em development build, login do
+      cliente final e build EAS.
 
 ### Financeiro / comercial
 - [x] **Gateway online** (adapter portável: mock + Mercado Pago), link de

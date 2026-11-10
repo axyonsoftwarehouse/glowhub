@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -29,6 +29,7 @@ import {
   type MeResponse,
 } from "@/lib/api";
 import { clearToken, getToken } from "@/lib/session";
+import { enablePush, type PushStatus } from "@/lib/push";
 import { colors, radius, spacing } from "@/theme";
 
 const STATUS_LABEL: Record<AppointmentStatus, string> = {
@@ -110,6 +111,8 @@ export default function AgendaScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [pushStatus, setPushStatus] = useState<PushStatus | null>(null);
+  const pushAttempted = useRef(false);
   const [actionError, setActionError] = useState<{
     id: string;
     message: string;
@@ -141,6 +144,13 @@ export default function AgendaScreen() {
 
         setProfile(profileData);
         setItems(agenda.appointments);
+
+        if (!pushAttempted.current) {
+          pushAttempted.current = true;
+          void enablePush(activeToken)
+            .then(setPushStatus)
+            .catch(() => setPushStatus("error"));
+        }
       } catch (cause) {
         if (cause instanceof ApiClientError && cause.status === 401) {
           await clearToken();
@@ -270,6 +280,12 @@ export default function AgendaScreen() {
             ) : null}
             {profile?.professional ? (
               <Pill label={profile.professional.name} tone="neutral" />
+            ) : null}
+            {pushStatus === "ok" ? (
+              <Pill label="Push ativo" tone="success" />
+            ) : null}
+            {pushStatus === "denied" ? (
+              <Pill label="Push bloqueado" tone="warning" />
             ) : null}
           </View>
         </View>
