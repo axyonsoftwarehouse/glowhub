@@ -39,12 +39,29 @@ curl "https://SEU_DOMINIO/api/v1/public/catalog" -H "x-tenant-slug: demo"
 | `GET` | `/me` | Usuário, tenant ativo (inclui `isSolo`), papel, profissional vinculado e lista de tenants |
 | `POST` | `/tenant` | Troca o tenant ativo (`{ "tenantId": "..." }`), validando o vínculo |
 | `GET` | `/appointments` | Agenda do tenant; filtros `from`, `to`, `status`, `professionalId`, `mine=1`, `limit` |
+| `PATCH` | `/appointments/:id/status` | Muda o status; valida transição, janela de cancelamento e gera taxa de no-show |
 | `POST` | `/auth/login` | Login do app; devolve token de sessão |
 | `POST` | `/auth/logout` | Revoga a sessão atual |
 
 `GET /appointments` aceita `from`/`to` em ISO 8601 (padrão: hoje até +7 dias) e
 limita a 200 registros. Com `mine=1`, exige que o usuário tenha um profissional
 vinculado e filtra a agenda dele.
+
+### Mudança de status
+
+```http
+PATCH /api/v1/appointments/<id>/status
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{ "status": "check_in" }
+```
+
+Transições permitidas: `pending → confirmed`, `confirmed → check_in`,
+`check_in → checkout`, `checkout → completed`, e `cancelled`/`no_show` a partir
+de `pending`/`confirmed` (cancelamento também de `check_in`/`checkout`).
+Respostas: `200 { ok, status }`, `409 INVALID_TRANSITION`, `403
+CANCELLATION_WINDOW`/`FORBIDDEN`, `404 NOT_FOUND`.
 
 ## Endpoints públicos
 
@@ -104,14 +121,14 @@ O app Expo fica em [`mobile/`](../mobile/README.md):
 - **Login** (`src/app/index.tsx`) chama `/auth/login`, guarda o token no
   SecureStore (localStorage no web) e navega para a agenda.
 - **Agenda** (`src/app/agenda.tsx`) chama `/me` e `/appointments`; mostra
-  Hoje/7 dias, pull-to-refresh, status, profissional, modo solo e preço.
+  Hoje/7 dias, pull-to-refresh, status, profissional, modo solo e preço. Os
+  botões Confirmar/Check-in/Checkout/Concluir, Cancelar e Não veio chamam
+  `PATCH /appointments/:id/status`.
 - Expo Router SDK 58, TypeScript estrito e `expo-secure-store`.
 - Rodar: `cd mobile && npm install && cp .env.example .env && npm start`.
   Ajuste `EXPO_PUBLIC_API_URL` para o IP da máquina em aparelho físico.
 
 ## Próximos passos do app
 
-- Ações de status (`PATCH /api/v1/appointments/:id/status`) — a agenda ainda é
-  somente leitura no app.
 - Booking público do cliente (`/public/catalog|availability|bookings`).
 - Troca de tenant, notificações push e login do cliente final (OTP).

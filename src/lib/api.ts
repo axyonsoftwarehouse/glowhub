@@ -76,12 +76,12 @@ export function apiPreflight(request: Request): Response {
   return new Response(null, { status: 204, headers: corsHeaders(request) });
 }
 
-export function handleApi(
-  handler: (request: Request) => Promise<Response>,
-): (request: Request) => Promise<Response> {
-  return async (request) => {
+export function handleApi<C = unknown>(
+  handler: (request: Request, context: C) => Promise<Response>,
+): (request: Request, context: C) => Promise<Response> {
+  return async (request, context) => {
     try {
-      return await handler(request);
+      return await handler(request, context);
     } catch (cause) {
       if (cause instanceof ApiError) {
         return apiError(request, cause.status, cause.code, cause.message);

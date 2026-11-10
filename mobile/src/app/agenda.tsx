@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -22,6 +23,7 @@ import {
   appointments,
   logout,
   me,
+  updateAppointmentStatus,
   type Appointment,
   type AppointmentStatus,
   type MeResponse,
@@ -51,6 +53,24 @@ const STATUS_TONE: Record<
   cancelled: "neutral",
   no_show: "danger",
 };
+
+const PRIMARY_ACTION: Partial<
+  Record<AppointmentStatus, { status: AppointmentStatus; label: string }>
+> = {
+  pending: { status: "confirmed", label: "Confirmar" },
+  confirmed: { status: "check_in", label: "Check-in" },
+  check_in: { status: "checkout", label: "Checkout" },
+  checkout: { status: "completed", label: "Concluir" },
+};
+
+const CAN_CANCEL: AppointmentStatus[] = [
+  "pending",
+  "confirmed",
+  "check_in",
+  "checkout",
+];
+
+const CAN_NO_SHOW: AppointmentStatus[] = ["pending", "confirmed"];
 
 function dateKey(date: Date): string {
   const year = date.getFullYear();
@@ -89,6 +109,11 @@ export default function AgendaScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<{
+    id: string;
+    message: string;
+  } | null>(null);
 
   const refresh = useCallback(
     async (mode: "initial" | "pull" = "initial") => {
@@ -140,6 +165,68 @@ export default function AgendaScreen() {
       void refresh("initial");
     }, [refresh]),
   );
+
+  async function changeStatus(
+    item: Appointment,
+    status: AppointmentStatus,
+  ) {
+    const activeToken = token ?? (await getToken());
+    if (!activeToken) {
+      router.replace("/");
+      return;
+    }
+    setUpdatingId(item.id);
+    setActionError(null);
+    try {
+      await updateAppointmentStatus(activeToken, item.id, status);
+      setItems((current) =>
+        current.map((appointment) =>
+          appointment.id === item.id
+            ? { ...appointment, status }
+            : appointment,
+        ),
+      );
+    } catch (cause) {
+      if (cause instanceof ApiClientError && cause.status === 401) {
+        await clearToken();
+        router.replace("/");
+        return;
+      }
+      setActionError({
+        id: item.id,
+        message:
+          cause instanceof Error
+            ? cause.message
+            : "Não foi possível alterar o status.",
+      });
+    } finally {
+      setUpdatingId(null);
+    }
+  }
+
+  function confirmStatus(
+    item: Appointment,
+    status: AppointmentStatus,
+    label: string,
+  ) {
+    Alert.alert(
+      `${label}?`,
+      `Atendimento de ${item.client.name} às ${timeLabel(item.startsAt)}.`,
+      [
+        { text: "Voltar", style: "cancel" },
+        {
+          text: label,
+          style:
+            status === "cancelled" || status === "no_show"
+              ? "destructive"
+              : "default",
+          onPress: () => {
+            void changeStatus(item, status);
+          },
+        },
+      ],
+    );
+  }
 
   async function handleLogout() {
     const activeToken = token ?? (await getToken());
@@ -257,28 +344,86 @@ export default function AgendaScreen() {
               </Text>
             </Card>
           ) : (
-            items.map((item) => (
-              <Card key={item.id} style={styles.appointment}>
-                <View style={styles.timeColumn}>
-                  <Text style={styles.time}>{timeLabel(item.startsAt)}</Text>
-                  <Text style={styles.day}>{dayLabel(item.startsAt)}</Text>
-                </View>
-                <View style={styles.appointmentBody}>
-                  <View style={styles.appointmentTop}>
-                    <Text style={styles.client}>{item.client.name}</Text>
-                    <Pill
-                      label={STATUS_LABEL[item.status]}
-                      tone={STATUS_TONE[item.status]}
-                    />
+            items.map((item) => {
+              const primary = PRIMARY_ACTION[item.status];
+              const busy = updatingId === item.id;
+              return (
+                <Card key={item.id} style={styles.appointment}>
+                  <View style={styles.timeColumn}>
+                    <Text style={styles.time}>{timeLabel(item.startsAt)}</Text>
+                    <Text style={styles.day}>{dayLabel(item.startsAt)}</Text>
                   </View>
-                  <Text style={styles.service}>{item.service.name}</Text>
-                  <Text style={styles.meta}>
-                    {item.professional.name} · {item.branch.name}
-                  </Text>
-                  <Text style={styles.price}>{money(item.priceCents)}</Text>
-                </View>
-              </Card>
-            ))
+                  <View style={styles.appointmentBody}>
+                    <View style={styles.appointmentTop}>
+                      <Text style={styles.client}>{item.client.name}</Text>
+                      <Pill
+                        label={STATUS_LABEL[item.status]}
+                        tone={STATUS_TONE[item.status]}
+                      />
+                    </View>
+                    <Text style={styles.service}>{item.service.name}</Text>
+                    <Text style={styles.meta}>
+                      {item.professional.name} · {item.branch.name}
+                    </Text>
+                    <Text style={styles.price}>{money(item.priceCents)}</Text>
+
+                    <View style={styles.actions}>
+                      {primary ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          disabled={busy}
+                          onPress={() => changeStatus(item, primary.status)}
+                          style={({ pressed }) => [
+                            styles.actionPrimary,
+                            (pressed || busy) && styles.actionPressed,
+                          ]}
+                        >
+                          <Text style={styles.actionPrimaryLabel}>
+                            {busy ? "..." : primary.label}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                      {CAN_CANCEL.includes(item.status) ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          disabled={busy}
+                          onPress={() =>
+                            confirmStatus(item, "cancelled", "Cancelar")
+                          }
+                          style={({ pressed }) => [
+                            styles.actionSecondary,
+                            (pressed || busy) && styles.actionPressed,
+                          ]}
+                        >
+                          <Text style={styles.actionDangerLabel}>Cancelar</Text>
+                        </Pressable>
+                      ) : null}
+                      {CAN_NO_SHOW.includes(item.status) ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          disabled={busy}
+                          onPress={() =>
+                            confirmStatus(item, "no_show", "Não veio")
+                          }
+                          style={({ pressed }) => [
+                            styles.actionSecondary,
+                            (pressed || busy) && styles.actionPressed,
+                          ]}
+                        >
+                          <Text style={styles.actionDangerLabel}>Não veio</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+
+                    {actionError?.id === item.id ? (
+                      <Text style={styles.actionError}>
+                        {actionError.message}
+                      </Text>
+                    ) : null}
+                  </View>
+                </Card>
+              );
+            })
           )}
         </View>
       </ScrollView>
@@ -417,6 +562,43 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
     color: colors.brand,
+  },
+  actions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  actionPrimary: {
+    borderRadius: radius.pill,
+    backgroundColor: colors.brand,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  actionSecondary: {
+    borderRadius: radius.pill,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  actionPressed: {
+    opacity: 0.7,
+  },
+  actionPrimaryLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: colors.brandForeground,
+  },
+  actionDangerLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: colors.danger,
+  },
+  actionError: {
+    marginTop: spacing.xs,
+    fontSize: 12,
+    color: colors.danger,
   },
   empty: {
     alignItems: "center",
