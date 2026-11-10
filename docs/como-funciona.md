@@ -513,7 +513,8 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
 - **Rate limit** (`src/lib/rate-limit.ts`): fixed-window na tabela interna
   `rate_limits`, via conexão admin; fail-open.
 - **App mobile** (`mobile/`): Expo Router SDK 58; login em `/api/v1/auth/login`,
-  token no SecureStore e agenda em `/api/v1/me` + `/api/v1/appointments`. O
+  token no SecureStore e agenda em `/api/v1/me` + `/api/v1/appointments`, com
+  ações de status via `PATCH /api/v1/appointments/:id/status`. O
   `EXPO_PUBLIC_API_URL` aponta para a API (localhost no simulador, IP da máquina
   no aparelho físico).
 

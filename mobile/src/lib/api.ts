@@ -159,4 +159,19 @@ export async function appointments(
   );
 }
 
+export async function updateAppointmentStatus(
+  token: string,
+  appointmentId: string,
+  status: AppointmentStatus,
+) {
+  return request<{ ok: true; status: AppointmentStatus }>(
+    `/api/v1/appointments/${appointmentId}/status`,
+    {
+      method: "PATCH",
+      token,
+      body: { status },
+    },
+  );
+}
+
 export { apiBaseUrl };

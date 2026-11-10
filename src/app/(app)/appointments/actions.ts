@@ -5,10 +5,10 @@ import { dbErrorCode, overlapMessage } from "@/lib/appointment-errors";
 
 import { revalidatePath } from "next/cache";
 import { and, eq } from "drizzle-orm";
-import { appointments, clients, memberships, notifications, tenants } from "@/db/schema";
+import { appointments, clients } from "@/db/schema";
 import { computeSlotsForDay } from "@/lib/availability-data";
 import { withUser } from "@/lib/db";
-import { applyNoShowFee } from "@/lib/no-show-fee";
+import { setAppointmentStatus } from "@/lib/appointment-status";
 import { enqueueEmail } from "@/lib/notifications";
 import {
   formatReminderWhen,
@@ -17,16 +17,8 @@ import {
 } from "@/lib/reminders";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
-import {
-  isWithinCancellationWindow,
-  OVERRIDE_ROLES,
-} from "@/lib/tenant-policy";
 import { zonedTimeToUtc } from "@/lib/timezone";
-import {
-  ALLOWED_TRANSITIONS,
-  type AppointmentActionState,
-  type AppointmentStatus,
-} from "./types";
+import type { AppointmentActionState, AppointmentStatus } from "./types";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -196,90 +188,16 @@ export async function setAppointmentStatusAction(
   if (!session?.user) return error("Sessão expirada.");
 
   try {
-    const result = await withUser(session.user.id, async (tx) => {
-      const [appointment] = await tx
-        .select({
-          id: appointments.id,
-          status: appointments.status,
-          startsAt: appointments.startsAt,
-          clientId: appointments.clientId,
-          serviceId: appointments.serviceId,
-          priceCents: appointments.priceCents,
-        })
-        .from(appointments)
-        .where(and(eq(appointments.id, id), eq(appointments.tenantId, tenant.id)))
-        .limit(1);
-      if (!appointment) return { error: "Agendamento não encontrado." };
+    const result = await withUser(session.user.id, (tx) =>
+      setAppointmentStatus(tx, {
+        tenantId: tenant.id,
+        userId: session.user.id,
+        appointmentId: id,
+        status,
+      }),
+    );
 
-      const current = appointment.status as AppointmentStatus;
-      if (!ALLOWED_TRANSITIONS[current].includes(status)) {
-        return { error: "Transição de status inválida." };
-      }
-
-      const [policy] = await tx
-        .select({
-          cancellationWindowHours: tenants.cancellationWindowHours,
-          noShowFeePercent: tenants.noShowFeePercent,
-        })
-        .from(tenants)
-        .where(eq(tenants.id, tenant.id))
-        .limit(1);
-      const windowHours = policy?.cancellationWindowHours ?? 0;
-
-      if (
-        status === "cancelled" &&
-        isWithinCancellationWindow(appointment.startsAt, windowHours)
-      ) {
-        const [membership] = await tx
-          .select({ role: memberships.role })
-          .from(memberships)
-          .where(
-            and(
-              eq(memberships.tenantId, tenant.id),
-              eq(memberships.userId, session.user.id),
-            ),
-          )
-          .limit(1);
-        if (!OVERRIDE_ROLES.includes(membership?.role ?? "")) {
-          return {
-            error: `Cancelamento dentro da janela mínima de ${windowHours}h. Peça a um gerente.`,
-          };
-        }
-      }
-
-      await tx
-        .update(appointments)
-        .set({ status })
-        .where(and(eq(appointments.id, id), eq(appointments.tenantId, tenant.id)));
-
-      if (status === "cancelled" || status === "no_show") {
-        await tx
-          .delete(notifications)
-          .where(
-            and(
-              eq(notifications.tenantId, tenant.id),
-              eq(notifications.dedupeKey, reminderDedupeKey(appointment.id)),
-              eq(notifications.status, "pending"),
-            ),
-          );
-      }
-
-      if (status === "no_show") {
-        await applyNoShowFee(tx, {
-          tenantId: tenant.id,
-          userId: session.user.id,
-          appointmentId: appointment.id,
-          clientId: appointment.clientId,
-          serviceId: appointment.serviceId,
-          priceCents: appointment.priceCents,
-          percent: policy?.noShowFeePercent ?? 0,
-        });
-      }
-
-      return { ok: true as const };
-    });
-
-    if ("error" in result) return error(result.error);
+    if (!result.ok) return error(result.error);
   } catch (cause) {
     return error(overlapMessage(cause) ?? internalError(cause));
   }

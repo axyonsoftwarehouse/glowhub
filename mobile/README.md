@@ -43,11 +43,11 @@ npm run typecheck  # tsc --noEmit
   SecureStore (localStorage no web).
 - **Agenda** (`src/app/agenda.tsx`): `/api/v1/me` + `/api/v1/appointments`;
   filtros Hoje/7 dias, pull-to-refresh, status do atendimento, modo solo e
-  profissional vinculado.
+  profissional vinculado. Ações: Confirmar, Check-in, Checkout, Concluir,
+  Cancelar e Não veio (`PATCH /appointments/:id/status`).
 
 ## Próximos passos
 
-- Ações de status (`/api/v1/appointments/:id/status`) — a API ainda é somente
-  leitura na agenda.
 - Booking público do cliente (`/api/v1/public/*`).
-- Push, login do cliente final e troca de tenant no app.
+- Troca de tenant, push e login do cliente final.
+- Testar em aparelho físico/emulador e gerar build EAS.

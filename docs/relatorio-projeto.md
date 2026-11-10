@@ -251,8 +251,9 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 - **Pacote mobile solo**: navegação inferior, painel “Hoje” com ações rápidas e
   checklist, modo solo (`tenants.is_solo`) e onboarding que cria profissional,
   serviço, horários e plano de contas.
-- **App mobile (Expo)**: login Bearer, agenda Hoje/7 dias e pull-to-refresh
-  (`mobile/`).
+- **App mobile (Expo)**: login Bearer, agenda Hoje/7 dias, pull-to-refresh e
+  ações de status (confirmar, check-in, checkout, concluir, cancelar, no-show)
+  via `PATCH /api/v1/appointments/:id/status`.
 - **CI** + **115 testes unitários** (18 arquivos) e **16 cenários e2e** (+ setup;
   Playwright: login demo, minha agenda + status, histórico do cliente, booking,
   API v1 pública, navegação mobile, assinaturas, fechamento e **7 verificações
@@ -269,10 +270,9 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
       [`api-mobile.md`](api-mobile.md).
 - [x] **Web mobile solo**: navegação inferior, painel “Hoje”, modo solo e
       onboarding assistido.
-- [x] **App mobile inicial (Expo)**: login Bearer, token no SecureStore e agenda
-      Hoje/7 dias ([`mobile/`](../mobile/README.md)).
-- [ ] **App mobile completo**: ações de status, booking público, push e login do
-      cliente final.
+- [x] **App mobile inicial (Expo)**: login Bearer, token no SecureStore, agenda
+      Hoje/7 dias e ações de status ([`mobile/`](../mobile/README.md)).
+- [ ] **App mobile completo**: booking público, push e login do cliente final.
 
 ### Financeiro / comercial
 - [x] **Gateway online** (adapter portável: mock + Mercado Pago), link de
