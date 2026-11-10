@@ -16,4 +16,5 @@ export * from "./subscriptions";
 export * from "./coupons";
 export * from "./loyalty";
 export * from "./notifications";
+export * from "./push";
 export * from "./infra";

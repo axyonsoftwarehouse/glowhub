@@ -4,6 +4,7 @@ import { overlapMessage } from "@/lib/appointment-errors";
 import { computeSlotsForDay } from "@/lib/availability-data";
 import { getDb } from "@/lib/db";
 import { enqueueEmail } from "@/lib/notifications";
+import { sendPushToTenant } from "@/lib/push";
 import {
   formatReminderWhen,
   reminderDedupeKey,
@@ -155,6 +156,13 @@ export async function createPublicBooking(params: {
         code: result.code ?? "SLOT_INVALID",
       };
     }
+
+    await sendPushToTenant(tenant.id, {
+      title: "Novo agendamento",
+      body: `${name} · ${input.date} às ${input.time}`,
+      data: { type: "booking", url: "/agenda" },
+    }).catch(() => undefined);
+
     return { ok: true, label: `${input.date} às ${input.time}` };
   } catch (cause) {
     if (overlapMessage(cause)) {

@@ -43,6 +43,13 @@
       "when": 1794261562838,
       "tag": "0005_modo_solo",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794276236313,
+      "tag": "0006_push_tokens",
+      "breakpoints": true
     }
   ]
 }

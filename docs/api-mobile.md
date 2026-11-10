@@ -40,6 +40,8 @@ curl "https://SEU_DOMINIO/api/v1/public/catalog" -H "x-tenant-slug: demo"
 | `POST` | `/tenant` | Troca o tenant ativo (`{ "tenantId": "..." }`), validando o vínculo |
 | `GET` | `/appointments` | Agenda do tenant; filtros `from`, `to`, `status`, `professionalId`, `mine=1`, `limit` |
 | `PATCH` | `/appointments/:id/status` | Muda o status; valida transição, janela de cancelamento e gera taxa de no-show |
+| `POST` | `/push-tokens` | Registra/atualiza o token Expo Push do aparelho no tenant ativo |
+| `DELETE` | `/push-tokens` | Remove o token do usuário atual |
 | `POST` | `/auth/login` | Login do app; devolve token de sessão |
 | `POST` | `/auth/logout` | Revoga a sessão atual |
 
@@ -127,10 +129,14 @@ O app Expo fica em [`mobile/`](../mobile/README.md):
 - **Booking público** (`src/app/book/index.tsx`): sem login, em 4 passos —
   serviço, profissional/filial, data/horário e contato; usa
   `/public/catalog|availability|bookings` com `EXPO_PUBLIC_TENANT_SLUG`.
+- **Push**: após o login, o app pede permissão e registra o token Expo em
+  `/push-tokens`. No Android, push remoto exige **development build** (não Expo
+  Go) e um `projectId` EAS; sem isso o app mostra push como indisponível.
 - Rodar: `cd mobile && npm install && cp .env.example .env && npm start`.
-  Ajuste `EXPO_PUBLIC_API_URL` e `EXPO_PUBLIC_TENANT_SLUG`.
+  Ajuste `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_TENANT_SLUG` e, se houver,
+  `EXPO_PUBLIC_EAS_PROJECT_ID`.
 
 ## Próximos passos do app
 
-- Troca de tenant, notificações push e login do cliente final (OTP).
-- Testar em aparelho físico/emulador e gerar build EAS.
+- Login do cliente final (OTP) e troca de tenant no app.
+- Testar push em aparelho físico/development build e gerar build EAS.

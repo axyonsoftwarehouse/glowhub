@@ -108,6 +108,7 @@ begin
     'subscription_plans', 'plan_items', 'client_subscriptions',
     'subscription_redemptions',
     'coupons', 'coupon_redemptions', 'notifications',
+    'push_tokens',
     'gift_cards', 'gift_card_redemptions', 'loyalty_settings',
     'loyalty_points', 'campaigns'
   ]
@@ -153,6 +154,12 @@ drop policy if exists invitations_manage on public.invitations;
 create policy invitations_manage on public.invitations
   for all using (public.has_tenant_role(tenant_id, array['owner', 'admin']::public.tenant_role[]))
   with check (public.has_tenant_role(tenant_id, array['owner', 'admin']::public.tenant_role[]));
+
+-- push_tokens: cada usuario gerencia os proprios tokens no tenant.
+drop policy if exists push_tokens_self on public.push_tokens;
+create policy push_tokens_self on public.push_tokens
+  for all using (user_id = public.auth_uid() and public.is_tenant_member(tenant_id))
+  with check (user_id = public.auth_uid() and public.is_tenant_member(tenant_id));
 
 -- profiles
 drop policy if exists profiles_read_self on public.profiles;

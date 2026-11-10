@@ -28,6 +28,11 @@ Ajuste `EXPO_PUBLIC_API_URL`:
 O app usa HTTP em desenvolvimento; para produção, use HTTPS.
 `EXPO_PUBLIC_TENANT_SLUG` define o salão do booking público (padrão `demo`).
 
+Push: o app registra um token Expo em `/api/v1/push-tokens` quando o
+`projectId` EAS está disponível (`npx eas-cli init` grava em `app.json`, ou use
+`EXPO_PUBLIC_EAS_PROJECT_ID`). No Android, push remoto exige **development
+build**; sem projectId o app segue funcionando e mostra push como indisponível.
+
 ## Rodar
 
 ```bash
@@ -53,5 +58,5 @@ npm run typecheck  # tsc --noEmit
 
 ## Próximos passos
 
-- Troca de tenant, push e login do cliente final.
-- Testar em aparelho físico/emulador e gerar build EAS.
+- Login do cliente final (OTP) e troca de tenant.
+- Testar push em aparelho físico/development build e gerar build EAS.

@@ -487,6 +487,9 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
   vencidas uma vez por dia. **Limitação:** a granularidade é diária; um
   agendamento criado poucas horas antes depende do próximo cron ou do botão
   manual em `/notifications`.
+- **Push**: `push_tokens` guarda o token Expo por usuário/tenant; o app registra
+  após o login e o booking público dispara “Novo agendamento” para os aparelhos
+  do tenant. O envio real exige `projectId` EAS e development build no Android.
 - `src/lib/email.ts`: Resend se `RESEND_API_KEY` existir; senão loga no console
   e devolve sucesso de desenvolvimento.
 
@@ -502,7 +505,6 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
 | `/api/webhooks/<provider>` | assinatura HMAC | confirma/estorna pagamentos |
 | `/api/auth/[...all]` | Better Auth + rate limit | login/cadastro/sessão |
 | `/api/v1/*` | Bearer/cookie ou slug público | API do app (ver [`api-mobile.md`](api-mobile.md)) |
-
 - **Métricas** (`src/lib/metrics.ts`): `recordMetric` acumula em memória **e**
   sempre emite um log JSON (`message: "metric"`). Com `METRICS_WEBHOOK_URL`,
   envia POST best-effort. Contadores são por instância serverless.
@@ -514,10 +516,9 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
   `rate_limits`, via conexão admin; fail-open.
 - **App mobile** (`mobile/`): Expo Router SDK 58; login em `/api/v1/auth/login`,
   token no SecureStore e agenda em `/api/v1/me` + `/api/v1/appointments`, com
-  ações de status via `PATCH /api/v1/appointments/:id/status`. O booking
-  público do cliente fica em `mobile/src/app/book/` e usa
-  `/api/v1/public/*` com `EXPO_PUBLIC_TENANT_SLUG`. O `EXPO_PUBLIC_API_URL`
-  aponta para a API (localhost no simulador, IP da máquina no aparelho físico).
+  ações de status via `PATCH /api/v1/appointments/:id/status`, booking público
+  e registro de push. O `EXPO_PUBLIC_API_URL` aponta para a API e
+  `EXPO_PUBLIC_TENANT_SLUG` para o salão do booking; push exige projectId EAS.
 
 ## 11. Ambientes e deploy
 
@@ -540,10 +541,10 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
 
 ## 12. Testes e verificação
 
-- **Unitários (Vitest, 18 arquivos / 115 casos)**: dinheiro, fuso,
+- **Unitários (Vitest, 19 arquivos / 117 casos)**: dinheiro, fuso,
   disponibilidade, erros de banco/agendamento, estoque, fidelidade, CRM,
   lucratividade, assinatura/retry de webhook, estorno de cobrança, lembretes,
-  métricas, alertas e `APP_ENV`.
+  push, métricas, alertas e `APP_ENV`.
 - **e2e (Playwright, 16 cenários + setup de auth)**: login demo, minha agenda
   (vínculo e mudança de status), histórico do cliente, booking público,
   assinaturas, fechamento, API v1 pública, navegação mobile e 7 verificações de
