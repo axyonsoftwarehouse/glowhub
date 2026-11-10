@@ -61,6 +61,8 @@ jobs:
           cache-dependency-path: mobile/package-lock.json
       - name: Install
         run: npm ci
+      - name: Generate route types
+        run: npm run typegen
       - name: Typecheck
         run: npm run typecheck
       - name: Lint

@@ -124,11 +124,13 @@ O app Expo fica em [`mobile/`](../mobile/README.md):
   Hoje/7 dias, pull-to-refresh, status, profissional, modo solo e preço. Os
   botões Confirmar/Check-in/Checkout/Concluir, Cancelar e Não veio chamam
   `PATCH /appointments/:id/status`.
-- Expo Router SDK 58, TypeScript estrito e `expo-secure-store`.
+- **Booking público** (`src/app/book/index.tsx`): sem login, em 4 passos —
+  serviço, profissional/filial, data/horário e contato; usa
+  `/public/catalog|availability|bookings` com `EXPO_PUBLIC_TENANT_SLUG`.
 - Rodar: `cd mobile && npm install && cp .env.example .env && npm start`.
-  Ajuste `EXPO_PUBLIC_API_URL` para o IP da máquina em aparelho físico.
+  Ajuste `EXPO_PUBLIC_API_URL` e `EXPO_PUBLIC_TENANT_SLUG`.
 
 ## Próximos passos do app
 
-- Booking público do cliente (`/public/catalog|availability|bookings`).
 - Troca de tenant, notificações push e login do cliente final (OTP).
+- Testar em aparelho físico/emulador e gerar build EAS.

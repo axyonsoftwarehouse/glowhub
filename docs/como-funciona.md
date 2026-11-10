@@ -514,9 +514,10 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
   `rate_limits`, via conexão admin; fail-open.
 - **App mobile** (`mobile/`): Expo Router SDK 58; login em `/api/v1/auth/login`,
   token no SecureStore e agenda em `/api/v1/me` + `/api/v1/appointments`, com
-  ações de status via `PATCH /api/v1/appointments/:id/status`. O
-  `EXPO_PUBLIC_API_URL` aponta para a API (localhost no simulador, IP da máquina
-  no aparelho físico).
+  ações de status via `PATCH /api/v1/appointments/:id/status`. O booking
+  público do cliente fica em `mobile/src/app/book/` e usa
+  `/api/v1/public/*` com `EXPO_PUBLIC_TENANT_SLUG`. O `EXPO_PUBLIC_API_URL`
+  aponta para a API (localhost no simulador, IP da máquina no aparelho físico).
 
 ## 11. Ambientes e deploy
 
