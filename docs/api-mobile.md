@@ -97,10 +97,21 @@ nativos com Bearer. Para restringir clientes web, defina
   `memberships` e atualiza `profiles.active_tenant_id`.
 - Rotas públicas nunca aceitam `tenant_id` do corpo; o tenant vem do slug/host.
 
+## App mobile (implementado)
+
+O app Expo fica em [`mobile/`](../mobile/README.md):
+
+- **Login** (`src/app/index.tsx`) chama `/auth/login`, guarda o token no
+  SecureStore (localStorage no web) e navega para a agenda.
+- **Agenda** (`src/app/agenda.tsx`) chama `/me` e `/appointments`; mostra
+  Hoje/7 dias, pull-to-refresh, status, profissional, modo solo e preço.
+- Expo Router SDK 58, TypeScript estrito e `expo-secure-store`.
+- Rodar: `cd mobile && npm install && cp .env.example .env && npm start`.
+  Ajuste `EXPO_PUBLIC_API_URL` para o IP da máquina em aparelho físico.
+
 ## Próximos passos do app
 
-- Scaffold Expo/React Native consumindo `/public/catalog`, `/public/availability`
-  e `/public/bookings` (fluxo de agendamento).
-- App da equipe: login com `/auth/login`, agenda com `/appointments` e mudança de
-  status (endpoint `PATCH` ainda a implementar).
-- Notificações push (hoje o lembrete é e-mail) e login do cliente final (OTP).
+- Ações de status (`PATCH /api/v1/appointments/:id/status`) — a agenda ainda é
+  somente leitura no app.
+- Booking público do cliente (`/public/catalog|availability|bookings`).
+- Troca de tenant, notificações push e login do cliente final (OTP).

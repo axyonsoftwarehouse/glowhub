@@ -78,6 +78,10 @@ db/
   seed.sql                     # tenant/filial de exemplo
 docs/
   como-funciona.md             # comportamento real do código, fluxo a fluxo
+mobile/
+  src/app/                     # Expo Router: login e agenda
+  src/lib/api.ts               # cliente da API v1
+  README.md                    # como rodar o app
 ```
 
 Cada página tem um `actions.ts` com as Server Actions do módulo; os
@@ -202,5 +206,6 @@ Acesse: http://localhost:3000/dashboard
 - [x] API v1 para app (login Bearer, agenda e booking público) — **[contrato](docs/api-mobile.md)**
 - [x] Pacote mobile solo: navegação inferior, painel “Hoje”, modo solo e
       onboarding assistido
-- [ ] App mobile (Expo/React Native), push e login do cliente final
+- [x] App mobile (Expo) inicial: login Bearer + agenda — **[como rodar](mobile/README.md)**
+- [ ] Ações de status, booking público no app, push e login do cliente final
 - [ ] Verificação de e-mail, canais push/SMS e storage de arquivos
