@@ -126,6 +126,12 @@ export default function LoginScreen() {
             />
           </Card>
 
+          <Button
+            label="Quero agendar sem conta"
+            onPress={() => router.push("/book")}
+            variant="ghost"
+          />
+
           <Text style={styles.apiHint}>API: {apiBaseUrl()}</Text>
         </ScrollView>
       </KeyboardAvoidingView>

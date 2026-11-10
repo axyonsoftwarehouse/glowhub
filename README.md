@@ -206,6 +206,6 @@ Acesse: http://localhost:3000/dashboard
 - [x] API v1 para app (login Bearer, agenda e booking público) — **[contrato](docs/api-mobile.md)**
 - [x] Pacote mobile solo: navegação inferior, painel “Hoje”, modo solo e
       onboarding assistido
-- [x] App mobile (Expo) inicial: login Bearer + agenda + ações de status — **[como rodar](mobile/README.md)**
-- [ ] Booking público no app, push e login do cliente final
+- [x] App mobile (Expo) inicial: login Bearer + agenda + ações de status + booking público — **[como rodar](mobile/README.md)**
+- [ ] Push, login do cliente final e build EAS
 - [ ] Verificação de e-mail, canais push/SMS e storage de arquivos

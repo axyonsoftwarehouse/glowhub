@@ -26,6 +26,7 @@ Ajuste `EXPO_PUBLIC_API_URL`:
 | Aparelho físico | `http://<IP-da-máquina>:3000` |
 
 O app usa HTTP em desenvolvimento; para produção, use HTTPS.
+`EXPO_PUBLIC_TENANT_SLUG` define o salão do booking público (padrão `demo`).
 
 ## Rodar
 
@@ -34,6 +35,7 @@ npm start          # Expo Dev Tools
 npm run android    # emulador/dispositivo Android
 npm run ios        # macOS
 npm run web        # navegador
+npm run typegen    # gera os tipos das rotas (.expo)
 npm run typecheck  # tsc --noEmit
 ```
 
@@ -45,9 +47,11 @@ npm run typecheck  # tsc --noEmit
   filtros Hoje/7 dias, pull-to-refresh, status do atendimento, modo solo e
   profissional vinculado. Ações: Confirmar, Check-in, Checkout, Concluir,
   Cancelar e Não veio (`PATCH /appointments/:id/status`).
+- **Booking público** (`src/app/book/index.tsx`): sem login, em 4 passos —
+  serviço, profissional/filial, data/horário e contato; usa
+  `/api/v1/public/catalog|availability|bookings` com `EXPO_PUBLIC_TENANT_SLUG`.
 
 ## Próximos passos
 
-- Booking público do cliente (`/api/v1/public/*`).
 - Troca de tenant, push e login do cliente final.
 - Testar em aparelho físico/emulador e gerar build EAS.

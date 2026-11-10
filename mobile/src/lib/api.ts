@@ -49,6 +49,77 @@ export type AppointmentsResponse = {
   appointments: Appointment[];
 };
 
+export type PublicTenant = {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+};
+
+export type PublicBranch = {
+  id: string;
+  name: string;
+  slug: string;
+  address: string | null;
+  timezone: string;
+};
+
+export type PublicService = {
+  id: string;
+  categoryId: string | null;
+  name: string;
+  description: string | null;
+  durationMinutes: number;
+  priceCents: number;
+  imageUrl: string | null;
+  branchOverrides: {
+    branchId: string;
+    priceCents: number | null;
+    durationMinutes: number | null;
+    isActive: boolean;
+  }[];
+};
+
+export type PublicProfessional = {
+  id: string;
+  name: string;
+  branchIds: string[];
+  serviceIds: string[];
+};
+
+export type PublicTenantResponse = {
+  tenant: PublicTenant;
+  branches: PublicBranch[];
+};
+
+export type PublicCatalogResponse = {
+  tenant: PublicTenant;
+  branches: PublicBranch[];
+  categories: { id: string; parentId: string | null; name: string }[];
+  services: PublicService[];
+  professionals: PublicProfessional[];
+};
+
+export type PublicAvailabilityResponse = {
+  date: string;
+  slots: string[];
+  durationMinutes: number;
+  priceCents: number;
+  timezone: string;
+};
+
+export type PublicBookingInput = {
+  branchId: string;
+  professionalId: string;
+  serviceId: string;
+  date: string;
+  time: string;
+  name: string;
+  phone: string;
+  email?: string;
+  notes?: string;
+};
+
 export class ApiClientError extends Error {
   status: number;
   code: string;
@@ -74,6 +145,7 @@ async function request<T>(
     method?: "GET" | "POST" | "PATCH";
     token?: string | null;
     body?: unknown;
+    headers?: Record<string, string>;
   } = {},
 ): Promise<T> {
   const controller = new AbortController();
@@ -88,6 +160,7 @@ async function request<T>(
         ...(options.token
           ? { authorization: `Bearer ${options.token}` }
           : {}),
+        ...(options.headers ?? {}),
       },
       body: options.body ? JSON.stringify(options.body) : undefined,
       signal: controller.signal,
@@ -172,6 +245,56 @@ export async function updateAppointmentStatus(
       body: { status },
     },
   );
+}
+
+export function publicTenantSlug(): string {
+  return process.env.EXPO_PUBLIC_TENANT_SLUG?.trim() || "demo";
+}
+
+function publicHeaders(): Record<string, string> {
+  return { "x-tenant-slug": publicTenantSlug() };
+}
+
+export async function publicTenant() {
+  return request<PublicTenantResponse>("/api/v1/public/tenant", {
+    headers: publicHeaders(),
+  });
+}
+
+export async function publicCatalog() {
+  return request<PublicCatalogResponse>("/api/v1/public/catalog", {
+    headers: publicHeaders(),
+  });
+}
+
+export async function publicAvailability(params: {
+  branchId: string;
+  professionalId: string;
+  serviceId: string;
+  date: string;
+}) {
+  const query = new URLSearchParams({
+    branchId: params.branchId,
+    professionalId: params.professionalId,
+    serviceId: params.serviceId,
+    date: params.date,
+  });
+  return request<PublicAvailabilityResponse>(
+    `/api/v1/public/availability?${query.toString()}`,
+    { headers: publicHeaders() },
+  );
+}
+
+export async function createPublicBooking(input: PublicBookingInput) {
+  return request<{
+    ok: true;
+    label: string;
+    tenant: { name: string; slug: string };
+  }>("/api/v1/public/bookings", {
+    method: "POST",
+    headers: publicHeaders(),
+    body: input,
+  });
 }
 
 export { apiBaseUrl };
