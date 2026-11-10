@@ -20,6 +20,7 @@
 | [`roadmap.md`](roadmap.md) | Fases de construção e o que falta para o lançamento |
 | [`banco-e-ambientes.md`](banco-e-ambientes.md) | Migrations versionadas, ambientes (demo/dev/production) e `APP_ENV` |
 | [`api-mobile.md`](api-mobile.md) | Contrato da API v1 para app mobile (auth, agenda e booking público) |
+| [`../mobile/README.md`](../mobile/README.md) | App Expo: como rodar, configurar a API e telas atuais |
 | [`neon-migration.md`](neon-migration.md) | Histórico da migração Supabase → Neon + Better Auth |
 
 ## Planos e specs

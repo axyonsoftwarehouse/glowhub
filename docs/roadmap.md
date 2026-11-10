@@ -59,7 +59,8 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Website público / agendamento online (`/book`, por subdomínio/slug)
 - [x] API v1 para app: login Bearer, agenda da equipe e booking público
 - [x] Web mobile solo: navegação inferior, painel “Hoje”, modo solo e onboarding assistido
-- [ ] App do cliente (mobile) consumindo a API
+- [x] App mobile inicial (Expo): login Bearer + agenda Hoje/7 dias
+- [ ] App mobile completo: ações, booking público, push e cliente final
 
 ## Fase 7 — Relatórios & Inteligência de Negócio (BI)
 - [x] CRM de clientes: aniversário, tags e preferências no cadastro; segmentação

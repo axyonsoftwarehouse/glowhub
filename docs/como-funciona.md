@@ -512,6 +512,10 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
   `ALERT_COOLDOWN_SECONDS` (padrão 300).
 - **Rate limit** (`src/lib/rate-limit.ts`): fixed-window na tabela interna
   `rate_limits`, via conexão admin; fail-open.
+- **App mobile** (`mobile/`): Expo Router SDK 58; login em `/api/v1/auth/login`,
+  token no SecureStore e agenda em `/api/v1/me` + `/api/v1/appointments`. O
+  `EXPO_PUBLIC_API_URL` aponta para a API (localhost no simulador, IP da máquina
+  no aparelho físico).
 
 ## 11. Ambientes e deploy
 
