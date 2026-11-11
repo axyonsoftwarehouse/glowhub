@@ -99,6 +99,13 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
   aceite obrigatório no cadastro (validado no servidor), histórico em
   `legal_acceptances` (versão, data, IP, navegador) e reaceite em
   `/aceite-termos` quando a versão muda (`LEGAL_VERSIONS` em `src/lib/legal.ts`)
+- [x] Billing da plataforma (`/billing`): planos Solo/Equipe/Rede
+  (`src/lib/billing/plans.ts`), teste grátis de 14 dias, limites de
+  profissionais/filiais/usuários, tolerância de 7 dias e bloqueio do painel;
+  Mercado Pago Assinaturas (`BILLING_PROVIDER=mercadopago`) + provedor mock;
+  webhook em `/api/billing/webhooks/mercadopago`; demo isenta (cortesia)
+- [ ] Validar o billing com credenciais reais do Mercado Pago (sandbox) e
+  confirmar preços dos planos
 - [ ] Preencher dados da empresa e do encarregado (`LEGAL_COMPANY`) e revisar o
   texto com advogado
 - [ ] Provedor de e-mail real (verificação de conta e convites) — depende do domínio

@@ -19,6 +19,7 @@ import { withUser, type AppTx } from "@/lib/db";
 import { dbErrorCode } from "@/lib/db-errors";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
+import { checkPlanLimit } from "@/lib/billing/service";
 import type { ProfessionalActionState } from "./types";
 
 const nameInput = z.object({
@@ -73,6 +74,9 @@ export async function createProfessionalAction(
   if (commissionBp === null) {
     return { status: "error", fieldErrors: { commission: ["Comissão deve ser entre 0 e 100%."] } };
   }
+
+  const limitError = await checkPlanLimit(ctx.tenant, "professionals");
+  if (limitError) return { status: "error", message: limitError };
 
   try {
     await withUser(ctx.userId, async (tx) => {
@@ -155,6 +159,11 @@ export async function setProfessionalActiveAction(
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
+
+  if (isActive) {
+    const limitError = await checkPlanLimit(ctx.tenant, "professionals");
+    if (limitError) return { status: "error", message: limitError };
+  }
 
   try {
     const updated = await withUser(ctx.userId, async (tx) =>
