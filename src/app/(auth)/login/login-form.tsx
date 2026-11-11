@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authClient } from "@/lib/auth-client";
+import { authErrorMessage } from "@/lib/auth-errors";
 
 export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }) {
   const router = useRouter();
@@ -21,13 +23,25 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
     setMessage(null);
 
     if (mode === "signup") {
-      const { error: signUpError } = await authClient.signUp.email({
+      const { data, error: signUpError } = await authClient.signUp.email({
         email,
         password,
         name,
+        callbackURL: "/verify-email",
       });
       if (signUpError) {
-        setError(signUpError.message ?? "Não foi possível criar a conta.");
+        setError(authErrorMessage(signUpError, "Não foi possível criar a conta."));
+        setLoading(false);
+        return;
+      }
+      // Com verificacao obrigatoria o cadastro nao abre sessao: a pessoa precisa
+      // confirmar o e-mail antes de entrar.
+      if (!data?.token) {
+        setMessage(
+          `Conta criada. Enviamos um link de confirmação para ${email}; confirme para entrar.`,
+        );
+        setMode("signin");
+        setPassword("");
         setLoading(false);
         return;
       }
@@ -35,9 +49,10 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
       const { error: signInError } = await authClient.signIn.email({
         email,
         password,
+        callbackURL: "/verify-email",
       });
       if (signInError) {
-        setError(signInError.message ?? "Credenciais inválidas.");
+        setError(authErrorMessage(signInError, "E-mail ou senha incorretos."));
         setLoading(false);
         return;
       }
@@ -100,8 +115,24 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
         />
       </div>
 
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-      {message && <p className="mt-3 text-sm text-emerald-700">{message}</p>}
+      {mode === "signin" && (
+        <p className="mt-2 text-right text-sm">
+          <Link href="/forgot-password" className="text-brand hover:underline">
+            Esqueci minha senha
+          </Link>
+        </p>
+      )}
+
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-red-600">
+          {error}
+        </p>
+      )}
+      {message && (
+        <p role="status" className="mt-3 text-sm text-emerald-700">
+          {message}
+        </p>
+      )}
 
       <button
         type="submit"

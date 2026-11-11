@@ -91,6 +91,10 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Ambientes separados: demo (branch Neon `production`) e dev (branch `dev`), `APP_ENV` travando login demo e seed (`docs/banco-e-ambientes.md`)
 - [x] Trava no banco contra agendamento duplo (`appointments_no_overlap`, migration `0002`)
 - [x] Agendador diário de lembretes e envio da caixa de saída (`/api/cron/daily`)
+- [x] Recuperação de senha (`/forgot-password` → `/reset-password`, link de 1 h,
+  encerra outras sessões) e verificação de e-mail (link no cadastro,
+  `/verify-email`, aviso com reenvio no painel; obrigatória só com
+  `AUTH_REQUIRE_EMAIL_VERIFICATION=true`)
 - [ ] Provedor de e-mail real (verificação de conta e convites) — depende do domínio
 
 ## Lançamento (pendente; decidido deixar para quando o produto estiver completo)

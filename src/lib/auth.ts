@@ -3,6 +3,12 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { bearer } from "better-auth/plugins/bearer";
 import { getDb } from "@/lib/db";
+import {
+  buildResetPasswordEmail,
+  buildVerificationEmail,
+  deliverAuthEmail,
+  isEmailVerificationRequired,
+} from "@/lib/auth-emails";
 import * as schema from "@/db/schema";
 
 type Auth = ReturnType<typeof buildAuth>;
@@ -19,6 +25,31 @@ function buildAuth() {
     database: drizzleAdapter(getDb(), { provider: "pg", schema }),
     emailAndPassword: {
       enabled: true,
+      requireEmailVerification: isEmailVerificationRequired(),
+      resetPasswordTokenExpiresIn: 60 * 60,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: async ({ user, url }) => {
+        await deliverAuthEmail({
+          to: user.email,
+          email: buildResetPasswordEmail({ name: user.name, url }),
+          url,
+          kind: "reset_password",
+        });
+      },
+    },
+    emailVerification: {
+      sendOnSignUp: true,
+      sendOnSignIn: true,
+      autoSignInAfterVerification: true,
+      expiresIn: 24 * 60 * 60,
+      sendVerificationEmail: async ({ user, url }) => {
+        await deliverAuthEmail({
+          to: user.email,
+          email: buildVerificationEmail({ name: user.name, url }),
+          url,
+          kind: "verify_email",
+        });
+      },
     },
     session: {
       cookieCache: {
