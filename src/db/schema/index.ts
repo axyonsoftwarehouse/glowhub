@@ -18,3 +18,4 @@ export * from "./loyalty";
 export * from "./notifications";
 export * from "./push";
 export * from "./infra";
+export * from "./legal";

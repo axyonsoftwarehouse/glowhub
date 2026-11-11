@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { and, asc, eq } from "drizzle-orm";
 import {
   branches,
@@ -123,6 +124,15 @@ export default async function PublicBookingPage() {
           professionals={professionalList}
         />
       )}
+
+      <footer className="mt-12 border-t border-border pt-4 text-center text-xs text-foreground/60">
+        Ao agendar, seus dados (nome, contato e agendamento) são usados por{" "}
+        {tenant.name} para realizar e lembrar o atendimento. Saiba mais na{" "}
+        <Link href="/privacidade" className="text-brand underline">
+          Política de Privacidade
+        </Link>
+        .
+      </footer>
     </main>
   );
 }

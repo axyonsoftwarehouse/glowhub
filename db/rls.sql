@@ -427,6 +427,10 @@ revoke update, delete on public.gift_card_redemptions from glowhub_app;
 revoke all on public.webhook_events from glowhub_app;
 revoke all on public.rate_limits from glowhub_app;
 
+-- legal_acceptances: historico de aceite (LGPD), so pela conexao admin.
+alter table public.legal_acceptances enable row level security;
+revoke all on public.legal_acceptances from glowhub_app;
+
 -- Tabelas do Better Auth sao geridas pela conexao admin (sem RLS). Revogar o
 -- acesso da role do app evita consultas via withUser sem isolamento.
 revoke all on public."user" from glowhub_app;

@@ -9,6 +9,7 @@ import { SignOutButton } from "./sign-out-button";
 import { TenantSwitcher } from "./tenant-switcher";
 import { VerifyEmailBanner } from "./verify-email-banner";
 import { isAuthEmailSuppressed } from "@/lib/auth-emails";
+import { getPendingDocuments } from "@/lib/legal";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,13 @@ export default async function AppLayout({
   const session = await getSession();
   if (!session?.user) redirect("/login");
   const user = session.user;
+
+  // Termos/Politica: quem ainda nao aceitou a versao vigente aceita antes de usar
+  // o painel (conta demo dispensada).
+  if (!isAuthEmailSuppressed(user.email)) {
+    const pendingLegal = await getPendingDocuments(user.id);
+    if (pendingLegal.length > 0) redirect("/aceite-termos");
+  }
 
   const [tenant, tenants, myProfessional] = await Promise.all([
     getCurrentTenant(),
