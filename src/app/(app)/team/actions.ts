@@ -14,6 +14,7 @@ import { dbErrorCode } from "@/lib/db-errors";
 import { enqueueEmail } from "@/lib/notifications";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
+import { checkPlanLimit } from "@/lib/billing/service";
 import type { TeamActionState } from "./types";
 
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -68,6 +69,9 @@ export async function inviteMemberAction(
   if (!parsed.success) {
     return { status: "error", fieldErrors: toFieldErrors(parsed.error) };
   }
+
+  const limitError = await checkPlanLimit(ctx.tenant, "members");
+  if (limitError) return { status: "error", message: limitError };
 
   const token = randomBytes(24).toString("base64url");
   const expiresAt = new Date(Date.now() + INVITE_TTL_MS);

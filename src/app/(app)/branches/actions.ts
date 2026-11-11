@@ -12,6 +12,7 @@ import { withUser } from "@/lib/db";
 import { dbErrorCode } from "@/lib/db-errors";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
+import { checkPlanLimit } from "@/lib/billing/service";
 import type { BranchActionState } from "./types";
 
 const branchInput = z.object({
@@ -74,6 +75,9 @@ export async function createBranchAction(
   if (!parsed.success) {
     return { status: "error", fieldErrors: toFieldErrors(parsed.error) };
   }
+
+  const limitError = await checkPlanLimit(ctx.tenant, "branches");
+  if (limitError) return { status: "error", message: limitError };
 
   try {
     await withUser(ctx.userId, async (tx) => {
@@ -162,6 +166,11 @@ export async function setBranchActiveAction(
 
   const ctx = await context();
   if ("error" in ctx) return { status: "error", message: ctx.error };
+
+  if (isActive) {
+    const limitError = await checkPlanLimit(ctx.tenant, "branches");
+    if (limitError) return { status: "error", message: limitError };
+  }
 
   try {
     const updated = await withUser(ctx.userId, async (tx) =>

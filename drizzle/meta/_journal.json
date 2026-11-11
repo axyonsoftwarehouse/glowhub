@@ -57,6 +57,13 @@
       "when": 1794429089384,
       "tag": "0007_termos_privacidade",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1794433304063,
+      "tag": "0008_billing_plataforma",
+      "breakpoints": true
     }
   ]
 }

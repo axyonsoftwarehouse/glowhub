@@ -19,3 +19,4 @@ export * from "./notifications";
 export * from "./push";
 export * from "./infra";
 export * from "./legal";
+export * from "./billing";

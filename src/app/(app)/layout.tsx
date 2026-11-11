@@ -10,6 +10,7 @@ import { TenantSwitcher } from "./tenant-switcher";
 import { VerifyEmailBanner } from "./verify-email-banner";
 import { isAuthEmailSuppressed } from "@/lib/auth-emails";
 import { getPendingDocuments } from "@/lib/legal";
+import { getAccess } from "@/lib/billing/service";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,11 @@ export default async function AppLayout({
 
   const activeRole = tenants.find((t) => t.id === tenant?.id)?.role ?? "";
   const canManageTenant = activeRole === "owner" || activeRole === "admin";
+
+  // Assinatura do GlowHub: teste vencido ou atraso alem da tolerancia bloqueia o
+  // painel da empresa (a pagina /billing fica fora deste layout).
+  const billing = tenant && activeRole ? (await getAccess(tenant)).access : null;
+  if (billing?.level === "blocked") redirect("/billing");
 
   return (
     <div className="flex min-h-screen w-full">
@@ -160,6 +166,11 @@ export default async function AppLayout({
               Configurações
             </Link>
           )}
+          {canManageTenant && (
+            <Link href="/billing" className="rounded-lg px-3 py-2 hover:bg-muted">
+              Plano e cobrança
+            </Link>
+          )}
           <Link href="/profile" className="rounded-lg px-3 py-2 hover:bg-muted">
             Perfil
           </Link>
@@ -179,6 +190,17 @@ export default async function AppLayout({
           <SignOutButton />
         </header>
         <main id="conteudo" className="flex-1 px-4 pb-28 pt-6 sm:px-6 sm:py-8">
+          {billing?.level === "warning" && (
+            <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+              <p className="flex-1">{billing.message}</p>
+              <Link
+                href="/billing"
+                className="rounded-full border border-amber-400 bg-white px-3 py-1 font-medium hover:bg-amber-100"
+              >
+                {canManageTenant ? "Ver planos" : "Detalhes"}
+              </Link>
+            </div>
+          )}
           {!user.emailVerified && !isAuthEmailSuppressed(user.email) && (
             <VerifyEmailBanner email={user.email} />
           )}

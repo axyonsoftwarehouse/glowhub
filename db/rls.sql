@@ -431,6 +431,12 @@ revoke all on public.rate_limits from glowhub_app;
 alter table public.legal_acceptances enable row level security;
 revoke all on public.legal_acceptances from glowhub_app;
 
+-- Billing da plataforma (assinatura do GlowHub): so pela conexao admin.
+alter table public.platform_subscriptions enable row level security;
+alter table public.platform_payments enable row level security;
+revoke all on public.platform_subscriptions from glowhub_app;
+revoke all on public.platform_payments from glowhub_app;
+
 -- Tabelas do Better Auth sao geridas pela conexao admin (sem RLS). Revogar o
 -- acesso da role do app evita consultas via withUser sem isolamento.
 revoke all on public."user" from glowhub_app;

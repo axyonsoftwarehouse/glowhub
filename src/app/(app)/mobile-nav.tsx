@@ -120,6 +120,7 @@ export function MobileNav({
           ? [
               { href: "/closing", label: "Fechamento" },
               { href: "/settings", label: "Configurações" },
+              { href: "/billing", label: "Plano e cobrança" },
             ]
           : []),
         { href: "/notifications", label: "Mensagens" },
