@@ -95,6 +95,12 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
   encerra outras sessões) e verificação de e-mail (link no cadastro,
   `/verify-email`, aviso com reenvio no painel; obrigatória só com
   `AUTH_REQUIRE_EMAIL_VERIFICATION=true`)
+- [x] Termos de Uso (`/termos`) e Política de Privacidade (`/privacidade`, LGPD):
+  aceite obrigatório no cadastro (validado no servidor), histórico em
+  `legal_acceptances` (versão, data, IP, navegador) e reaceite em
+  `/aceite-termos` quando a versão muda (`LEGAL_VERSIONS` em `src/lib/legal.ts`)
+- [ ] Preencher dados da empresa e do encarregado (`LEGAL_COMPANY`) e revisar o
+  texto com advogado
 - [ ] Provedor de e-mail real (verificação de conta e convites) — depende do domínio
 
 ## Lançamento (pendente; decidido deixar para quando o produto estiver completo)

@@ -12,6 +12,7 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -23,12 +24,16 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
     setMessage(null);
 
     if (mode === "signup") {
-      const { data, error: signUpError } = await authClient.signUp.email({
+      // `acceptTerms` nao faz parte do tipo do cliente: vai no corpo e e lido no
+      // hook de criacao de usuario (src/lib/auth.ts), que recusa o cadastro sem ele.
+      const body = {
         email,
         password,
         name,
         callbackURL: "/verify-email",
-      });
+        acceptTerms,
+      };
+      const { data, error: signUpError } = await authClient.signUp.email(body);
       if (signUpError) {
         setError(authErrorMessage(signUpError, "Não foi possível criar a conta."));
         setLoading(false);
@@ -114,6 +119,29 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
           className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
         />
       </div>
+
+      {mode === "signup" && (
+        <label className="mt-3 flex items-start gap-2 text-sm text-foreground/80">
+          <input
+            type="checkbox"
+            required
+            checked={acceptTerms}
+            onChange={(e) => setAcceptTerms(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-[var(--brand)]"
+          />
+          <span>
+            Li e aceito os{" "}
+            <Link href="/termos" target="_blank" className="text-brand underline">
+              Termos de Uso
+            </Link>{" "}
+            e a{" "}
+            <Link href="/privacidade" target="_blank" className="text-brand underline">
+              Política de Privacidade
+            </Link>
+            .
+          </span>
+        </label>
+      )}
 
       {mode === "signin" && (
         <p className="mt-2 text-right text-sm">

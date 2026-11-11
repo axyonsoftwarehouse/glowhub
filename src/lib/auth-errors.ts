@@ -10,6 +10,7 @@ const MESSAGES: Record<string, string> = {
     "Confirme seu e-mail antes de entrar. Enviamos um novo link para sua caixa de entrada.",
   INVALID_TOKEN: "Este link é inválido ou expirou. Peça um novo.",
   TOKEN_EXPIRED: "Este link expirou. Peça um novo.",
+  TERMS_NOT_ACCEPTED: "Aceite os Termos de Uso e a Política de Privacidade para criar a conta.",
   PASSWORD_TOO_SHORT: "A senha precisa ter pelo menos 8 caracteres.",
   PASSWORD_TOO_LONG: "A senha pode ter no máximo 128 caracteres.",
 };

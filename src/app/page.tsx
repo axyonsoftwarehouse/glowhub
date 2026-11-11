@@ -79,6 +79,14 @@ export default function Home() {
       <footer className="mt-20 border-t border-border pt-6 text-sm text-foreground/70">
         GlowHub — fundação multi-tenant. Documentação em{" "}
         <code className="font-mono">README.md</code>.
+        <nav aria-label="Documentos legais" className="mt-3 flex gap-4">
+          <Link href="/termos" className="hover:underline">
+            Termos de Uso
+          </Link>
+          <Link href="/privacidade" className="hover:underline">
+            Política de Privacidade
+          </Link>
+        </nav>
       </footer>
     </main>
   );

@@ -7,8 +7,11 @@ import {
   buildResetPasswordEmail,
   buildVerificationEmail,
   deliverAuthEmail,
+  isAuthEmailSuppressed,
   isEmailVerificationRequired,
 } from "@/lib/auth-emails";
+import { APIError } from "better-auth/api";
+import { recordAcceptance } from "@/lib/legal";
 import * as schema from "@/db/schema";
 
 type Auth = ReturnType<typeof buildAuth>;
@@ -49,6 +52,31 @@ function buildAuth() {
           url,
           kind: "verify_email",
         });
+      },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          // Cadastro pelo formulario exige aceite dos Termos e da Politica,
+          // validado aqui no servidor (o checkbox da tela e so a interface).
+          before: async (newUser, ctx) => {
+            if (
+              ctx?.path === "/sign-up/email" &&
+              !isAuthEmailSuppressed(newUser.email) &&
+              ctx.body?.acceptTerms !== true
+            ) {
+              throw new APIError("BAD_REQUEST", {
+                code: "TERMS_NOT_ACCEPTED",
+                message: "Aceite os Termos de Uso e a Política de Privacidade.",
+              });
+            }
+          },
+          after: async (createdUser, ctx) => {
+            if (ctx?.path === "/sign-up/email" && ctx.body?.acceptTerms === true) {
+              await recordAcceptance(createdUser.id, ctx.request?.headers ?? ctx.headers);
+            }
+          },
+        },
       },
     },
     session: {
