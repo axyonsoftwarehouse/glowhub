@@ -7,6 +7,8 @@ import { SetupNotice } from "@/components/setup-notice";
 import { MobileNav } from "./mobile-nav";
 import { SignOutButton } from "./sign-out-button";
 import { TenantSwitcher } from "./tenant-switcher";
+import { VerifyEmailBanner } from "./verify-email-banner";
+import { isAuthEmailSuppressed } from "@/lib/auth-emails";
 
 export const dynamic = "force-dynamic";
 
@@ -169,6 +171,9 @@ export default async function AppLayout({
           <SignOutButton />
         </header>
         <main id="conteudo" className="flex-1 px-4 pb-28 pt-6 sm:px-6 sm:py-8">
+          {!user.emailVerified && !isAuthEmailSuppressed(user.email) && (
+            <VerifyEmailBanner email={user.email} />
+          )}
           {tenant?.isReadOnly && (
             <div className="mb-6 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               Modo demonstração: este ambiente é somente leitura para catálogo,

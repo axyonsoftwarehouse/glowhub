@@ -31,6 +31,19 @@ const RULES = [
     limit: 5,
     windowSeconds: 300,
   },
+  {
+    scope: "auth:password-reset",
+    test: (path: string) =>
+      path.includes("/request-password-reset") || path.includes("/reset-password"),
+    limit: 5,
+    windowSeconds: 900,
+  },
+  {
+    scope: "auth:verification-email",
+    test: (path: string) => path.includes("/send-verification-email"),
+    limit: 3,
+    windowSeconds: 600,
+  },
 ];
 
 export async function GET(request: NextRequest) {
