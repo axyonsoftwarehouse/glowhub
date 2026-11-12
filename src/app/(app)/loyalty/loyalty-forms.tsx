@@ -34,7 +34,7 @@ function Feedback({ state }: { state: LoyaltyActionState }) {
 
 function ClientSelect({ clients }: { clients: ClientOption[] }) {
   return (
-    <select name="clientId" defaultValue="" className={inputClass}>
+    <select aria-label="Cliente" name="clientId" defaultValue="" className={inputClass}>
       <option value="">Sem cliente vinculado</option>
       {clients.map((client) => (
         <option key={client.id} value={client.id}>
@@ -83,7 +83,7 @@ export function PointsSettingsForm({
             <label className="text-xs font-medium text-foreground/60">
               Pontos por R$ 1,00
             </label>
-            <input
+            <input aria-label="Pontos por R$ 1,00"
               name="pointsPerReal"
               type="number"
               min={0}
@@ -95,7 +95,7 @@ export function PointsSettingsForm({
             <label className="text-xs font-medium text-foreground/60">
               Pontos por R$ 1,00 de crédito no resgate
             </label>
-            <input
+            <input aria-label="Pontos por R$ 1,00 de crédito no resgate"
               name="redeemPointsPerReal"
               type="number"
               min={1}
@@ -158,7 +158,7 @@ export function GiftCardForms({ clients }: { clients: ClientOption[] }) {
         </summary>
         <form ref={createRef} action={handleCreate} className="mt-4 space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
-            <input name="value" placeholder="Valor (R$)" className={inputClass} />
+            <input aria-label="Valor (R$)" name="value" placeholder="Valor (R$)" className={inputClass} />
             <input
               name="expiresAt"
               type="date"
@@ -183,13 +183,13 @@ export function GiftCardForms({ clients }: { clients: ClientOption[] }) {
           Resgatar gift card
         </summary>
         <form ref={redeemRef} action={handleRedeem} className="mt-4 space-y-3">
-          <input
+          <input aria-label="Código (GC-XXXXX-XXXXX)"
             name="code"
             placeholder="Código (GC-XXXXX-XXXXX)"
             className={`${inputClass} uppercase`}
           />
           <div className="grid gap-3 sm:grid-cols-2">
-            <input name="amount" placeholder="Valor do resgate (R$)" className={inputClass} />
+            <input aria-label="Valor do resgate (R$)" name="amount" placeholder="Valor do resgate (R$)" className={inputClass} />
             <ClientSelect clients={clients} />
           </div>
           <Feedback state={redeemResult} />
@@ -229,7 +229,7 @@ export function PointsRedeemForm({ clients }: { clients: ClientOption[] }) {
     >
       <div className="min-w-48 flex-1">
         <label className="text-xs font-medium text-foreground/60">Cliente</label>
-        <select name="clientId" defaultValue="" className={`mt-1 ${inputClass}`}>
+        <select aria-label="Cliente" name="clientId" defaultValue="" className={`mt-1 ${inputClass}`}>
           <option value="" disabled>
             Selecione o cliente
           </option>
@@ -242,7 +242,7 @@ export function PointsRedeemForm({ clients }: { clients: ClientOption[] }) {
       </div>
       <div>
         <label className="text-xs font-medium text-foreground/60">Pontos</label>
-        <input
+        <input aria-label="Pontos"
           name="points"
           type="number"
           min={1}
@@ -296,8 +296,8 @@ export function CampaignForm() {
       </summary>
       <form ref={formRef} action={handleSubmit} className="mt-4 space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
-          <input name="name" placeholder="Nome da campanha" className={inputClass} />
-          <select name="segment" defaultValue="todos" className={inputClass}>
+          <input aria-label="Nome da campanha" name="name" placeholder="Nome da campanha" className={inputClass} />
+          <select aria-label="Público da campanha" name="segment" defaultValue="todos" className={inputClass}>
             {SEGMENTS.map((segment) => (
               <option key={segment.value} value={segment.value}>
                 {segment.label}
@@ -305,8 +305,8 @@ export function CampaignForm() {
             ))}
           </select>
         </div>
-        <input name="subject" placeholder="Assunto do e-mail" className={inputClass} />
-        <textarea
+        <input aria-label="Assunto do e-mail" name="subject" placeholder="Assunto do e-mail" className={inputClass} />
+        <textarea aria-label="Mensagem (HTML simples)"
           name="body"
           rows={4}
           placeholder="Mensagem (HTML simples)"

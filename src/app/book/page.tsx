@@ -10,6 +10,7 @@ import {
 import { getDb } from "@/lib/db";
 import { getPublicTenant } from "@/lib/tenant";
 import { BookingWizard } from "./booking-wizard";
+import { todayInTimeZone } from "@/lib/timezone";
 import type {
   BookingBranch,
   BookingProfessional,
@@ -49,7 +50,7 @@ export default async function PublicBookingPage() {
     .orderBy(asc(services.name));
 
   const branchRows = await db
-    .select({ id: branches.id, name: branches.name })
+    .select({ id: branches.id, name: branches.name, timezone: branches.timezone })
     .from(branches)
     .where(and(eq(branches.tenantId, tenant.id), eq(branches.isActive, true)))
     .orderBy(asc(branches.name));
@@ -119,6 +120,7 @@ export default async function PublicBookingPage() {
         </p>
       ) : (
         <BookingWizard
+          today={todayInTimeZone(branchRows[0]?.timezone)}
           services={serviceRows as BookingService[]}
           branches={branchRows as BookingBranch[]}
           professionals={professionalList}

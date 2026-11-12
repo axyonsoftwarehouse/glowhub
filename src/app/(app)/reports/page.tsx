@@ -17,7 +17,7 @@ import { withUser } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import { formatCentsBRL } from "@/lib/money";
-import { zonedDateKey } from "@/lib/timezone";
+import { todayInTimeZone, zonedDateKey } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +73,7 @@ export default async function ReportsPage({
     );
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInTimeZone();
   const from = first(sp.from) ?? monthStart();
   const to = first(sp.to) ?? today;
   const start = new Date(`${from}T00:00:00Z`);
@@ -398,7 +398,7 @@ export default async function ReportsPage({
       <form method="get" action="/reports" className="flex flex-wrap items-end gap-3">
         <div>
           <label className="text-xs font-medium text-foreground/60">De</label>
-          <input
+          <input aria-label="De"
             type="date"
             name="from"
             defaultValue={from}
@@ -407,7 +407,7 @@ export default async function ReportsPage({
         </div>
         <div>
           <label className="text-xs font-medium text-foreground/60">Até</label>
-          <input
+          <input aria-label="Até"
             type="date"
             name="to"
             defaultValue={to}
@@ -505,7 +505,7 @@ export default async function ReportsPage({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
           Balancete (movimento no período)
         </h2>
-        <div className="mt-4 overflow-hidden rounded-xl border border-border">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/70">
               <tr>
@@ -555,7 +555,7 @@ export default async function ReportsPage({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
           Ocupação por profissional
         </h2>
-        <div className="mt-4 overflow-hidden rounded-xl border border-border">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/70">
               <tr>

@@ -127,6 +127,7 @@ export function ProfessionalCard({
             Acesso
           </span>
           <select
+            aria-label="Usuário vinculado"
             name="userId"
             defaultValue={professional.userId ?? ""}
             className="rounded-lg border border-border bg-white px-2 py-1.5 text-xs outline-none focus:border-brand"
@@ -174,7 +175,7 @@ export function ProfessionalCard({
             )}
           </div>
           <div className="w-28">
-            <input
+            <input aria-label="Comissão %"
               name="commission"
               defaultValue={(professional.commissionBp / 100).toString()}
               placeholder="Comissão %"

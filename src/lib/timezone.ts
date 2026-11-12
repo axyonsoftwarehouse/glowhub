@@ -79,3 +79,16 @@ export function zonedDateKey(iso: string, timeZone: string): string {
   }
   return `${map.year}-${map.month}-${map.day}`;
 }
+
+export const DEFAULT_TIMEZONE = "America/Sao_Paulo";
+
+/**
+ * Data de "hoje" (YYYY-MM-DD) no fuso informado. Evita `toISOString()`, que usa
+ * UTC e, no Brasil, já vira o dia seguinte a partir das 21h.
+ */
+export function todayInTimeZone(
+  timeZone: string = DEFAULT_TIMEZONE,
+  now: Date = new Date(),
+): string {
+  return zonedDateKey(now.toISOString(), timeZone);
+}

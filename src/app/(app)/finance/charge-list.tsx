@@ -199,7 +199,7 @@ export function ChargeList({
                 className="mt-2 flex items-center gap-2 border-t border-border pt-2"
               >
                 <input type="hidden" name="id" value={charge.id} />
-                <input
+                <input aria-label="Motivo do estorno"
                   name="reason"
                   placeholder="Motivo do estorno (opcional)"
                   className={`min-w-0 flex-1 ${smallInput}`}
@@ -220,7 +220,12 @@ export function ChargeList({
                 className="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2"
               >
                 <input type="hidden" name="chargeId" value={charge.id} />
-                <select name="variantId" defaultValue="" className={smallInput}>
+                <select
+                  name="variantId"
+                  defaultValue=""
+                  aria-label="Produto"
+                  className={`${smallInput} min-w-0 max-w-full`}
+                >
                   <option value="" disabled>
                     Adicionar produto…
                   </option>
@@ -255,7 +260,7 @@ export function ChargeList({
                 className="mt-2 flex flex-wrap items-center gap-2"
               >
                 <input type="hidden" name="chargeId" value={charge.id} />
-                <select name="method" defaultValue="cash" className={smallInput}>
+                <select aria-label="Forma de pagamento" name="method" defaultValue="cash" className={smallInput}>
                   {METHODS.map((method) => (
                     <option key={method.value} value={method.value}>
                       {method.label}
@@ -263,11 +268,12 @@ export function ChargeList({
                   ))}
                 </select>
                 <input
+                  aria-label="Valor (R$)"
                   name="amount"
                   defaultValue={formatCentsToInput(remaining)}
                   className={`w-24 ${smallInput}`}
                 />
-                <input
+                <input aria-label="Gorjeta"
                   name="tip"
                   placeholder="Gorjeta"
                   className={`w-20 ${smallInput}`}
@@ -288,7 +294,7 @@ export function ChargeList({
                 className="mt-2 flex flex-wrap items-center gap-2"
               >
                 <input type="hidden" name="chargeId" value={charge.id} />
-                <input
+                <input aria-label="Cupom"
                   name="code"
                   placeholder="Cupom"
                   className={`w-28 uppercase ${smallInput}`}
@@ -309,7 +315,7 @@ export function ChargeList({
                 className="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2"
               >
                 <input type="hidden" name="chargeId" value={charge.id} />
-                <select name="method" defaultValue="pix" className={smallInput}>
+                <select aria-label="Forma de pagamento" name="method" defaultValue="pix" className={smallInput}>
                   <option value="pix">Pix</option>
                   <option value="credit">Cartão de crédito</option>
                   <option value="debit">Cartão de débito</option>

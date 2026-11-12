@@ -83,7 +83,7 @@ export function PackageForm({
           <div className="mt-4 grid gap-3 sm:grid-cols-3">
             <div className="sm:col-span-2">
               <label className="text-xs font-medium text-foreground/60">Nome</label>
-              <input
+              <input aria-label="Nome"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="5 cortes"
@@ -92,7 +92,7 @@ export function PackageForm({
             </div>
             <div>
               <label className="text-xs font-medium text-foreground/60">Preço (R$)</label>
-              <input
+              <input aria-label="Preço (R$)"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="250,00"
@@ -105,7 +105,7 @@ export function PackageForm({
               <label className="text-xs font-medium text-foreground/60">
                 Validade (dias)
               </label>
-              <input
+              <input aria-label="Validade (dias)"
                 value={validityDays}
                 onChange={(e) => setValidityDays(e.target.value)}
                 placeholder="180 (opcional)"
@@ -116,7 +116,7 @@ export function PackageForm({
               <label className="text-xs font-medium text-foreground/60">
                 Descrição (opcional)
               </label>
-              <input
+              <input aria-label="Descrição (opcional)"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className={`mt-1 w-full ${inputClass}`}
@@ -129,6 +129,7 @@ export function PackageForm({
             {items.map((item, index) => (
               <div key={index} className="flex flex-wrap items-center gap-2">
                 <select
+                  aria-label="Serviço"
                   value={item.serviceId}
                   onChange={(e) =>
                     setItems((prev) =>
@@ -147,6 +148,7 @@ export function PackageForm({
                   ))}
                 </select>
                 <input
+                  aria-label="Quantidade"
                   value={item.quantity}
                   onChange={(e) =>
                     setItems((prev) =>

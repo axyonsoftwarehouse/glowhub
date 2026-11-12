@@ -115,7 +115,7 @@ export function ServiceCard({
           <input type="hidden" name="id" value={service.id} />
           <div>
             <label className="text-xs font-medium text-foreground/60">Nome</label>
-            <input
+            <input aria-label="Nome"
               name="name"
               defaultValue={service.name}
               className={`mt-1 ${inputClass}`}
@@ -126,7 +126,7 @@ export function ServiceCard({
             <label className="text-xs font-medium text-foreground/60">
               Categoria
             </label>
-            <select
+            <select aria-label="Categoria"
               name="categoryId"
               defaultValue={service.categoryId ?? ""}
               className={`mt-1 ${inputClass}`}
@@ -147,7 +147,7 @@ export function ServiceCard({
               <label className="text-xs font-medium text-foreground/60">
                 Duração (min)
               </label>
-              <input
+              <input aria-label="Duração (min)"
                 name="durationMinutes"
                 type="number"
                 min={1}
@@ -163,7 +163,7 @@ export function ServiceCard({
               <label className="text-xs font-medium text-foreground/60">
                 Preço (R$)
               </label>
-              <input
+              <input aria-label="Preço (R$)"
                 name="price"
                 defaultValue={formatCentsToInput(service.priceCents)}
                 className={`mt-1 ${inputClass}`}
@@ -177,7 +177,7 @@ export function ServiceCard({
             <label className="text-xs font-medium text-foreground/60">
               Descrição
             </label>
-            <textarea
+            <textarea aria-label="Descrição"
               name="description"
               rows={2}
               defaultValue={service.description ?? ""}
@@ -188,7 +188,7 @@ export function ServiceCard({
             <label className="text-xs font-medium text-foreground/60">
               Imagem (URL)
             </label>
-            <input
+            <input aria-label="Imagem (URL)"
               name="imageUrl"
               defaultValue={service.imageUrl ?? ""}
               className={`mt-1 ${inputClass}`}

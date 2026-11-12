@@ -227,7 +227,7 @@ export default async function ReconciliationPage() {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
           Cobranças
         </h2>
-        <div className="mt-4 overflow-hidden rounded-xl border border-border">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/70">
               <tr>

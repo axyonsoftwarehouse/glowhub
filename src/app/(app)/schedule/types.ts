@@ -26,6 +26,7 @@ export type ClosureItem = {
 export type BranchOption = {
   id: string;
   name: string;
+  timezone?: string;
 };
 
 export type ProfessionalOption = {

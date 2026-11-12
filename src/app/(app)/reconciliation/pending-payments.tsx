@@ -76,7 +76,7 @@ export function PendingPayments({
               confirmação
             </p>
           </div>
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium">
               {formatCentsBRL(payment.amountCents)}
             </span>

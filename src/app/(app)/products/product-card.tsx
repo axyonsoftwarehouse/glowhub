@@ -92,7 +92,7 @@ export function ProductCard({
           <input type="hidden" name="id" value={product.id} />
           <div>
             <label className="text-xs font-medium text-foreground/60">Nome</label>
-            <input
+            <input aria-label="Nome"
               name="name"
               defaultValue={product.name}
               className={`mt-1 ${inputClass}`}
@@ -103,7 +103,7 @@ export function ProductCard({
             <label className="text-xs font-medium text-foreground/60">
               Categoria
             </label>
-            <select
+            <select aria-label="Categoria"
               name="categoryId"
               defaultValue={product.categoryId ?? ""}
               className={`mt-1 ${inputClass}`}
@@ -123,7 +123,7 @@ export function ProductCard({
             <label className="text-xs font-medium text-foreground/60">
               Tipo
             </label>
-            <select
+            <select aria-label="Tipo"
               name="kind"
               defaultValue={product.kind}
               className={`mt-1 ${inputClass}`}
@@ -136,7 +136,7 @@ export function ProductCard({
             <label className="text-xs font-medium text-foreground/60">
               Descrição
             </label>
-            <textarea
+            <textarea aria-label="Descrição"
               name="description"
               rows={2}
               defaultValue={product.description ?? ""}
@@ -147,7 +147,7 @@ export function ProductCard({
             <label className="text-xs font-medium text-foreground/60">
               Imagem (URL)
             </label>
-            <input
+            <input aria-label="Imagem (URL)"
               name="imageUrl"
               defaultValue={product.imageUrl ?? ""}
               className={`mt-1 ${inputClass}`}

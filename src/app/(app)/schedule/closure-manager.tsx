@@ -76,7 +76,7 @@ export function ClosureManager({
               <label className="text-xs font-medium text-foreground/60">
                 Data inicial
               </label>
-              <input
+              <input aria-label="Data inicial"
                 type="date"
                 name="startDate"
                 required
@@ -87,7 +87,7 @@ export function ClosureManager({
               <label className="text-xs font-medium text-foreground/60">
                 Data final
               </label>
-              <input
+              <input aria-label="Data final"
                 type="date"
                 name="endDate"
                 required
@@ -100,7 +100,7 @@ export function ClosureManager({
               <label className="text-xs font-medium text-foreground/60">
                 Início (opcional)
               </label>
-              <input
+              <input aria-label="Início (opcional)"
                 type="time"
                 name="startTime"
                 className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
@@ -110,14 +110,14 @@ export function ClosureManager({
               <label className="text-xs font-medium text-foreground/60">
                 Fim (opcional)
               </label>
-              <input
+              <input aria-label="Fim (opcional)"
                 type="time"
                 name="endTime"
                 className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
               />
             </div>
           </div>
-          <input
+          <input aria-label="Motivo"
             name="reason"
             placeholder="Motivo (feriado, manutenção...)"
             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"

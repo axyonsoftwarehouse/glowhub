@@ -21,7 +21,7 @@ import {
 import { formatCentsBRL } from "@/lib/money";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
-import { zonedDateKey } from "@/lib/timezone";
+import { todayInTimeZone, zonedDateKey } from "@/lib/timezone";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +55,7 @@ export default async function ProfitabilityPage({
     );
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayInTimeZone();
   const from = first(sp.from) ?? monthStart();
   const to = first(sp.to) ?? today;
   const start = new Date(`${from}T00:00:00Z`);
@@ -254,7 +254,7 @@ export default async function ProfitabilityPage({
       <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
         {title}
       </h2>
-      <div className="mt-4 overflow-hidden rounded-xl border border-border">
+      <div className="mt-4 overflow-x-auto rounded-xl border border-border">
         <table className="w-full text-sm">
           <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/70">
             <tr>
@@ -319,7 +319,7 @@ export default async function ProfitabilityPage({
       <form method="get" action="/reports/profitability" className="flex flex-wrap items-end gap-3">
         <div>
           <label className="text-xs font-medium text-foreground/60">De</label>
-          <input
+          <input aria-label="De"
             type="date"
             name="from"
             defaultValue={from}
@@ -328,7 +328,7 @@ export default async function ProfitabilityPage({
         </div>
         <div>
           <label className="text-xs font-medium text-foreground/60">Até</label>
-          <input
+          <input aria-label="Até"
             type="date"
             name="to"
             defaultValue={to}
@@ -368,7 +368,7 @@ export default async function ProfitabilityPage({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
           DRE do período
         </h2>
-        <div className="mt-4 overflow-hidden rounded-xl border border-border">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
             <tbody>
               {dreRows.map((row) => (
@@ -396,7 +396,7 @@ export default async function ProfitabilityPage({
           {formatCentsBRL(cashOutflow)} · líquido {formatCentsBRL(cashNet)}. Difere
           do resultado por competência (DRE), que inclui valores a receber/pagar.
         </p>
-        <div className="mt-4 overflow-hidden rounded-xl border border-border">
+        <div className="mt-4 overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-foreground/70">
               <tr>

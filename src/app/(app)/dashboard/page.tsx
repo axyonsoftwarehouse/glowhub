@@ -288,7 +288,7 @@ export default async function DashboardPage() {
             </span>
           )}
         </div>
-        <h1 className="mt-2 text-2xl font-semibold capitalize">{todayLabel}</h1>
+        <h1 className="mt-2 text-2xl font-semibold first-letter:uppercase">{todayLabel}</h1>
         <p className="mt-1 text-sm text-foreground/60">
           {tenant.name}
           {data.primaryBranch ? ` · ${data.primaryBranch.name}` : ""}

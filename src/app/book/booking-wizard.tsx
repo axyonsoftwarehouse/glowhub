@@ -19,7 +19,9 @@ export function BookingWizard({
   services,
   branches,
   professionals,
+  today,
 }: {
+  today: string;
   services: BookingService[];
   branches: BookingBranch[];
   professionals: BookingProfessional[];
@@ -27,7 +29,7 @@ export function BookingWizard({
   const [serviceId, setServiceId] = useState("");
   const [professionalId, setProfessionalId] = useState("");
   const [branchId, setBranchId] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(today);
   const [slots, setSlots] = useState<string[] | null>(null);
   const [time, setTime] = useState<string | null>(null);
   const [name, setName] = useState("");

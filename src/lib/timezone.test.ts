@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatInTimeZone,
+  todayInTimeZone,
   zonedDateKey,
   zonedMinutesOfDay,
   zonedTimeToUtc,
@@ -37,5 +38,17 @@ describe("formatação no fuso", () => {
     expect(
       zonedDateKey("2026-01-05T02:00:00.000Z", "America/Sao_Paulo"),
     ).toBe("2026-01-04");
+  });
+});
+
+describe("todayInTimeZone", () => {
+  it("às 23h em São Paulo ainda é o mesmo dia (UTC já virou)", () => {
+    const now = new Date("2026-11-12T02:00:00.000Z"); // 23:00 de 11/11 em SP
+    expect(todayInTimeZone("America/Sao_Paulo", now)).toBe("2026-11-11");
+  });
+
+  it("usa São Paulo como fuso padrão", () => {
+    const now = new Date("2026-11-12T02:30:00.000Z");
+    expect(todayInTimeZone(undefined, now)).toBe("2026-11-11");
   });
 });

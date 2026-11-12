@@ -80,6 +80,7 @@ export function ServiceBranchList({
 
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <input
+                  aria-label="Preço nesta filial"
                   name="price"
                   inputMode="decimal"
                   placeholder={`Padrão ${formatCentsBRL(service.priceCents)}`}
@@ -91,6 +92,7 @@ export function ServiceBranchList({
                   className={inputClass}
                 />
                 <input
+                  aria-label="Duração nesta filial (min)"
                   name="durationMinutes"
                   type="number"
                   min={1}

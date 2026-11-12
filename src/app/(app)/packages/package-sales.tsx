@@ -68,7 +68,7 @@ export function PackageSales({
             Vender pacote
           </h2>
           <form action={sell} className="mt-4 flex flex-wrap items-end gap-2">
-            <select name="clientId" defaultValue="" className={inputClass}>
+            <select aria-label="Cliente" name="clientId" defaultValue="" className={inputClass}>
               <option value="">Cliente...</option>
               {clients.map((client) => (
                 <option key={client.id} value={client.id}>
@@ -76,7 +76,7 @@ export function PackageSales({
                 </option>
               ))}
             </select>
-            <select name="packageId" defaultValue="" className={inputClass}>
+            <select aria-label="Pacote" name="packageId" defaultValue="" className={inputClass}>
               <option value="">Pacote...</option>
               {packages
                 .filter((pkg) => pkg.isActive)
@@ -86,7 +86,7 @@ export function PackageSales({
                   </option>
                 ))}
             </select>
-            <select name="method" defaultValue="cash" className={inputClass}>
+            <select aria-label="Forma de pagamento" name="method" defaultValue="cash" className={inputClass}>
               {METHODS.map((method) => (
                 <option key={method.value} value={method.value}>
                   {method.label}
@@ -152,7 +152,7 @@ export function PackageSales({
                       name="clientPackageId"
                       value={item.id}
                     />
-                    <select name="serviceId" defaultValue="" className={inputClass}>
+                    <select aria-label="Serviço" name="serviceId" defaultValue="" className={inputClass}>
                       <option value="">Serviço a resgatar...</option>
                       {item.items
                         .filter((pi) => pi.redeemed < pi.quantity)

@@ -5,6 +5,7 @@ import { getCurrentTenant, getMyProfessional, getUserTenants } from "@/lib/tenan
 import { getSession } from "@/lib/session";
 import { SetupNotice } from "@/components/setup-notice";
 import { MobileNav } from "./mobile-nav";
+import { SidebarNav } from "./sidebar-nav";
 import { SignOutButton } from "./sign-out-button";
 import { TenantSwitcher } from "./tenant-switcher";
 import { VerifyEmailBanner } from "./verify-email-banner";
@@ -78,103 +79,10 @@ export default async function AppLayout({
           </div>
         )}
 
-        <nav
-          aria-label="Navegação principal"
-          className="mt-6 flex flex-col gap-1 text-sm"
-        >
-          <Link href="/dashboard" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Visão geral
-          </Link>
-          <Link href="/branches" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Filiais
-          </Link>
-          <Link href="/services" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Serviços
-          </Link>
-          <Link href="/products" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Produtos
-          </Link>
-          <Link href="/inventory" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Estoque
-          </Link>
-          <Link
-            href="/professionals"
-            className="rounded-lg px-3 py-2 hover:bg-muted"
-          >
-            Profissionais
-          </Link>
-          <Link href="/schedule" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Horários
-          </Link>
-          <Link href="/appointments" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Agenda
-          </Link>
-          {myProfessional && (
-            <Link
-              href="/my-schedule"
-              className="rounded-lg px-3 py-2 hover:bg-muted"
-            >
-              Minha agenda
-            </Link>
-          )}
-          <Link href="/clients" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Clientes
-          </Link>
-          <Link href="/packages" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Pacotes
-          </Link>
-          <Link href="/subscriptions" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Assinaturas
-          </Link>
-          <Link href="/coupons" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Cupons
-          </Link>
-          <Link href="/loyalty" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Fidelidade
-          </Link>
-          <Link href="/notifications" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Mensagens
-          </Link>
-          <Link href="/team" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Equipe
-          </Link>
-          <Link href="/finance" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Financeiro
-          </Link>
-          <Link
-            href="/reconciliation"
-            className="rounded-lg px-3 py-2 hover:bg-muted"
-          >
-            Conciliação
-          </Link>
-          <Link href="/reports" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Relatórios
-          </Link>
-          {canManageTenant && (
-            <Link
-              href="/closing"
-              className="rounded-lg px-3 py-2 hover:bg-muted"
-            >
-              Fechamento
-            </Link>
-          )}
-          {canManageTenant && (
-            <Link
-              href="/settings"
-              className="rounded-lg px-3 py-2 hover:bg-muted"
-            >
-              Configurações
-            </Link>
-          )}
-          {canManageTenant && (
-            <Link href="/billing" className="rounded-lg px-3 py-2 hover:bg-muted">
-              Plano e cobrança
-            </Link>
-          )}
-          <Link href="/profile" className="rounded-lg px-3 py-2 hover:bg-muted">
-            Perfil
-          </Link>
-        </nav>
+        <SidebarNav
+          hasProfessional={Boolean(myProfessional)}
+          canManageTenant={canManageTenant}
+        />
 
         <div className="mt-auto space-y-3">
           <p className="truncate text-xs text-foreground/70">{user.email}</p>
@@ -182,14 +90,14 @@ export default async function AppLayout({
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-border px-6 py-4 sm:hidden">
           <Link href="/dashboard" className="font-semibold">
             Glow<span className="text-brand">Hub</span>
           </Link>
           <SignOutButton />
         </header>
-        <main id="conteudo" className="flex-1 px-4 pb-28 pt-6 sm:px-6 sm:py-8">
+        <main id="conteudo" className="min-w-0 flex-1 px-4 pb-28 pt-6 sm:px-6 sm:py-8">
           {billing?.level === "warning" && (
             <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
               <p className="flex-1">{billing.message}</p>

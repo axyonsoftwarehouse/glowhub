@@ -36,7 +36,7 @@ function VariantSelect({
   variants: InventoryVariantOption[];
 }) {
   return (
-    <select name="variantId" defaultValue="" className={inputClass}>
+    <select aria-label="Produto" name="variantId" defaultValue="" className={inputClass}>
       <option value="" disabled>
         Selecione o item
       </option>
@@ -97,7 +97,7 @@ export function InventoryForms({
         <form ref={purchaseRef} action={handlePurchase} className="mt-4 space-y-3">
           <VariantSelect variants={variants} />
           <div className="grid gap-3 sm:grid-cols-2">
-            <input
+            <input aria-label="Quantidade"
               name="quantity"
               type="number"
               min={1}
@@ -105,14 +105,14 @@ export function InventoryForms({
               placeholder="Quantidade"
               className={inputClass}
             />
-            <input
+            <input aria-label="Custo unitário (R$)"
               name="unitCost"
               placeholder="Custo unitário (R$)"
               className={inputClass}
             />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            <select name="supplierId" defaultValue="" className={inputClass}>
+            <select aria-label="Fornecedor" name="supplierId" defaultValue="" className={inputClass}>
               <option value="">Sem fornecedor</option>
               {suppliers.map((supplier) => (
                 <option key={supplier.id} value={supplier.id}>
@@ -120,7 +120,7 @@ export function InventoryForms({
                 </option>
               ))}
             </select>
-            <select name="paymentMethod" defaultValue="cash" className={inputClass}>
+            <select aria-label="Forma de pagamento" name="paymentMethod" defaultValue="cash" className={inputClass}>
               <option value="cash">Pago à vista (Caixa)</option>
               <option value="payable">A prazo (Contas a Pagar)</option>
             </select>
@@ -143,19 +143,19 @@ export function InventoryForms({
         <form ref={adjustmentRef} action={handleAdjustment} className="mt-4 space-y-3">
           <VariantSelect variants={variants} />
           <div className="grid gap-3 sm:grid-cols-2">
-            <input
+            <input aria-label="Quantidade"
               name="quantityDelta"
               type="number"
               defaultValue={0}
               placeholder="Quantidade (negativo = baixa)"
               className={inputClass}
             />
-            <select name="kind" defaultValue="adjustment" className={inputClass}>
+            <select aria-label="Tipo de movimento" name="kind" defaultValue="adjustment" className={inputClass}>
               <option value="adjustment">Ajuste de inventário</option>
               <option value="loss">Perda / quebra</option>
             </select>
           </div>
-          <input
+          <input aria-label="Observação"
             name="notes"
             placeholder="Observação (opcional)"
             className={inputClass}
@@ -199,14 +199,14 @@ export function SupplierForm() {
       </summary>
       <form ref={formRef} action={handleSubmit} className="mt-4 space-y-3">
         <div className="grid gap-3 sm:grid-cols-2">
-          <input name="name" placeholder="Nome do fornecedor" className={inputClass} />
-          <input
+          <input aria-label="Nome do fornecedor" name="name" placeholder="Nome do fornecedor" className={inputClass} />
+          <input aria-label="Contato (telefone, e-mail)"
             name="contact"
             placeholder="Contato (telefone, e-mail)"
             className={inputClass}
           />
         </div>
-        <input name="notes" placeholder="Observações (opcional)" className={inputClass} />
+        <input aria-label="Observações" name="notes" placeholder="Observações (opcional)" className={inputClass} />
         <Feedback state={result} />
         <button
           type="submit"
