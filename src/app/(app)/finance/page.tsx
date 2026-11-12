@@ -19,6 +19,7 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { AccountManager } from "./account-manager";
 import { ChargeList } from "./charge-list";
 import { JournalForm } from "./journal-form";
+import { todayInTimeZone } from "@/lib/timezone";
 import { JournalList } from "./journal-list";
 import { PayoutList } from "./payout-list";
 import type {
@@ -333,6 +334,7 @@ export default async function FinancePage() {
 
       {data.canManage && data.accounts.length >= 2 && (
         <JournalForm
+          today={todayInTimeZone()}
           accounts={data.accounts.filter((account) => account.isActive)}
         />
       )}

@@ -15,7 +15,7 @@ import { SearchForm } from "@/components/search-form";
 import { withUser } from "@/lib/db";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
-import { formatInTimeZone, zonedTimeToUtc } from "@/lib/timezone";
+import { formatInTimeZone, todayInTimeZone, zonedTimeToUtc } from "@/lib/timezone";
 import { AppointmentForm } from "./appointment-form";
 import { AppointmentRow } from "./appointment-row";
 import type {
@@ -175,7 +175,8 @@ export default async function AppointmentsPage({
 
   const selectedBranch =
     branchesList.find((branch) => branch.id === first(sp.branch)) ?? branchesList[0];
-  const date = first(sp.date) ?? new Date().toISOString().slice(0, 10);
+  const today = todayInTimeZone(selectedBranch.timezone);
+  const date = first(sp.date) ?? today;
 
   const dayStart = zonedTimeToUtc(date, "00:00", selectedBranch.timezone);
   const dayEnd = zonedTimeToUtc(addDays(date, 1), "00:00", selectedBranch.timezone);
@@ -312,7 +313,7 @@ export default async function AppointmentsPage({
           <input type="hidden" name="branch" value={selectedBranch.id} />
           <div>
             <label className="text-xs font-medium text-foreground/60">Data</label>
-            <input
+            <input aria-label="Data"
               type="date"
               name="date"
               defaultValue={date}
@@ -331,6 +332,7 @@ export default async function AppointmentsPage({
       {data.canManage && data.professionals.length > 0 && (
         <AppointmentForm
           branches={branchesList}
+          today={today}
           professionals={data.professionals}
           services={data.services}
           clients={data.clients}

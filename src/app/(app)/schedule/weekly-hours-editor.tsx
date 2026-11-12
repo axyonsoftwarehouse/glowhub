@@ -110,6 +110,7 @@ export function WeeklyHoursEditor({
                 <div key={index} className="flex items-center gap-2">
                   <input
                     type="time"
+                    aria-label={`${label}: início`}
                     value={interval.start}
                     disabled={!canManage}
                     onChange={(event) =>
@@ -120,6 +121,7 @@ export function WeeklyHoursEditor({
                   <span className="text-xs text-foreground/70">até</span>
                   <input
                     type="time"
+                    aria-label={`${label}: fim`}
                     value={interval.end}
                     disabled={!canManage}
                     onChange={(event) =>

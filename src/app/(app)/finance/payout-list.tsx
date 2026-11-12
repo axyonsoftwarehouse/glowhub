@@ -57,6 +57,7 @@ export function PayoutList({ rows }: { rows: PayoutRow[] }) {
               {formatCentsBRL(row.commissionCents + row.tipCents)}
             </span>
             <select
+              aria-label="Forma de pagamento"
               name="method"
               defaultValue="cash"
               className="rounded-lg border border-border bg-white px-2 py-1.5 text-xs outline-none focus:border-brand"

@@ -92,7 +92,7 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
 
       <div className="space-y-3">
         {mode === "signup" && (
-          <input
+          <input aria-label="Seu nome"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -101,7 +101,7 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
           />
         )}
-        <input
+        <input aria-label="E-mail"
           type="email"
           required
           value={email}
@@ -109,7 +109,7 @@ export function LoginForm({ redirectTo = "/dashboard" }: { redirectTo?: string }
           placeholder="voce@empresa.com"
           className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
         />
-        <input
+        <input aria-label="Senha"
           type="password"
           required
           minLength={8}

@@ -22,11 +22,15 @@ function emptyLine(): DraftLine {
   return { accountId: "", direction: "debit", amount: "" };
 }
 
-export function JournalForm({ accounts }: { accounts: LedgerAccount[] }) {
+export function JournalForm({
+  accounts,
+  today,
+}: {
+  accounts: LedgerAccount[];
+  today: string;
+}) {
   const [description, setDescription] = useState("");
-  const [occurredAt, setOccurredAt] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
+  const [occurredAt, setOccurredAt] = useState(today);
   const [lines, setLines] = useState<DraftLine[]>([
     { accountId: "", direction: "debit", amount: "" },
     { accountId: "", direction: "credit", amount: "" },
@@ -98,7 +102,7 @@ export function JournalForm({ accounts }: { accounts: LedgerAccount[] }) {
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
         <div className="sm:col-span-2">
           <label className="text-xs font-medium text-foreground/60">Descrição</label>
-          <input
+          <input aria-label="Descrição"
             value={description}
             onChange={(event) => setDescription(event.target.value)}
             className={`mt-1 w-full ${inputClass}`}
@@ -106,7 +110,7 @@ export function JournalForm({ accounts }: { accounts: LedgerAccount[] }) {
         </div>
         <div>
           <label className="text-xs font-medium text-foreground/60">Data</label>
-          <input
+          <input aria-label="Data"
             type="date"
             value={occurredAt}
             onChange={(event) => setOccurredAt(event.target.value)}
@@ -119,6 +123,7 @@ export function JournalForm({ accounts }: { accounts: LedgerAccount[] }) {
         {lines.map((line, index) => (
           <div key={index} className="flex flex-wrap items-center gap-2">
             <select
+              aria-label="Conta"
               value={line.accountId}
               onChange={(event) => updateLine(index, { accountId: event.target.value })}
               className={`flex-1 ${inputClass}`}
@@ -131,6 +136,7 @@ export function JournalForm({ accounts }: { accounts: LedgerAccount[] }) {
               ))}
             </select>
             <select
+              aria-label="Débito ou crédito"
               value={line.direction}
               onChange={(event) =>
                 updateLine(index, {
@@ -142,7 +148,7 @@ export function JournalForm({ accounts }: { accounts: LedgerAccount[] }) {
               <option value="debit">Débito</option>
               <option value="credit">Crédito</option>
             </select>
-            <input
+            <input aria-label="Valor (R$)"
               value={line.amount}
               onChange={(event) => updateLine(index, { amount: event.target.value })}
               placeholder="0,00"

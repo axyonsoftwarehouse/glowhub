@@ -98,7 +98,7 @@ export function AccountManager({
         <form ref={formRef} action={handleCreate} className="mt-4 flex flex-wrap items-end gap-2">
           <div>
             <label className="text-xs font-medium text-foreground/60">Código</label>
-            <input
+            <input aria-label="Código"
               name="code"
               placeholder="4.4"
               className="mt-1 w-24 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
@@ -107,7 +107,7 @@ export function AccountManager({
           </div>
           <div className="flex-1">
             <label className="text-xs font-medium text-foreground/60">Nome</label>
-            <input
+            <input aria-label="Nome"
               name="name"
               placeholder="Receita de Assinaturas"
               className="mt-1 w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
@@ -116,7 +116,7 @@ export function AccountManager({
           </div>
           <div>
             <label className="text-xs font-medium text-foreground/60">Tipo</label>
-            <select
+            <select aria-label="Tipo"
               name="type"
               className="mt-1 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
             >

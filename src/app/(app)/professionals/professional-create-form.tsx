@@ -36,7 +36,7 @@ export function ProfessionalCreateForm() {
 
       <form ref={formRef} action={handleSubmit} className="mt-4 flex items-start gap-2">
         <div className="flex-1">
-          <input
+          <input aria-label="Nome do profissional"
             name="name"
             placeholder="Nome do profissional"
             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"
@@ -50,7 +50,7 @@ export function ProfessionalCreateForm() {
           )}
         </div>
         <div className="w-28">
-          <input
+          <input aria-label="Comissão %"
             name="commission"
             placeholder="Comissão %"
             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"

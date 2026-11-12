@@ -16,6 +16,7 @@ import {
   type WeeklyHour,
 } from "@/lib/availability";
 import { withUser } from "@/lib/db";
+import { todayInTimeZone } from "@/lib/timezone";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import { ClosureManager } from "./closure-manager";
@@ -60,7 +61,7 @@ export default async function SchedulePage({
 
   const data = await withUser(userId, async (tx) => {
     const branchRows = await tx
-      .select({ id: branches.id, name: branches.name })
+      .select({ id: branches.id, name: branches.name, timezone: branches.timezone })
       .from(branches)
       .where(and(eq(branches.tenantId, tenant.id), eq(branches.isActive, true)))
       .orderBy(asc(branches.name));
@@ -220,7 +221,7 @@ export default async function SchedulePage({
       end: item.endTime ? timeToMinutes(item.endTime) : null,
     }));
 
-  const previewDate = first(sp.date) ?? new Date().toISOString().slice(0, 10);
+  const previewDate = first(sp.date) ?? todayInTimeZone(selectedBranch?.timezone);
   const previewService =
     servicesList.find((service) => service.id === first(sp.service)) ??
     servicesList[0];
@@ -351,7 +352,7 @@ export default async function SchedulePage({
               )}
               <div>
                 <label className="text-xs font-medium text-foreground/60">Data</label>
-                <input
+                <input aria-label="Data"
                   type="date"
                   name="date"
                   defaultValue={previewDate}
@@ -362,7 +363,7 @@ export default async function SchedulePage({
                 <label className="text-xs font-medium text-foreground/60">
                   Serviço
                 </label>
-                <select
+                <select aria-label="Serviço"
                   name="service"
                   defaultValue={previewService?.id}
                   className="mt-1 rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand"

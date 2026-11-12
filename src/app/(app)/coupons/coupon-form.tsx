@@ -69,39 +69,39 @@ export function CouponForm({
             <div className="grid gap-3 sm:grid-cols-4">
               <div>
                 <label className="text-xs font-medium text-foreground/60">Código</label>
-                <input name="code" placeholder="BEMVINDO10" className={`mt-1 w-full ${inputClass}`} />
+                <input aria-label="Código" name="code" placeholder="BEMVINDO10" className={`mt-1 w-full ${inputClass}`} />
                 {e.code?.[0] && <p className="mt-1 text-xs text-red-600">{e.code[0]}</p>}
               </div>
               <div>
                 <label className="text-xs font-medium text-foreground/60">Tipo</label>
-                <select name="type" defaultValue="percent" className={`mt-1 w-full ${inputClass}`}>
+                <select aria-label="Tipo" name="type" defaultValue="percent" className={`mt-1 w-full ${inputClass}`}>
                   <option value="percent">Percentual (%)</option>
                   <option value="fixed">Valor fixo (R$)</option>
                 </select>
               </div>
               <div>
                 <label className="text-xs font-medium text-foreground/60">Valor</label>
-                <input name="value" placeholder="10 ou 20,00" className={`mt-1 w-full ${inputClass}`} />
+                <input aria-label="Valor" name="value" placeholder="10 ou 20,00" className={`mt-1 w-full ${inputClass}`} />
                 {e.value?.[0] && <p className="mt-1 text-xs text-red-600">{e.value[0]}</p>}
               </div>
               <div>
                 <label className="text-xs font-medium text-foreground/60">Mínimo (R$)</label>
-                <input name="minAmount" placeholder="0,00" className={`mt-1 w-full ${inputClass}`} />
+                <input aria-label="Mínimo (R$)" name="minAmount" placeholder="0,00" className={`mt-1 w-full ${inputClass}`} />
               </div>
             </div>
             <div className="grid gap-3 sm:grid-cols-4">
               <div>
                 <label className="text-xs font-medium text-foreground/60">Usos máx.</label>
-                <input name="maxUses" placeholder="ilimitado" className={`mt-1 w-full ${inputClass}`} />
+                <input aria-label="Usos máx." name="maxUses" placeholder="ilimitado" className={`mt-1 w-full ${inputClass}`} />
                 {e.maxUses?.[0] && <p className="mt-1 text-xs text-red-600">{e.maxUses[0]}</p>}
               </div>
               <div>
                 <label className="text-xs font-medium text-foreground/60">Expira em</label>
-                <input type="date" name="expiresAt" className={`mt-1 w-full ${inputClass}`} />
+                <input aria-label="Expira em" type="date" name="expiresAt" className={`mt-1 w-full ${inputClass}`} />
               </div>
               <div className="sm:col-span-2">
                 <label className="text-xs font-medium text-foreground/60">Descrição</label>
-                <input name="description" className={`mt-1 w-full ${inputClass}`} />
+                <input aria-label="Descrição" name="description" className={`mt-1 w-full ${inputClass}`} />
               </div>
             </div>
 

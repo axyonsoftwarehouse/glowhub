@@ -98,7 +98,7 @@ export function ServiceMaterials({
           className="mt-3 flex flex-wrap items-center gap-2"
         >
           <input type="hidden" name="serviceId" value={serviceId} />
-          <select name="variantId" defaultValue="" className={inputClass}>
+          <select aria-label="Insumo" name="variantId" defaultValue="" className={inputClass}>
             <option value="" disabled>
               Selecione o insumo
             </option>

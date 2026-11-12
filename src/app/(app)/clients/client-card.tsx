@@ -133,7 +133,7 @@ export function ClientCard({ client }: { client: ClientWithInsights }) {
               defaultValue={client.birthday ?? ""}
               className={inputClass}
             />
-            <input
+            <input aria-label="Tags (separadas por vírgula)"
               name="tags"
               defaultValue={formatTags(client.tags)}
               placeholder="Tags (separadas por vírgula)"
@@ -141,7 +141,7 @@ export function ClientCard({ client }: { client: ClientWithInsights }) {
             />
           </div>
           {e.birthday?.[0] && <p className="text-xs text-red-600">{e.birthday[0]}</p>}
-          <textarea
+          <textarea aria-label="Preferências"
             name="preferences"
             rows={2}
             defaultValue={client.preferences ?? ""}

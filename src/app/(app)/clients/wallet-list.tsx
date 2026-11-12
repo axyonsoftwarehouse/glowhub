@@ -68,7 +68,7 @@ export function WalletList({
                   </option>
                 ))}
               </select>
-              <input
+              <input aria-label="Valor (R$)"
                 name="amount"
                 placeholder="0,00"
                 className="w-20 rounded-lg border border-border bg-white px-2 py-1.5 text-xs outline-none focus:border-brand"

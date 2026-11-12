@@ -22,7 +22,9 @@ export function AppointmentForm({
   professionals,
   services,
   clients,
+  today,
 }: {
+  today: string;
   branches: BranchOption[];
   professionals: ProfessionalOption[];
   services: ServiceOption[];
@@ -31,7 +33,7 @@ export function AppointmentForm({
   const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
   const [professionalId, setProfessionalId] = useState("");
   const [serviceId, setServiceId] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(today);
   const [slots, setSlots] = useState<string[] | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [clientId, setClientId] = useState("");
@@ -130,7 +132,7 @@ export function AppointmentForm({
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <label className="text-xs font-medium text-foreground/60">Filial</label>
-          <select
+          <select aria-label="Filial"
             value={branchId}
             onChange={(event) => handleBranchChange(event.target.value)}
             className={`mt-1 ${selectClass}`}
@@ -146,7 +148,7 @@ export function AppointmentForm({
           <label className="text-xs font-medium text-foreground/60">
             Profissional
           </label>
-          <select
+          <select aria-label="Profissional"
             value={professionalId}
             onChange={(event) => handleProfessionalChange(event.target.value)}
             className={`mt-1 ${selectClass}`}
@@ -161,7 +163,7 @@ export function AppointmentForm({
         </div>
         <div>
           <label className="text-xs font-medium text-foreground/60">Serviço</label>
-          <select
+          <select aria-label="Serviço"
             value={serviceId}
             onChange={(event) => {
               setServiceId(event.target.value);
@@ -180,7 +182,7 @@ export function AppointmentForm({
         </div>
         <div>
           <label className="text-xs font-medium text-foreground/60">Data</label>
-          <input
+          <input aria-label="Data"
             type="date"
             value={date}
             onChange={(event) => {
@@ -243,7 +245,7 @@ export function AppointmentForm({
           <label className="text-xs font-medium text-foreground/60">
             Cliente existente
           </label>
-          <select
+          <select aria-label="Cliente existente"
             value={clientId}
             onChange={(event) => {
               setClientId(event.target.value);
@@ -263,7 +265,7 @@ export function AppointmentForm({
           <label className="text-xs font-medium text-foreground/60">
             ou novo cliente
           </label>
-          <input
+          <input aria-label="Nome do novo cliente"
             value={newClientName}
             onChange={(event) => {
               setNewClientName(event.target.value);
@@ -277,7 +279,7 @@ export function AppointmentForm({
           <label className="text-xs font-medium text-foreground/60">
             Observações
           </label>
-          <input
+          <input aria-label="Observações"
             value={notes}
             onChange={(event) => setNotes(event.target.value)}
             className={`mt-1 ${selectClass}`}

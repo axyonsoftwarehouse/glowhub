@@ -86,7 +86,7 @@ export function BranchCard({
             <label className="text-xs font-medium text-foreground/60">
               Nome
             </label>
-            <input
+            <input aria-label="Nome"
               name="name"
               defaultValue={branch.name}
               className={`mt-1 ${inputClass}`}
@@ -97,7 +97,7 @@ export function BranchCard({
             <label className="text-xs font-medium text-foreground/60">
               Identificador
             </label>
-            <input
+            <input aria-label="Identificador"
               name="slug"
               defaultValue={branch.slug}
               className={`mt-1 font-mono ${inputClass}`}
@@ -108,7 +108,7 @@ export function BranchCard({
             <label className="text-xs font-medium text-foreground/60">
               Endereço
             </label>
-            <input
+            <input aria-label="Endereço"
               name="address"
               defaultValue={branch.address ?? ""}
               className={`mt-1 ${inputClass}`}
@@ -121,7 +121,7 @@ export function BranchCard({
             <label className="text-xs font-medium text-foreground/60">
               Fuso horário
             </label>
-            <select
+            <select aria-label="Fuso horário"
               name="timezone"
               defaultValue={branch.timezone}
               className={`mt-1 ${inputClass}`}

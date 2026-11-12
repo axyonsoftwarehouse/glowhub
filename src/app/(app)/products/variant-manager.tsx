@@ -76,23 +76,23 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
         <form action={handleUpdate} className="space-y-2">
           <input type="hidden" name="id" value={variant.id} />
           <div className="grid gap-2 sm:grid-cols-2">
-            <input name="name" defaultValue={variant.name} placeholder="Nome" className={inputClass} />
-            <input name="sku" defaultValue={variant.sku ?? ""} placeholder="SKU" className={inputClass} />
+            <input aria-label="Nome" name="name" defaultValue={variant.name} placeholder="Nome" className={inputClass} />
+            <input aria-label="SKU" name="sku" defaultValue={variant.sku ?? ""} placeholder="SKU" className={inputClass} />
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
-            <input
+            <input aria-label="Unidade"
               name="unit"
               defaultValue={variant.unit}
               placeholder="Unidade"
               className={inputClass}
             />
-            <input
+            <input aria-label="Preço"
               name="price"
               defaultValue={formatCentsToInput(variant.priceCents)}
               placeholder="Preço"
               className={inputClass}
             />
-            <input
+            <input aria-label="Custo"
               name="cost"
               defaultValue={formatCentsToInput(variant.costCents)}
               placeholder="Custo"
@@ -100,7 +100,7 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
             />
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
-            <input
+            <input aria-label="Estoque"
               name="stock"
               type="number"
               min={0}
@@ -108,7 +108,7 @@ function VariantRow({ variant }: { variant: ProductVariant }) {
               placeholder="Estoque"
               className={inputClass}
             />
-            <input
+            <input aria-label="Estoque mínimo"
               name="minStock"
               type="number"
               min={0}
@@ -212,16 +212,16 @@ export function VariantManager({
       <form ref={formRef} action={handleSubmit} className="mt-3 space-y-2">
         <input type="hidden" name="productId" value={productId} />
         <div className="grid gap-2 sm:grid-cols-2">
-          <input name="name" placeholder="Nova variação (ex.: 300ml)" className={inputClass} />
-          <input name="sku" placeholder="SKU (opcional)" className={inputClass} />
+          <input aria-label="Nova variação" name="name" placeholder="Nova variação (ex.: 300ml)" className={inputClass} />
+          <input aria-label="SKU" name="sku" placeholder="SKU (opcional)" className={inputClass} />
         </div>
         <div className="grid gap-2 sm:grid-cols-3">
-          <input name="unit" placeholder="Unidade (un/ml/g)" className={inputClass} />
-          <input name="price" placeholder="Preço" className={inputClass} />
-          <input name="cost" placeholder="Custo" className={inputClass} />
+          <input aria-label="Unidade (un/ml/g)" name="unit" placeholder="Unidade (un/ml/g)" className={inputClass} />
+          <input aria-label="Preço" name="price" placeholder="Preço" className={inputClass} />
+          <input aria-label="Custo" name="cost" placeholder="Custo" className={inputClass} />
         </div>
         <div className="grid gap-2 sm:grid-cols-2">
-          <input
+          <input aria-label="Estoque"
             name="stock"
             type="number"
             min={0}
@@ -229,7 +229,7 @@ export function VariantManager({
             placeholder="Estoque"
             className={inputClass}
           />
-          <input
+          <input aria-label="Estoque mínimo"
             name="minStock"
             type="number"
             min={0}
