@@ -1,3 +1,4 @@
+import { infinitePayProvider } from "./infinitepay";
 import { mercadoPagoProvider } from "./mercadopago";
 import { mockProvider } from "./mock";
 import type { PaymentProviderAdapter } from "./types";
@@ -5,6 +6,7 @@ import type { PaymentProviderAdapter } from "./types";
 const ADAPTERS: Record<string, PaymentProviderAdapter> = {
   mock: mockProvider,
   mercadopago: mercadoPagoProvider,
+  infinitepay: infinitePayProvider,
 };
 
 export function getPaymentProvider(
@@ -22,5 +24,5 @@ export function activePaymentProvider(): PaymentProviderAdapter {
   return getPaymentProvider(activePaymentProviderId()) ?? mockProvider;
 }
 
-export { mercadoPagoProvider, mockProvider };
+export { infinitePayProvider, mercadoPagoProvider, mockProvider };
 export * from "./types";

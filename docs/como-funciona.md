@@ -378,16 +378,18 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
 
 ### 6.5 Pagamento online e webhooks
 
-- Provedores em `src/lib/payments/*`: `mock` (padrão) e `mercadopago`
-  (Checkout Pro). A interface é `createCheckout`, `verifyWebhook`,
-  `parseWebhook`.
+- Provedores em `src/lib/payments/*`: `mock` (padrão), `mercadopago`
+  (Checkout Pro) e `infinitepay` (Checkout Integrado). A interface é
+  `createCheckout`, `verifyWebhook`, `parseWebhook`.
 - `POST /api/webhooks/<provider>`:
   1. rejeita provedor inválido e corpo > 256 KB;
   2. busca o segredo em `WEBHOOK_<PROVIDER>_SECRET` ou `WEBHOOK_SECRET`; **sem
-     segredo, responde 503**;
+     segredo, responde 503** quando o adapter exige segredo (padrão). Adapters
+     com `requiresSecret: false` (InfinitePay) confirmam o evento por API;
   3. valida a assinatura com o adapter (Mercado Pago: `x-signature` +
-     `x-request-id` + `data.id`) ou com HMAC-SHA256 genérico do corpo
-     (`x-webhook-signature`/`x-signature`);
+     `x-request-id` + `data.id`; InfinitePay: `/payment_check` com
+     `order_nsu` + `transaction_nsu` + `slug`) ou com HMAC-SHA256 genérico do
+     corpo (`x-webhook-signature`/`x-signature`);
   4. grava em `webhook_events` com unique `(provider, event_id)`, guardando
      payload, URL e status `pending`;
   5. com adapter, aplica `approved` (confirma), `rejected` (marca `failed`) ou
@@ -519,6 +521,11 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
   ações de status via `PATCH /api/v1/appointments/:id/status`, booking público
   e registro de push. O `EXPO_PUBLIC_API_URL` aponta para a API e
   `EXPO_PUBLIC_TENANT_SLUG` para o salão do booking; push exige projectId EAS.
+- **Assistente de IA** (`/assistant`): server action autenticada monta um resumo
+  somente-leitura da empresa (agenda de hoje, próximos 7 dias, serviços,
+  clientes, recebido hoje e em aberto) com `withUser` (RLS) e chama a OpenRouter
+  (`OPENROUTER_API_KEY`, padrão `google/gemini-2.5-flash`). Rate limit de 20
+  perguntas/5 min por usuário; sem a chave, a página só mostra o aviso.
 
 ## 11. Ambientes e deploy
 
@@ -583,7 +590,9 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
 
 1. Implemente `PaymentProviderAdapter` em `src/lib/payments/<provider>.ts`.
 2. Registre em `ADAPTERS` (`src/lib/payments/index.ts`).
-3. Defina `WEBHOOK_<PROVIDER>_SECRET` e a validação de assinatura.
+3. Defina `WEBHOOK_<PROVIDER>_SECRET` e a validação de assinatura — ou
+   `requiresSecret: false` se o provedor confirmar o evento por API (como a
+   InfinitePay no `/payment_check`).
 4. Teste o parse de status (`approved`/`rejected`/`refunded`) e a idempotência.
 
 ## 14. Limitações conhecidas

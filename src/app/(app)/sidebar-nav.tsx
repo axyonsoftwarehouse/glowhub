@@ -28,6 +28,7 @@ export function SidebarNav({
         ...(hasProfessional ? [{ href: "/my-schedule", label: "Minha agenda" }] : []),
         { href: "/clients", label: "Clientes" },
         { href: "/schedule", label: "Horários" },
+        { href: "/assistant", label: "Assistente IA" },
       ],
     },
     {

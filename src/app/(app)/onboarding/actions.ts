@@ -23,6 +23,16 @@ import { parsePriceToCents } from "@/lib/money";
 import { getSession } from "@/lib/session";
 import type { TenantActionState } from "./types";
 
+const serviceInput = z.object({
+  name: z.string().trim().max(120, "No máximo 120 caracteres."),
+  durationMinutes: z.coerce
+    .number()
+    .int("Use minutos inteiros.")
+    .min(5, "Mínimo 5 minutos.")
+    .max(480, "Máximo 480 minutos."),
+  price: z.string().trim().max(30).optional().or(z.literal("")),
+});
+
 const tenantInput = z.object({
   name: z
     .string()
@@ -40,6 +50,7 @@ const tenantInput = z.object({
     .optional()
     .or(z.literal("")),
   solo: z.boolean().default(false),
+  services: z.string().trim().max(20_000).optional().or(z.literal("")),
   serviceName: z.string().trim().max(120).optional().or(z.literal("")),
   serviceDuration: z.coerce
     .number()
@@ -49,6 +60,70 @@ const tenantInput = z.object({
     .default(30),
   servicePrice: z.string().trim().max(30).optional().or(z.literal("")),
 });
+
+type NewService = {
+  name: string;
+  durationMinutes: number;
+  priceCents: number;
+};
+
+/** Valida a lista de serviços do onboarding (JSON) ou usa o serviço único antigo. */
+function parseServices(data: z.infer<typeof tenantInput>):
+  | { services: NewService[] }
+  | { error: Record<string, string[]> } {
+  let rows: z.infer<typeof serviceInput>[];
+
+  if (data.services) {
+    let json: unknown;
+    try {
+      json = JSON.parse(data.services);
+    } catch {
+      return { error: { services: ["Lista de serviços inválida."] } };
+    }
+    const parsed = z.array(serviceInput).max(50).safeParse(json);
+    if (!parsed.success) {
+      return { error: { services: ["Revise os serviços informados."] } };
+    }
+    rows = parsed.data;
+  } else {
+    rows = [
+      {
+        name: data.serviceName?.trim() || "Atendimento",
+        durationMinutes: data.serviceDuration,
+        price: data.servicePrice,
+      },
+    ];
+  }
+
+  const services: NewService[] = [];
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const name = row.name.trim();
+    if (!name) continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+
+    const rawPrice = row.price?.trim() ?? "";
+    const priceCents = rawPrice ? parsePriceToCents(rawPrice) : 0;
+    if (priceCents === null || priceCents < 0) {
+      return { error: { services: [`Preço inválido em "${name}".`] } };
+    }
+
+    seen.add(key);
+    services.push({
+      name,
+      durationMinutes: row.durationMinutes,
+      priceCents,
+    });
+  }
+
+  if (services.length === 0) {
+    return {
+      services: [{ name: "Atendimento", durationMinutes: 30, priceCents: 0 }],
+    };
+  }
+  return { services };
+}
 
 function slugify(value: string): string {
   return value
@@ -91,6 +166,7 @@ export async function createTenantAction(
     name: formData.get("name") ?? "",
     slug: formData.get("slug") ?? "",
     solo: formData.get("solo") === "on",
+    services: formData.get("services") ?? "",
     serviceName: formData.get("serviceName") ?? "",
     serviceDuration: formData.get("serviceDuration") ?? 30,
     servicePrice: formData.get("servicePrice") ?? "",
@@ -99,19 +175,14 @@ export async function createTenantAction(
     return { status: "error", fieldErrors: toFieldErrors(parsed.error) };
   }
 
-  const rawPrice = parsed.data.servicePrice?.trim() ?? "";
-  const servicePriceCents = rawPrice ? parsePriceToCents(rawPrice) : 0;
-  if (servicePriceCents === null || servicePriceCents < 0) {
-    return {
-      status: "error",
-      fieldErrors: { servicePrice: ["Preço inválido."] },
-    };
+  const serviceList = parseServices(parsed.data);
+  if ("error" in serviceList) {
+    return { status: "error", fieldErrors: serviceList.error };
   }
 
   const baseSlug = parsed.data.slug || slugify(parsed.data.name) || "empresa";
   const solo = parsed.data.solo;
   const professionalName = session.user.name?.trim() || "Meu nome";
-  const serviceName = parsed.data.serviceName?.trim() || "Atendimento";
 
   try {
     // Onboarding: usuario autenticado sem tenant ainda. Usa a conexao admin
@@ -166,21 +237,23 @@ export async function createTenantAction(
           branchId: branch.id,
         });
 
-        const [service] = await tx
-          .insert(services)
-          .values({
-            tenantId: tenant.id,
-            name: serviceName,
-            durationMinutes: parsed.data.serviceDuration,
-            priceCents: servicePriceCents,
-          })
-          .returning({ id: services.id });
+        for (const item of serviceList.services) {
+          const [service] = await tx
+            .insert(services)
+            .values({
+              tenantId: tenant.id,
+              name: item.name,
+              durationMinutes: item.durationMinutes,
+              priceCents: item.priceCents,
+            })
+            .returning({ id: services.id });
 
-        await tx.insert(professionalServices).values({
-          tenantId: tenant.id,
-          professionalId: professional.id,
-          serviceId: service.id,
-        });
+          await tx.insert(professionalServices).values({
+            tenantId: tenant.id,
+            professionalId: professional.id,
+            serviceId: service.id,
+          });
+        }
 
         await tx.insert(branchHours).values(
           SOLO_HOURS.map((hour) => ({

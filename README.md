@@ -50,7 +50,7 @@ src/
     subscription-billing.ts    # renovação/receita diferida
     notifications.ts           # caixa de saída e envio do que está vencido
     reminders.ts               # janela e dedupe de lembretes
-    payments/*                 # adapters (mock, Mercado Pago), assinatura e confirmação
+    payments/*                 # adapters (mock, Mercado Pago, InfinitePay), assinatura e confirmação
     availability.ts            # cálculo puro de slots
     availability-data.ts       # slots a partir do banco
     rate-limit.ts / metrics.ts / alerts.ts / logger.ts
@@ -69,7 +69,8 @@ src/
       dashboard, branches, services, products, inventory, professionals,
       schedule, appointments, my-schedule, clients, clients/[id], packages,
       subscriptions, coupons, loyalty, notifications, team, finance,
-      reconciliation, reports, reports/profitability, closing, settings, profile
+      reconciliation, reports, reports/profitability, closing, settings, profile,
+      assistant
     book/                      # agendamento online (canal público)
     invite/[token]/            # aceite de convite
     pay/mock/                  # checkout simulado (dev/teste)
@@ -113,6 +114,14 @@ cp .env.example .env.local
 Preencha `DATABASE_URL`, `DATABASE_AUTHENTICATED_URL`, `BETTER_AUTH_SECRET`
 (`node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`)
 e `BETTER_AUTH_URL`.
+
+Opcionais:
+- **Assistente de IA** (`/assistant`): `OPENROUTER_API_KEY` e, se quiser trocar o
+  modelo, `OPENROUTER_MODEL` (padrão `google/gemini-2.5-flash`).
+- **InfinitePay** (gateway): `PAYMENT_PROVIDER=infinitepay`,
+  `INFINITEPAY_HANDLE` (InfiniteTag sem `$`) e `INFINITEPAY_API_KEY` (`inchk_...`,
+  necessária só para `options`, como ligar/desligar Pix). O webhook não tem
+  assinatura: a confirmação é feita no `/payment_check` da própria InfinitePay.
 
 ### 3. Aplicar o schema
 ```bash
@@ -201,7 +210,10 @@ Acesse: http://localhost:3000/dashboard
 - [x] Estoque e insumos (ficha técnica, custo médio, CMV e alertas em `/inventory`)
 - [x] Fidelização (gift cards, pontos e campanhas em `/loyalty`)
 - [x] Fechamento contábil (`/closing`) e lucratividade/DRE (`/reports/profitability`)
-- [x] Gateway online (mock + Mercado Pago) com webhooks assinados
+- [x] Gateway online (mock + Mercado Pago + InfinitePay) com webhooks assinados
+      (InfinitePay confirmado via `/payment_check`)
+- [x] Assistente de IA em `/assistant` (OpenRouter, padrão Gemini 2.5 Flash)
+- [x] Onboarding solo com vários serviços iniciais
 - [x] Estorno formal de cobrança (ledger, estoque, cupom e comissão) e retry de webhooks
 - [x] API v1 para app (login Bearer, agenda e booking público) — **[contrato](docs/api-mobile.md)**
 - [x] Pacote mobile solo: navegação inferior, painel “Hoje”, modo solo e
