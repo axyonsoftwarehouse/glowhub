@@ -53,7 +53,7 @@ describe("limites", () => {
   });
 
   it("canAdd respeita o máximo e o ilimitado", () => {
-    const usage = { professionals: 1, branches: 1, members: 2 };
+    const usage = { professionals: 2, branches: 1, members: 2 };
     expect(canAdd(PLANS.solo.limits, usage, "professionals")).toBe(false);
     expect(canAdd(PLANS.equipe.limits, usage, "professionals")).toBe(true);
     expect(canAdd(PLANS.rede.limits, { ...usage, members: 999 }, "members")).toBe(true);

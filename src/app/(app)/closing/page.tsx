@@ -5,6 +5,7 @@ import {
   type TrialBalanceRow,
 } from "@/lib/accounting";
 import { withUser } from "@/lib/db";
+import { requireFullMode } from "@/lib/lean";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import { ClosingManager } from "./closing-manager";
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 const CLOSE_ROLES = ["owner", "admin"];
 
 export default async function ClosingPage() {
+  await requireFullMode();
   const tenant = await getCurrentTenant();
 
   if (!tenant) {

@@ -25,9 +25,9 @@ export const PLANS: Record<PlanId, Plan> = {
   solo: {
     id: "solo",
     name: "Solo",
-    description: "Para o profissional autônomo.",
+    description: "Para o profissional autônomo, com 1 ajudante eventual.",
     priceCents: 5990,
-    limits: { professionals: 1, branches: 1, members: 2 },
+    limits: { professionals: 2, branches: 1, members: 2 },
   },
   equipe: {
     id: "equipe",

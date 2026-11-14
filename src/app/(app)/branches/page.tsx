@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { branches, memberships } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { requireFullMode } from "@/lib/lean";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import { BranchCard } from "./branch-card";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 const MANAGER_ROLES = ["owner", "admin", "manager"];
 
 export default async function BranchesPage() {
+  await requireFullMode();
   const tenant = await getCurrentTenant();
 
   if (!tenant) {

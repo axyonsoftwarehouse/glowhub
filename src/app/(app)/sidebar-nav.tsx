@@ -13,13 +13,15 @@ function isActive(pathname: string, href: string) {
 export function SidebarNav({
   hasProfessional,
   canManageTenant,
+  isSolo,
 }: {
   hasProfessional: boolean;
   canManageTenant: boolean;
+  isSolo: boolean;
 }) {
   const pathname = usePathname();
 
-  const groups: Group[] = [
+  const fullGroups: Group[] = [
     {
       title: "Operação",
       items: [
@@ -74,6 +76,46 @@ export function SidebarNav({
       ],
     },
   ];
+
+  const leanGroups: Group[] = [
+    {
+      title: "Operação",
+      items: [
+        { href: "/dashboard", label: "Visão geral" },
+        { href: "/appointments", label: "Agenda" },
+        ...(hasProfessional
+          ? [{ href: "/my-schedule", label: "Minha agenda" }]
+          : []),
+        { href: "/clients", label: "Clientes" },
+        { href: "/schedule", label: "Horários" },
+        { href: "/assistant", label: "Assistente IA" },
+      ],
+    },
+    {
+      title: "Catálogo",
+      items: [{ href: "/services", label: "Serviços" }],
+    },
+    {
+      title: "Financeiro",
+      items: [{ href: "/finance", label: "Caixa" }],
+    },
+    {
+      title: "Minha empresa",
+      items: [
+        { href: "/helpers", label: "Ajudante" },
+        { href: "/notifications", label: "Mensagens" },
+        ...(canManageTenant
+          ? [
+              { href: "/settings", label: "Configurações" },
+              { href: "/billing", label: "Plano e cobrança" },
+            ]
+          : []),
+        { href: "/profile", label: "Perfil" },
+      ],
+    },
+  ];
+
+  const groups = isSolo ? leanGroups : fullGroups;
 
   return (
     <nav aria-label="Navegação principal" className="mt-6 flex flex-col gap-4 text-sm">

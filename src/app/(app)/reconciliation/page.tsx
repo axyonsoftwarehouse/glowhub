@@ -7,6 +7,7 @@ import {
   payments,
 } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { requireFullMode } from "@/lib/lean";
 import { formatCentsBRL } from "@/lib/money";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
@@ -34,6 +35,7 @@ const CHARGE_STATUS: Record<ChargeRow["status"], string> = {
 };
 
 export default async function ReconciliationPage() {
+  await requireFullMode();
   const tenant = await getCurrentTenant();
 
   if (!tenant) {

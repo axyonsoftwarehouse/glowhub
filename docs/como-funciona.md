@@ -98,9 +98,22 @@ Consequências práticas:
 - O layout reserva `pb-28` no mobile para a barra fixa e usa
   `env(safe-area-inset-bottom)` para aparelhos com gesto.
 - `tenants.is_solo` liga o **modo solo**: o onboarding cria profissional
-  vinculado ao dono, um serviço inicial, horário seg–sáb e o plano de contas;
+  vinculado ao dono, serviços iniciais, horário seg–sáb e o plano de contas;
   o dashboard vira “Hoje” com checklist do que falta; o menu “Mais” esconde
   Filiais/Equipe do grupo principal.
+- **Modo enxuto**: no solo, a navegação esconde financeiro avançado
+  (conciliação, relatórios, fechamento), catálogo extra e a área Empresa;
+  `/finance` mostra uma versão simplificada (recebido hoje, a receber,
+  cobranças abertas, repasses e pagamentos recentes) e `/closing`,
+  `/reconciliation`, `/reports`, `/reports/profitability`, `/branches` e
+  `/team` redirecionam para o dashboard. O livro-razão completo volta ao
+  desligar o modo solo em `/settings`.
+- **Ajudante eventual** (`/helpers`): cria um profissional sem login, com
+  comissão e uma **conta de passivo própria** (`2.8.x`, “Ajudante: nome”). A
+  comissão gerada na cobrança é creditada nessa conta (em vez da conta geral de
+  comissões) e o repasse debita a mesma conta; o saldo pendente aparece por
+  ajudante em `/helpers` e `/finance`. O ajudante é vinculado à filial principal
+  e a todos os serviços ativos, então já aparece na agenda.
 - O modo solo pode ser ligado/desligado depois em `/settings` (owner/admin).
 
 ## 3. Identidade e sessão
