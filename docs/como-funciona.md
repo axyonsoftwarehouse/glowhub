@@ -574,10 +574,10 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
 
 ## 12. Testes e verificação
 
-- **Unitários (Vitest, 19 arquivos / 117 casos)**: dinheiro, fuso,
+- **Unitários (Vitest, 24 arquivos / 155 casos)**: dinheiro, fuso,
   disponibilidade, erros de banco/agendamento, estoque, fidelidade, CRM,
   lucratividade, assinatura/retry de webhook, estorno de cobrança, lembretes,
-  push, métricas, alertas e `APP_ENV`.
+  push, métricas, alertas, billing/acesso, e-mails de auth, LGPD e `APP_ENV`.
 - **e2e (Playwright, 16 cenários + setup de auth)**: login demo, minha agenda
   (vínculo e mudança de status), histórico do cliente, booking público,
   assinaturas, fechamento, API v1 pública, navegação mobile e 7 verificações de
@@ -623,14 +623,17 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
 
 ## 14. Limitações conhecidas
 
-- **Verificação de e-mail** no cadastro ainda não existe (o convite por e-mail
-  já enfileira na caixa de saída).
+- **Provedor de e-mail real** ainda não configurado (Resend + domínio): a
+  verificação de e-mail já existe, mas fica opcional até o envio estar ativo, e
+  o convite de equipe continua por link.
 - O agendador é **diário** (cron), sem worker/fila em tempo real; lembretes de
   última hora dependem do botão manual em `/notifications`.
-- Canais push/SMS não implementados.
-- App mobile e API pública para ele não existem.
-- Billing da própria plataforma (planos do SaaS) não existe; as assinaturas são
-  vendidas ao cliente final do salão.
+- **Registro de push** existe; o envio real depende de `projectId` EAS e
+  development build. Canais **SMS** não implementados.
+- O app mobile inicial e a **API v1** existem; faltam push/EAS e login do
+  cliente final.
+- **Billing da plataforma** existe (`/billing`); falta validar o Mercado Pago no
+  sandbox e confirmar os preços dos planos.
 - Storage de arquivos por tenant não existe (logo/imagem só por URL).
 - Não há **conciliação automática** de extrato bancário; a conciliação é manual
   (`/reconciliation`) e o webhook cobre o gateway.

@@ -5,10 +5,12 @@
 > **retomar o trabalho** (handoff).
 
 - Repositório: https://github.com/axyonsoftwarehouse/glowhub (público).
-- Estágio: **MVP interno funcional** (Fases 0–5 concluídas; Fase 6 parcial).
-  Ainda **não pronto para produção** (ver backlog e riscos).
-- Última atualização: **2026-11-09**, conferida contra o código do commit
-  `3fcd13e` (demo somente leitura, gateway online, estoque, fidelidade e DRE).
+- Estágio: **MVP interno funcional** (Fases 0–8 implementadas; Fase 6 parcial —
+  app mobile ainda sem push em development build, login do cliente final e build
+  EAS). Ainda **não pronto para produção** (ver backlog e riscos).
+- Última atualização: **2026-11-14**, conferida contra o código do commit
+  `09ba388` (assistente de IA, billing da plataforma, LGPD, auth/e-mail,
+  InfinitePay e push registrado).
   Para o comportamento detalhado de cada fluxo, veja
   [`como-funciona.md`](como-funciona.md).
 
@@ -34,12 +36,17 @@ massagem. Do **autônomo com 1 cadeira** à **rede com várias filiais**.
 - **Financeiro auditável** (livro imutável, centavos, idempotência).
 - **Multi-tenant** seguro por padrão (isolamento por RLS no banco).
 - **Agendamento online** (canal público) por subdomínio.
+- **Assistente de IA** (`/assistant`): perguntas sobre o negócio, escrita
+  assistida, análises, leitura de comprovantes e modo voz.
 
-### 1.4 Modelo de negócio (hipóteses)
-- **Assinatura por tenant** (SaaS), com planos por filiais/profissionais/usuários.
-  (Planos de billing da própria plataforma ainda **não implementados** — hoje há
-  planos de assinatura vendidos *ao cliente final do salão*.)
-- Receita adicional possível: taxas sobre pagamentos online (gateway a definir).
+### 1.4 Modelo de negócio
+- **Assinatura por tenant** (SaaS), com três planos em `/billing`:
+  **Solo** (R$ 59,90), **Equipe** (R$ 129,90) e **Rede** (R$ 299,90), com teste
+  grátis de 14 dias, tolerância de 7 dias e limites de profissionais/filiais/
+  usuários (`src/lib/billing/plans.ts`). Cobrança via **Mercado Pago Assinaturas**
+  (`BILLING_PROVIDER=mercadopago`) ou provedor mock; demo isenta (cortesia).
+- Receita adicional possível: taxas sobre pagamentos online (gateway portável:
+  mock, Mercado Pago e InfinitePay).
 
 ### 1.5 Personas e papéis
 Papéis por tenant: **owner, admin, manager, staff, viewer**.
@@ -50,16 +57,16 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Gerente (manager) | Opera filiais, catálogo, agenda e equipe. |
 | Recepção / staff | Agenda, check-in/checkout, cobrança, clientes. |
 | Profissional | **Minha agenda** (`/my-schedule`): agenda do dia/semana e confirma/inicia/conclui os próprios atendimentos. |
-| Cliente final | **Agendamento online** em `/book`; app mobile pendente. |
+| Cliente final | **Agendamento online** em `/book`; app mobile inicial (push/EAS e login do cliente final pendentes). |
 
 ### 1.6 Escopo funcional (módulos)
 
 | Módulo | Descrição | Status |
 |---|---|---|
 | Fundação & Tenancy | Empresas, filiais, vínculos, papéis | ✅ |
-| Autenticação | Login/cadastro, sessão, logout, aceite de convite | ✅ (verificação de e-mail pendente) |
-| Onboarding | Cadastro cria empresa + filial + owner | ✅ |
-| Equipe & Convites | Convidar por link, papéis, editar papel/remover membro, revogar convite, troca de empresa ativa | ✅ (envio de e-mail pendente) |
+| Autenticação | Login/cadastro, sessão, logout, recuperação de senha, verificação de e-mail (opcional) e aceite de convite | ✅ (provedor de e-mail real pendente) |
+| Onboarding | Cadastro cria empresa + filial + owner (e onboarding solo com serviços/horários) | ✅ |
+| Equipe & Convites | Convidar por link, papéis, editar papel/remover membro, revogar convite, troca de empresa ativa | ✅ (envio do convite por e-mail pendente) |
 | Filiais | Criar/editar/ativar-desativar | ✅ |
 | Catálogo | Categorias, serviços, produtos (variações/estoque), profissionais | ✅ |
 | Estoque & insumos | Produtos internos (insumos) e de revenda, custo, mínimo de reposição, ficha técnica do serviço, movimentos append-only, fornecedores, entrada de estoque com custo médio, baixa automática + **CMV** na cobrança e alertas (`/inventory`) | ✅ |
@@ -67,13 +74,15 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Agenda | Horários, intervalos, feriados, disponibilidade; busca na agenda; políticas de cancelamento/no-show por tenant | ✅ |
 | Agendamentos | Reserva + status (pendente→confirmado→check-in→checkout→concluído) | ✅ |
 | Clientes | Cadastro, **busca**, **histórico dedicado** (atendimentos, cobranças/pagamentos, carteira), **CRM** (aniversário, tags, preferências, segmentos, VIP, ticket, frequência, LTV, recência) | ✅ |
-| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **receita diferida**, conciliação, **fechamento contábil**, **gateway online** (link de checkout; mock + Mercado Pago) | ✅ |
+| Financeiro | Plano de contas, ledger, cobrança, pagamentos, comissão/gorjeta/repasse, carteira, cupons, **receita diferida**, conciliação, **fechamento contábil**, **gateway online** (link de checkout; mock + Mercado Pago + InfinitePay) | ✅ |
 | Comandas | Cobrança aberta por atendimento; **adicionar/remover produtos** com receita (`revenue_product`), baixa de estoque na inclusão e estorno/devolução na remoção; pagamento até quitar | ✅ |
 | Fidelização | **Gift cards** (valor fixo + código; passivo→receita no resgate), **programa de pontos** (acúmulo ao quitar a comanda, resgate como crédito na carteira) e **campanhas por segmento** (e-mail com opt-in) | ✅ |
 | Pacotes & Assinaturas | Pré-pago e recorrente, com ledger, **consumo/limites por período** e **renovação automática** (cron) | ✅ |
-| Notificações | Caixa de saída + e-mail (adapter portável), convite de equipe e lembretes diários | ✅ (push/SMS e verificação de e-mail pendentes) |
+| Notificações | Caixa de saída + e-mail (adapter Resend), lembretes diários e **registro de push** (tokens Expo por usuário/tenant) | ✅ (envio real de push e SMS pendentes) |
 | Canal cliente | Agendamento online `(/book)`; app mobile | 🟡 |
 | Relatórios & BI | Balancete, resultado, receita/dia, recebimentos por forma, **ocupação por profissional**; **inteligência de clientes** (segmentos/RFM); **lucratividade & DRE** (margem por serviço/produto, ranking e fluxo de caixa vs. competência) | ✅ |
+| Billing da plataforma | Planos Solo/Equipe/Rede, teste grátis de 14 dias, limites de profissionais/filiais/usuários, tolerância de 7 dias, bloqueio do painel e cobrança via Mercado Pago Assinaturas (`/billing`) | ✅ (validar no sandbox e confirmar preços) |
+| Assistente de IA | Perguntas sobre o negócio, escrita assistida, análises, **leitura de comprovantes** Pix/cartão e **modo voz** (`/assistant`, OpenRouter) | ✅ (depende de `OPENROUTER_API_KEY`) |
 
 Legenda: ✅ pronto · 🟡 parcial · ⛔ não iniciado.
 
@@ -88,6 +97,8 @@ Legenda: ✅ pronto · 🟡 parcial · ⛔ não iniciado.
 - **Better Auth self-hosted** (tabelas `user`/`session`/`account`/`verification`
   no banco) — escolhido por **portabilidade**.
 - **Drizzle ORM** (schema e queries) + **Zod** (validação) + **Tailwind v4**.
+- **OpenRouter** (assistente de IA; padrão Gemini 2.5 Flash) e **Resend**
+  (e-mail; fallback para log em dev) como integrações externas.
 - **Vitest** (unitários) e **Playwright** (e2e) para testes; **GitHub Actions**
   para CI.
 
@@ -103,7 +114,9 @@ Browser ──► Next (RSC + Server Actions)
 ```
 - `src/proxy.ts` resolve o **tenant por subdomínio** (`<slug>.dominio`,
   `DEFAULT_TENANT_SLUG`/`?tenant=` em dev).
-- O app é **100% server-side** para dados.
+- O app é **100% server-side** para dados. O assistente (`/assistant`) monta um
+  resumo somente-leitura via `withUser` e chama a OpenRouter; a chave fica só no
+  servidor.
 
 ### 2.3 Multi-tenancy e segurança
 - `tenant_id` em todas as tabelas de domínio + **RLS**.
@@ -144,6 +157,8 @@ Browser ──► Next (RSC + Server Actions)
   `loyalty_points`, `campaigns`.
 - **Notificações:** `notifications` (caixa de saída), `push_tokens` (tokens Expo
   por usuário/tenant).
+- **Billing da plataforma:** `platform_subscriptions`, `platform_payments`.
+- **Legal:** `legal_acceptances` (documento, versão, data, IP e navegador).
 
 ### 2.5 Financeiro (princípios e estado)
 - **Partidas dobradas**, **append-only** (sem UPDATE/DELETE para a role do app;
@@ -159,6 +174,9 @@ Browser ──► Next (RSC + Server Actions)
 - **Fechamento contábil:** períodos fechados (`accounting_periods`) bloqueiam
   novos lançamentos com data dentro do intervalo (checado em `postEntry`);
   snapshot do balancete guardado no fechamento (`/closing`).
+- **Gateway online:** adapter portável em `src/lib/payments/*` (mock, Mercado
+  Pago e InfinitePay). Mercado Pago assina o webhook; a InfinitePay confirma o
+  evento via `/payment_check` (`requiresSecret: false`).
 - **Falta:** conciliação automática de extrato bancário (a atual é manual em
   `/reconciliation`), baixa automática de contas a pagar e integração do
   pagamento online no agendamento público.
@@ -179,7 +197,9 @@ Browser ──► Next (RSC + Server Actions)
 1. `npm install`
 2. `.env.local` a partir de `.env.example`:
    `DATABASE_URL`, `DATABASE_AUTHENTICATED_URL`, `BETTER_AUTH_SECRET`,
-   `BETTER_AUTH_URL` (opcional: `RESEND_API_KEY`, `EMAIL_FROM`, `CRON_SECRET`).
+   `BETTER_AUTH_URL`, `APP_ENV=dev` (opcional: `RESEND_API_KEY`, `EMAIL_FROM`,
+   `CRON_SECRET`, `OPENROUTER_API_KEY`, `PAYMENT_PROVIDER`,
+   `BILLING_PROVIDER`).
 3. Aplicar schema/RLS/seed:
    `npm run db:migrate` (migrations + `db/rls.sql`)
    → `node --env-file=.env.local scripts/apply-sql.mjs db/seed.sql`
@@ -201,9 +221,13 @@ Browser ──► Next (RSC + Server Actions)
 - **Cron** (`vercel.json`): `/api/cron/subscriptions` (diário, renova assinaturas
   vencidas) e `/api/cron/daily` (webhooks, lembretes e envio de notificações);
   ambos protegidos por `CRON_SECRET`.
+- **Webhooks extras:** `/api/billing/webhooks/[provider]` (assinatura da
+  plataforma; Mercado Pago Assinaturas) e `/api/webhooks/[provider]` (cobrança
+  dos clientes do salão).
 - **Produção:** https://glowhub-silk.vercel.app (também
   `glowhub-torinoorbit-dev.vercel.app`). Env de produção configuradas
-  (`DATABASE_URL` pooled).
+  (`DATABASE_URL` pooled). Billing, assistente e gateway dependem das chaves
+  próprias (`BILLING_MP_*`, `OPENROUTER_API_KEY`, `PAYMENT_PROVIDER`).
 - **Conta demo:** botão *"Entrar com conta demo"* na tela de login. Vincula o
   usuário como **owner de 3 tenants** (`demo`, `studio-bella`, `clinica-lumina`)
   → use o seletor **Empresa**. Também vincula a um profissional de `demo`,
@@ -225,17 +249,27 @@ Browser ──► Next (RSC + Server Actions)
 ---
 
 ## 3. Status atual (o que está pronto)
-Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
-`/branches`, `/services`, `/products`, `/professionals`, `/inventory`,
-`/schedule`, `/appointments`, `/my-schedule`, `/clients`, `/clients/[id]`,
-`/packages`, `/subscriptions`, `/coupons`, `/loyalty`, `/notifications`,
-`/finance`, `/reconciliation`, `/reports`, `/reports/profitability`, `/closing`,
-`/settings`, `/profile`, `/book`, `/pay/mock`, `/api/auth/[...all]`,
-`/api/webhooks/[provider]`, `/api/cron/subscriptions`, `/api/cron/daily`,
-`/api/cron/webhooks`, `/api/health`, `/api/metrics`, `/api/v1/*`.
+Rotas: `/`, `/login`, `/forgot-password`, `/reset-password`, `/verify-email`,
+`/aceite-termos`, `/termos`, `/privacidade`, `/invite/[token]`, `/onboarding`,
+`/dashboard`, `/branches`, `/services`, `/products`, `/professionals`,
+`/inventory`, `/schedule`, `/appointments`, `/my-schedule`, `/clients`,
+`/clients/[id]`, `/packages`, `/subscriptions`, `/coupons`, `/loyalty`,
+`/notifications`, `/helpers`, `/finance`, `/reconciliation`, `/reports`,
+`/reports/profitability`, `/closing`, `/settings`, `/profile`, `/assistant`,
+`/billing`, `/billing/mock`, `/book`, `/pay/mock`, `/api/auth/[...all]`,
+`/api/webhooks/[provider]`, `/api/billing/webhooks/[provider]`,
+`/api/cron/subscriptions`, `/api/cron/daily`, `/api/cron/webhooks`,
+`/api/health`, `/api/metrics`, `/api/v1/*`.
 
-- Auth/sessão, convites por link, **edição/remoção de membros**, troca de empresa,
-  **onboarding**.
+- Auth/sessão, **recuperação de senha** (`/forgot-password` → `/reset-password`,
+  link de 1 h) e **verificação de e-mail** (`/verify-email`, opcional por
+  `AUTH_REQUIRE_EMAIL_VERIFICATION`), convites por link, **edição/remoção de
+  membros**, troca de empresa, **onboarding**.
+- **LGPD**: Termos (`/termos`) e Política de Privacidade (`/privacidade`), aceite
+  obrigatório no cadastro e reaceite por versão (`/aceite-termos`,
+  `legal_acceptances`).
+- **Billing da plataforma** (`/billing`): planos Solo/Equipe/Rede, teste grátis,
+  limites e bloqueio; mock e Mercado Pago Assinaturas com webhook próprio.
 - Catálogo completo com overrides por filial; agenda e **disponibilidade**;
   **agendamentos** e **clientes** com **busca** e **paginação**; políticas de
   **cancelamento/no-show** por tenant (`/settings`).
@@ -245,8 +279,9 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
   **fechamento contábil**.
 - **Estoque e insumos** (ficha técnica, custo médio, CMV, movimentos
   append-only) e **fidelização** (gift cards, pontos e campanhas).
-- **Agendamento online**, **convite por e-mail** e **notificações por e-mail**
-  (caixa de saída, lembretes diários).
+- **Agendamento online**, **verificação de e-mail**, **notificações por e-mail**
+  (caixa de saída, lembretes diários) e **registro de push** (tokens Expo;
+  envio real pendente de EAS/development build).
 - **API v1** para app: login Bearer, tenant ativo, agenda da equipe e catálogo/
   disponibilidade/booking público (sem login).
 - **Pacote mobile solo**: navegação inferior, painel “Hoje” com ações rápidas e
@@ -256,7 +291,10 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
   ações de status, **booking público em 4 passos** e **registro de push**
   (`mobile/`). O envio real de push depende de `projectId` EAS e development
   build.
-- **CI** + **117 testes unitários** (19 arquivos) e **16 cenários e2e** (+ setup;
+- **Assistente de IA** (`/assistant`, OpenRouter): perguntas sobre o negócio,
+  escrita assistida, análises, leitura de comprovantes Pix/cartão e **modo voz**
+  (Web Speech API); rate limit próprio e chave só no servidor.
+- **CI** + **155 testes unitários** (24 arquivos) e **16 cenários e2e** (+ setup;
   Playwright: login demo, minha agenda + status, histórico do cliente, booking,
   API v1 pública, navegação mobile, assinaturas, fechamento e **7 verificações
   de acessibilidade com axe**); `tsc`/`eslint`/`build` verdes.
@@ -279,8 +317,8 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
       cliente final e build EAS.
 
 ### Financeiro / comercial
-- [x] **Gateway online** (adapter portável: mock + Mercado Pago), link de
-      checkout na comanda, webhooks assinados e confirmação/estorno no ledger.
+- [x] **Gateway online** (adapter portável: mock + Mercado Pago + InfinitePay),
+      link de checkout na comanda, webhooks e confirmação/estorno no ledger.
 - [x] **Estorno/void formal** de cobrança aberta (reverso no ledger, devolução
       de estoque, cupom e comissão) e **retry/fila de webhooks** com backoff
       (`webhook_events` + `/api/cron/webhooks`).
@@ -297,9 +335,12 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 ### Comunicação
 - [x] **Agendador diário** (`/api/cron/daily`) para lembretes de agendamento e
       envio da caixa de saída.
-- [ ] **Verificação de e-mail** no cadastro (o convite por e-mail já é
-      enfileirado).
-- [ ] Canais **push/SMS**.
+- [x] **Recuperação de senha** e **verificação de e-mail** (link de 24 h;
+      exigência opcional), com reenvio no painel.
+- [ ] **Provedor de e-mail real** (`RESEND_API_KEY` + domínio verificado) e
+      **envio do convite de equipe por e-mail**.
+- [x] **Registro de push** (tokens Expo por usuário/tenant).
+- [ ] Envio real de **push** (projectId EAS + development build) e canais **SMS**.
 
 ### Produto
 - [x] **Visão do profissional** (agenda própria `/my-schedule`, com mudança de
@@ -312,8 +353,22 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
       mínima de cancelamento e taxa de no-show lançada no ledger.
 - [ ] **Storage de arquivos** (logo/imagens por tenant; hoje só URL).
 
+### Assistente de IA
+- [x] **Perguntas** (resumo da empresa via RLS + OpenRouter), **escrita
+      assistida** (WhatsApp, respostas, descrições, promoções, legendas),
+      **análises** (dia, semana, inativos, caixa), **leitura de comprovantes**
+      Pix/cartão e **modo voz**.
+- [ ] Validar custo/limites em produção e avaliar o plano de cada tenant.
+
 ### Transversal / produção
 - [x] Onboarding de tenant; CI; testes unitários; e-mail (caixa de saída).
+- [x] **LGPD**: Termos/Política, aceite no cadastro, histórico em
+      `legal_acceptances` e reaceite por versão.
+- [x] **Billing da plataforma** (`/billing`): planos, teste grátis, limites,
+      bloqueio, mock + Mercado Pago Assinaturas e webhook próprio.
+- [ ] Validar o billing no sandbox do Mercado Pago e confirmar preços.
+- [ ] Preencher `LEGAL_COMPANY` (razão social, CNPJ, endereço, DPO) e revisar o
+      texto com advogado.
 - [x] **e2e** (Playwright) dos fluxos críticos: login demo, minha agenda
       (vínculo + status), histórico do cliente e booking público. Workflow
       `e2e.yml` manual (usa secrets de banco).
@@ -340,14 +395,17 @@ Rotas: `/`, `/login`, `/invite/[token]`, `/onboarding`, `/dashboard`,
 ---
 
 ## 5. Riscos e considerações
-- **Produção**: falta e-mail de verificação, banco de produção dedicado, domínio
-  próprio e revisão final de segurança; observabilidade in-app +
-  métricas/alertas externos já prontos (falta apenas configurar coletor/webhook).
+- **Produção**: verificação de e-mail implementada, mas depende de provedor real
+  (Resend + domínio); faltam banco de produção dedicado, domínio próprio e
+  revisão final de segurança. Observabilidade in-app + métricas/alertas externos
+  prontos (falta apenas configurar coletor/webhook).
 - **Financeiro**: mudanças exigem cuidado (imutável, balanceado, idempotente);
   novos lançamentos devem passar por `src/lib/ledger.ts`.
-- **Gateway**: Mercado Pago implementado como adapter; provedor definitivo,
-  conciliação automática de extrato e estorno de pagamento já confirmado ainda
-  em aberto (o estorno de cobrança aberta está pronto).
+- **Gateway**: três adapters (mock, Mercado Pago e InfinitePay); provedor
+  definitivo, conciliação automática de extrato e estorno de pagamento já
+  confirmado ainda em aberto (o estorno de cobrança aberta está pronto).
+- **Assistente**: depende de `OPENROUTER_API_KEY`; custo por uso e privacidade
+  dos dados enviados ao provedor devem ser avaliados antes de produção.
 - **RLS vs. canal público**: o `/book` usa a conexão admin com escopo explícito;
   manter essa disciplina ao evoluir.
 
@@ -378,6 +436,15 @@ Pontos de entrada úteis:
   `src/app/api/auth/[...all]/route.ts`, `src/app/api/health/route.ts`,
   `src/app/api/metrics/route.ts`.
 - Auth: `src/lib/auth.ts`, `src/lib/session.ts`, `src/app/api/auth/[...all]/route.ts`.
+- Auth/e-mail (recuperação, verificação): `src/lib/auth-emails.ts`,
+  `src/lib/email.ts`, `src/app/(auth)/forgot-password|reset-password|verify-email/*`.
+- LGPD: `src/lib/legal.ts`, `src/app/(legal)/termos|privacidade/*`,
+  `src/app/(auth)/aceite-termos/*`.
+- Billing da plataforma: `src/lib/billing/*` (planos, acesso, provedores,
+  serviço), `src/app/(billing)/billing/*`,
+  `src/app/api/billing/webhooks/[provider]/route.ts`.
+- Assistente de IA: `src/lib/assistant.ts`, `src/app/(app)/assistant/*`
+  (perguntas, escrita, análises, comprovantes e voz).
 - Financeiro: `src/lib/ledger.ts`, `src/app/(app)/finance/*`.
 - Fechamento contábil: `src/lib/accounting.ts`, `src/app/(app)/closing/*`,
   `src/db/schema/accounting.ts` (bloqueio em `postEntry`).
@@ -396,14 +463,14 @@ Pontos de entrada úteis:
 - Fidelização: `src/lib/loyalty.ts`, `src/app/(app)/loyalty/*`
   (gift cards, pontos, campanhas; contas `liability_gift_card`,
   `revenue_gift_card`, `expense_loyalty`).
-- Pagamento online: `src/lib/payments/*` (adapter mock/Mercado Pago,
-  `confirmPendingPayment`), `/api/webhooks/[provider]`, `/pay/mock`,
+- Pagamento online: `src/lib/payments/*` (adapters mock, Mercado Pago e
+  InfinitePay; `confirmPendingPayment`), `/api/webhooks/[provider]`, `/pay/mock`,
   botão "Cobrar online" em `src/app/(app)/finance/*`.
 - e2e: `e2e/*.spec.ts`, `e2e/auth.setup.ts`, `playwright.config.ts`.
 
-Decisões em aberto (ver `docs/architecture.md`): **verificação de e-mail**,
-canais **push/SMS**, **storage**, **API** para o app mobile e **billing da
-plataforma**.
+Decisões em aberto (ver `docs/architecture.md`): canais **push/SMS** com envio
+real, **storage** de arquivos, **conciliação automática** de extrato e provedor
+definitivo de gateway.
 
 ## 7. Glossário
 - **Tenant**: empresa cliente do SaaS. **Branch**: filial.
@@ -411,3 +478,8 @@ plataforma**.
 - **Charge (cobrança)**: valor a receber por um atendimento.
 - **Ledger**: livro-razão de partidas dobradas (imutável).
 - **RLS**: Row Level Security (isolamento por linha no Postgres).
+- **Billing da plataforma**: assinatura que o salão paga ao GlowHub
+  (`platform_subscriptions`/`platform_payments`; não confundir com as
+  assinaturas vendidas aos clientes do salão).
+- **Assistente**: camada de IA em `/assistant` (OpenRouter) que só lê um resumo
+  via RLS e nunca grava dados sozinha.

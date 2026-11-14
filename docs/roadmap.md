@@ -37,9 +37,10 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Comanda: adicionar/remover produtos numa cobrança aberta, com receita dedicada
   (`revenue_product`), baixa de estoque na inclusão e estorno + devolução na remoção
 - [x] Pagamentos **idempotentes** + webhooks + conciliação (tela `/reconciliation`)
-- [x] **Gateway online**: adapter portável (mock + Mercado Pago), link de checkout
-  por comanda, webhook assinado que confirma/estorna no ledger e conciliação
-  manual em `/reconciliation` (`src/lib/payments/*`, `/pay/mock`)
+- [x] **Gateway online**: adapter portável (**mock + Mercado Pago + InfinitePay**),
+  link de checkout por comanda, webhook que confirma/estorna no ledger e
+  conciliação manual em `/reconciliation` (`src/lib/payments/*`, `/pay/mock`).
+  Mercado Pago usa assinatura HMAC; a InfinitePay confirma via `/payment_check`
 - [x] **Estorno formal de cobrança** (reverso no ledger, estoque, cupom e
   comissão) e **retry de webhooks** com backoff (`/api/cron/webhooks`)
 - [x] Gorjeta, comissão e repasses
@@ -52,8 +53,9 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Renovação automática de assinaturas (cron `/api/cron/subscriptions`) e consumo/limites por período
 - [x] Receita diferida de assinaturas (faturamento em "Receitas a Apropriar", reconhecimento ao fim do período)
 - [x] Cupons e promoções (percentual/fixo, validade, limite de uso)
-- [x] Notificações por e-mail (caixa de saída + adapter portável) e **agendador
-  diário** de lembretes (`/api/cron/daily`); push e SMS pendentes
+- [x] Notificações por e-mail (caixa de saída + adapter Resend), **agendador
+  diário** de lembretes (`/api/cron/daily`) e **registro de push** (tokens Expo
+  por usuário/tenant); envio real de push e SMS pendentes
 
 ## Fase 6 — Canais
 - [x] Website público / agendamento online (`/book`, por subdomínio/slug)
@@ -79,6 +81,15 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
   receita), programa de pontos (acúmulo na comanda quitada, resgate como crédito
   na carteira) e campanhas por segmento (e-mail com opt-in via caixa de saída)
   (`src/lib/loyalty.ts`, `/loyalty`)
+
+## Fase 8 — Assistente de IA (concluída)
+- [x] Assistente na web (`/assistant`, OpenRouter; padrão Gemini 2.5 Flash):
+  perguntas sobre a empresa com resumo somente-leitura (RLS), escrita assistida
+  (WhatsApp, respostas, descrições, promoções, legendas), análises (dia, semana,
+  clientes inativos, caixa) e **leitura de comprovantes** Pix/cartão com sugestão
+  de cobrança (confirmação humana)
+- [x] **Modo voz** (Web Speech API): pergunta falada e resposta em voz alta
+- [x] Conta demo solo e rate limit próprio (20 solicitações/5 min por usuário)
 
 ## Transversal (em todas as fases)
 - [x] Onboarding de tenant (cadastro cria empresa + filial + owner)
@@ -108,15 +119,30 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
   confirmar preços dos planos
 - [ ] Preencher dados da empresa e do encarregado (`LEGAL_COMPANY`) e revisar o
   texto com advogado
-- [ ] Provedor de e-mail real (verificação de conta e convites) — depende do domínio
+- [ ] Provedor de e-mail real (`RESEND_API_KEY` + domínio verificado) e ligar
+  `AUTH_REQUIRE_EMAIL_VERIFICATION=true`; enviar também os convites de equipe
+- [ ] Storage de arquivos por tenant (logo/imagens; hoje só URL)
+- [ ] Conciliação automática de extrato bancário (a manual continua em
+  `/reconciliation`)
+- [ ] Canais SMS e envio real de push
 
 ## Lançamento (pendente; decidido deixar para quando o produto estiver completo)
 - [ ] Domínio próprio e subdomínio por tenant
 - [ ] Banco de produção limpo (`npm run db:migrate`), sem conta demo (`APP_ENV=production`)
 - [ ] Demo em endereço próprio (ex.: `demo.<domínio>`)
 - [ ] E-mail real (verificação de conta, convites, lembretes)
+- [ ] Credenciais de produção do billing (Mercado Pago) e do assistente
+      (`OPENROUTER_API_KEY`), além do gateway ativo (`PAYMENT_PROVIDER`)
 
 ## Concluído fora das fases
-- [x] Gateway de pagamento online (adapter portável: mock + Mercado Pago; Fase 4)
+- [x] Gateway de pagamento online (adapter portável: mock + Mercado Pago +
+      InfinitePay; Fase 4)
+- [x] Billing da própria plataforma (`/billing`): planos Solo/Equipe/Rede, teste
+      grátis de 14 dias, limites e bloqueio, provedor mock + Mercado Pago
+      Assinaturas e webhook próprio
+- [x] LGPD: Termos, Política de Privacidade, aceite registrado e reaceite por
+      versão (`LEGAL_VERSIONS`/`LEGAL_COMPANY` em `src/lib/legal.ts`)
+- [x] Auth: recuperação de senha e verificação de e-mail (link de 24 h; exigência
+      opcional por `AUTH_REQUIRE_EMAIL_VERIFICATION`)
 - [x] Modo demonstração somente leitura (`tenants.is_read_only` + trigger no
       banco; `DEMO_READ_ONLY=false` libera em dev/preview)

@@ -204,8 +204,8 @@ Acesse: http://localhost:3000/dashboard
 - [x] Onboarding de tenant (cadastro cria empresa) + CI (lint/typecheck/test/build)
 - [x] Testes unitários (vitest) de dinheiro, disponibilidade, fuso, estoque,
       fidelidade e CRM; e2e (Playwright) dos fluxos críticos
-- [x] Notificações por e-mail (caixa de saída em `/notifications`), convite de
-      equipe por e-mail e lembretes diários
+- [x] Notificações por e-mail (caixa de saída em `/notifications`), verificação
+      de e-mail e lembretes diários
 - [x] Conciliação (`/reconciliation`) e relatórios visuais (receita/dia, ocupação)
 - [x] Estoque e insumos (ficha técnica, custo médio, CMV e alertas em `/inventory`)
 - [x] Fidelização (gift cards, pontos e campanhas em `/loyalty`)
@@ -224,4 +224,5 @@ Acesse: http://localhost:3000/dashboard
       onboarding assistido
 - [x] App mobile (Expo) inicial: login Bearer + agenda + ações de status + booking público + push — **[como rodar](mobile/README.md)**
 - [ ] Push validado em development build, login do cliente final e build EAS
-- [ ] Verificação de e-mail, canais push/SMS e storage de arquivos
+- [ ] Provedor de e-mail real (Resend + domínio), SMS e storage de arquivos
+- [ ] Validar billing no sandbox do Mercado Pago e preencher `LEGAL_COMPANY`
