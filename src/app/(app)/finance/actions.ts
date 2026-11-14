@@ -390,11 +390,20 @@ export async function createChargeAction(
         .set({ revenueEntryId: entryId })
         .where(eq(charges.id, charge.id));
 
-      // Comissão do profissional (se configurada).
+      // Comissão do profissional (se configurada). Ajudantes com conta própria
+      // acumulam na conta de passivo dedicada; os demais usam a conta geral.
       const [professional] = await tx
-        .select({ commissionBp: professionals.commissionBp })
+        .select({
+          commissionBp: professionals.commissionBp,
+          ledgerAccountId: professionals.ledgerAccountId,
+        })
         .from(professionals)
-        .where(eq(professionals.id, appointment.professionalId))
+        .where(
+          and(
+            eq(professionals.id, appointment.professionalId),
+            eq(professionals.tenantId, ctx.tenant.id),
+          ),
+        )
         .limit(1);
       const commissionCents = Math.round(
         (appointment.priceCents * (professional?.commissionBp ?? 0)) / 10000,
@@ -405,11 +414,13 @@ export async function createChargeAction(
           ctx.tenant.id,
           "expense_commission",
         );
-        const liabilityCommission = await getSystemAccountId(
-          tx,
-          ctx.tenant.id,
-          "liability_commission",
-        );
+        const liabilityCommission =
+          professional?.ledgerAccountId ??
+          (await getSystemAccountId(
+            tx,
+            ctx.tenant.id,
+            "liability_commission",
+          ));
         if (expenseCommission && liabilityCommission) {
           const [earning] = await tx
             .insert(earnings)
@@ -1125,11 +1136,23 @@ export async function payProfessionalAction(
         .reduce((sum, row) => sum + row.amountCents, 0);
       const total = commissionTotal + tipTotal;
 
-      const liabilityCommission = await getSystemAccountId(
-        tx,
-        ctx.tenant.id,
-        "liability_commission",
-      );
+      const [professional] = await tx
+        .select({ ledgerAccountId: professionals.ledgerAccountId })
+        .from(professionals)
+        .where(
+          and(
+            eq(professionals.id, professionalId),
+            eq(professionals.tenantId, ctx.tenant.id),
+          ),
+        )
+        .limit(1);
+      const liabilityCommission =
+        professional?.ledgerAccountId ??
+        (await getSystemAccountId(
+          tx,
+          ctx.tenant.id,
+          "liability_commission",
+        ));
       const liabilityTip = await getSystemAccountId(
         tx,
         ctx.tenant.id,

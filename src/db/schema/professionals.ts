@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import { services } from "./catalog";
+import { ledgerAccounts } from "./ledger";
 import { branches, tenants } from "./tenancy";
 
 export const professionals = pgTable(
@@ -24,6 +25,13 @@ export const professionals = pgTable(
     userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
     name: text("name").notNull(),
     commissionBp: integer("commission_bp").notNull().default(0),
+    /** Ajudante eventual: não faz login e tem conta contábil própria. */
+    isHelper: boolean("is_helper").notNull().default(false),
+    /** Conta de passivo que acumula os valores do ajudante. */
+    ledgerAccountId: uuid("ledger_account_id").references(
+      () => ledgerAccounts.id,
+      { onDelete: "set null" },
+    ),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

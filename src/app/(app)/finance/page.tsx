@@ -19,7 +19,7 @@ import { getCurrentTenant } from "@/lib/tenant";
 import { AccountManager } from "./account-manager";
 import { ChargeList } from "./charge-list";
 import { JournalForm } from "./journal-form";
-import { todayInTimeZone } from "@/lib/timezone";
+import { todayInTimeZone, zonedDateKey } from "@/lib/timezone";
 import { JournalList } from "./journal-list";
 import { PayoutList } from "./payout-list";
 import type {
@@ -314,6 +314,120 @@ export default async function FinancePage() {
     commissionCents: totals.commissionCents,
     tipCents: totals.tipCents,
   }));
+
+  if (tenant.isSolo) {
+    const today = todayInTimeZone();
+    const paidTodayCents = data.paymentRows
+      .filter(
+        (payment) =>
+          payment.status === "confirmed" &&
+          zonedDateKey(payment.createdAt.toISOString(), "America/Sao_Paulo") ===
+            today,
+      )
+      .reduce((sum, payment) => sum + payment.amountCents, 0);
+    const openCharges = chargeList.filter((charge) => charge.status === "open");
+    const openTotalCents = openCharges.reduce(
+      (sum, charge) => sum + Math.max(0, charge.totalCents - charge.paidCents),
+      0,
+    );
+    const payoutTotalCents = payoutRows.reduce(
+      (sum, row) => sum + row.commissionCents + row.tipCents,
+      0,
+    );
+    const recentPayments = paymentList.slice(0, 8);
+
+    return (
+      <div className="space-y-6">
+        <header>
+          <p className="text-xs uppercase tracking-widest text-brand">Caixa</p>
+          <h1 className="mt-2 text-2xl font-semibold">Recebimentos</h1>
+          <p className="mt-1 text-sm text-foreground/60">
+            Versão enxuta do financeiro de {tenant.name}: cobranças, recebimentos
+            e repasses do dia a dia.
+          </p>
+        </header>
+
+        <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            { label: "Recebido hoje", value: formatCentsBRL(paidTodayCents) },
+            { label: "A receber", value: formatCentsBRL(openTotalCents) },
+            { label: "Repasses pendentes", value: formatCentsBRL(payoutTotalCents) },
+            { label: "Cobranças abertas", value: String(openCharges.length) },
+          ].map((metric) => (
+            <div
+              key={metric.label}
+              className="rounded-xl border border-border bg-white/70 p-3"
+            >
+              <p className="text-[11px] uppercase tracking-wide text-foreground/60">
+                {metric.label}
+              </p>
+              <p className="mt-1 text-lg font-semibold">{metric.value}</p>
+            </div>
+          ))}
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
+            Cobranças em aberto
+          </h2>
+          <div className="mt-3">
+            <ChargeList
+              charges={openCharges}
+              productOptions={[]}
+              canSettle={data.canManage && !tenant.isReadOnly}
+              canVoid={false}
+              lean
+            />
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
+            Repasses
+          </h2>
+          <div className="mt-3">
+            <PayoutList rows={payoutRows} />
+          </div>
+        </section>
+
+        <section>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-foreground/60">
+            Pagamentos recentes
+          </h2>
+          <div className="mt-3 space-y-1">
+            {recentPayments.map((payment) => (
+              <div
+                key={payment.id}
+                className="flex items-center justify-between gap-3 rounded-lg border border-border bg-white/60 px-3 py-2 text-sm"
+              >
+                <span className="min-w-0 truncate text-foreground/70">
+                  {payment.chargeDescription}
+                </span>
+                <span className="flex shrink-0 items-center gap-3">
+                  <span className="text-xs text-foreground/70">
+                    {METHOD_LABELS[payment.method] ?? payment.method}
+                  </span>
+                  <span className="font-medium">
+                    {formatCentsBRL(payment.amountCents)}
+                  </span>
+                </span>
+              </div>
+            ))}
+            {recentPayments.length === 0 && (
+              <p className="text-sm text-foreground/60">
+                Nenhum pagamento registrado.
+              </p>
+            )}
+          </div>
+        </section>
+
+        <p className="text-xs text-foreground/50">
+          Precisa de livro-razão, conciliação ou relatórios? Desative o modo solo
+          em Configurações para ver o financeiro completo.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

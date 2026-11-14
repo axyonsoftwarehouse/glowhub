@@ -10,6 +10,7 @@ import {
   stockMovements,
 } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { requireFullMode } from "@/lib/lean";
 import { computeTrialBalance } from "@/lib/accounting";
 import {
   cashFlowByDay,
@@ -41,6 +42,7 @@ export default async function ProfitabilityPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requireFullMode();
   const sp = await searchParams;
   const tenant = await getCurrentTenant();
 

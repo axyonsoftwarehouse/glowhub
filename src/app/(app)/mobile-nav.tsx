@@ -98,7 +98,41 @@ export function MobileNav({
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
-  const groups: NavGroup[] = [
+  const leanGroups: NavGroup[] = [
+    {
+      title: "Operação",
+      items: [
+        { href: "/services", label: "Serviços" },
+        { href: "/schedule", label: "Horários" },
+        ...(hasProfessional
+          ? [{ href: "/my-schedule", label: "Minha agenda" }]
+          : []),
+      ],
+    },
+    {
+      title: "Gestão",
+      items: [
+        { href: "/finance", label: "Caixa" },
+        { href: "/helpers", label: "Ajudante" },
+        { href: "/notifications", label: "Mensagens" },
+        ...(canManageTenant
+          ? [
+              { href: "/settings", label: "Configurações" },
+              { href: "/billing", label: "Plano e cobrança" },
+            ]
+          : []),
+      ],
+    },
+    {
+      title: "Mais módulos",
+      items: [
+        { href: "/assistant", label: "Assistente IA" },
+        { href: "/profile", label: "Perfil" },
+      ],
+    },
+  ];
+
+  const fullGroups: NavGroup[] = [
     {
       title: "Operação",
       items: [
@@ -127,15 +161,11 @@ export function MobileNav({
       ],
     },
     {
-      title: isSolo ? "Mais módulos" : "Equipe e comercial",
+      title: "Equipe e comercial",
       items: [
         { href: "/assistant", label: "Assistente IA" },
-        ...(!isSolo
-          ? [
-              { href: "/branches", label: "Filiais" },
-              { href: "/team", label: "Equipe" },
-            ]
-          : []),
+        { href: "/branches", label: "Filiais" },
+        { href: "/team", label: "Equipe" },
         { href: "/products", label: "Produtos" },
         { href: "/inventory", label: "Estoque" },
         { href: "/packages", label: "Pacotes" },
@@ -146,6 +176,8 @@ export function MobileNav({
       ],
     },
   ];
+
+  const groups = isSolo ? leanGroups : fullGroups;
 
   const primaryActive = PRIMARY.some((item) => isActive(pathname, item.href));
 

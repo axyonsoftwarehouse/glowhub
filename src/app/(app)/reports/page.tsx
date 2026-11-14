@@ -14,6 +14,7 @@ import {
   professionals,
 } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { requireFullMode } from "@/lib/lean";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import { formatCentsBRL } from "@/lib/money";
@@ -59,6 +60,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
+  await requireFullMode();
   const sp = await searchParams;
   const tenant = await getCurrentTenant();
 

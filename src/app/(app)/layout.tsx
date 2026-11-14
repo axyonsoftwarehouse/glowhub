@@ -82,6 +82,7 @@ export default async function AppLayout({
         <SidebarNav
           hasProfessional={Boolean(myProfessional)}
           canManageTenant={canManageTenant}
+          isSolo={Boolean(tenant?.isSolo)}
         />
 
         <div className="mt-auto space-y-3">

@@ -1,0 +1,3 @@
+ALTER TABLE "professionals" ADD COLUMN "is_helper" boolean DEFAULT false NOT NULL;--> statement-breakpoint
+ALTER TABLE "professionals" ADD COLUMN "ledger_account_id" uuid;--> statement-breakpoint
+ALTER TABLE "professionals" ADD CONSTRAINT "professionals_ledger_account_id_ledger_accounts_id_fk" FOREIGN KEY ("ledger_account_id") REFERENCES "public"."ledger_accounts"("id") ON DELETE set null ON UPDATE no action;

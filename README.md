@@ -67,8 +67,8 @@ src/
     (auth)/login/              # login/cadastro (+ conta demo)
     (app)/                     # shell autenticado:
       dashboard, branches, services, products, inventory, professionals,
-      schedule, appointments, my-schedule, clients, clients/[id], packages,
-      subscriptions, coupons, loyalty, notifications, team, finance,
+      helpers, schedule, appointments, my-schedule, clients, clients/[id],
+      packages, subscriptions, coupons, loyalty, notifications, team, finance,
       reconciliation, reports, reports/profitability, closing, settings, profile,
       assistant
     book/                      # agendamento online (canal público)
@@ -216,6 +216,8 @@ Acesse: http://localhost:3000/dashboard
       perguntas, escrita assistida, análises (dia, semana, inativos, caixa),
       leitura de comprovantes Pix/cartão e modo voz (fala e resposta falada)
 - [x] Onboarding solo com vários serviços iniciais
+- [x] Modo enxuto para solo (financeiro simplificado e menus reduzidos)
+- [x] Ajudante eventual com conta contábil própria (2.8.x) e repasse separado
 - [x] Estorno formal de cobrança (ledger, estoque, cupom e comissão) e retry de webhooks
 - [x] API v1 para app (login Bearer, agenda e booking público) — **[contrato](docs/api-mobile.md)**
 - [x] Pacote mobile solo: navegação inferior, painel “Hoje”, modo solo e

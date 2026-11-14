@@ -47,11 +47,13 @@ export function ChargeList({
   productOptions,
   canSettle,
   canVoid,
+  lean = false,
 }: {
   charges: Charge[];
   productOptions: ProductOption[];
   canSettle: boolean;
   canVoid: boolean;
+  lean?: boolean;
 }) {
   const [result, setResult] = useState<FinanceActionState>(
     initialFinanceActionState,
@@ -175,7 +177,7 @@ export function ChargeList({
                     </span>
                     <span className="flex shrink-0 items-center gap-2">
                       <span>{formatCentsBRL(item.totalCents)}</span>
-                      {canSettle && isOpen && item.kind === "product" && (
+                      {!lean && canSettle && isOpen && item.kind === "product" && (
                         <form action={handleRemoveItem}>
                           <input type="hidden" name="id" value={item.id} />
                           <button
@@ -193,7 +195,7 @@ export function ChargeList({
               </ul>
             )}
 
-            {canVoid && isOpen && charge.paidCents === 0 && (
+            {!lean && canVoid && isOpen && charge.paidCents === 0 && (
               <form
                 action={handleVoid}
                 className="mt-2 flex items-center gap-2 border-t border-border pt-2"
@@ -214,7 +216,7 @@ export function ChargeList({
               </form>
             )}
 
-            {canSettle && isOpen && productOptions.length > 0 && (
+            {!lean && canSettle && isOpen && productOptions.length > 0 && (
               <form
                 action={handleAddItem}
                 className="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2"
@@ -288,7 +290,7 @@ export function ChargeList({
               </form>
             )}
 
-            {canSettle && isOpen && (
+            {!lean && canSettle && isOpen && (
               <form
                 action={handleCoupon}
                 className="mt-2 flex flex-wrap items-center gap-2"
@@ -309,7 +311,7 @@ export function ChargeList({
               </form>
             )}
 
-            {canSettle && isOpen && remaining > 0 && (
+            {!lean && canSettle && isOpen && remaining > 0 && (
               <form
                 action={handleOnline}
                 className="mt-2 flex flex-wrap items-center gap-2 border-t border-border pt-2"

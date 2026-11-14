@@ -1,6 +1,7 @@
 import { asc, desc, eq, inArray } from "drizzle-orm";
 import { invitations, memberships, profiles } from "@/db/schema";
 import { withUser } from "@/lib/db";
+import { requireFullMode } from "@/lib/lean";
 import { getSession } from "@/lib/session";
 import { getCurrentTenant } from "@/lib/tenant";
 import { InviteForm } from "./invite-form";
@@ -14,6 +15,7 @@ const VIEW_ROLES = ["owner", "admin", "manager"];
 const MANAGE_ROLES = ["owner", "admin"];
 
 export default async function TeamPage() {
+  await requireFullMode();
   const tenant = await getCurrentTenant();
 
   if (!tenant) {
