@@ -1,6 +1,6 @@
 import { isAssistantConfigured } from "@/lib/assistant";
 import { getCurrentTenant } from "@/lib/tenant";
-import { AssistantChat } from "./assistant-chat";
+import { AssistantTabs } from "./assistant-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -12,11 +12,11 @@ export default async function AssistantPage() {
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <header>
         <p className="text-xs uppercase tracking-widest text-brand">Assistente</p>
-        <h1 className="mt-2 text-2xl font-semibold">Pergunte sobre o seu negócio</h1>
+        <h1 className="mt-2 text-2xl font-semibold">Assistente do seu negócio</h1>
         <p className="mt-1 text-sm text-foreground/60">
-          Consulta a agenda, clientes, serviços e finanças
-          {tenant ? ` de ${tenant.name}` : ""}. O assistente só lê os dados:
-          nenhuma alteração é feita por aqui.
+          Pergunte, escreva textos e analise a agenda, clientes e finanças
+          {tenant ? ` de ${tenant.name}` : ""}. O assistente consulta e sugere;
+          nenhuma alteração é feita sem você confirmar.
         </p>
       </header>
 
@@ -34,7 +34,7 @@ export default async function AssistantPage() {
         </div>
       )}
 
-      <AssistantChat
+      <AssistantTabs
         tenantName={tenant?.name ?? "sua empresa"}
         disabled={!tenant || !configured}
       />
