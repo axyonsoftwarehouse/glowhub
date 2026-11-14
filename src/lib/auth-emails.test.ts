@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildClientOtpEmail,
   buildResetPasswordEmail,
   buildVerificationEmail,
   isAuthEmailSuppressed,
@@ -34,6 +35,19 @@ describe("e-mails de autenticação", () => {
     expect(buildVerificationEmail({ name: "  ", url: "https://x" }).html).toContain(
       "Olá!",
     );
+  });
+
+  it("monta o código OTP com o nome do salão e escapa HTML", () => {
+    const email = buildClientOtpEmail({
+      tenantName: "Studio <Bella>\r\nBcc: x",
+      code: "123456",
+      minutes: 10,
+    });
+    expect(email.html).toContain("123456");
+    expect(email.html).toContain("Studio &lt;Bella&gt;");
+    expect(email.html).not.toContain("<Bella>");
+    expect(email.subject).toContain("Studio <Bella> Bcc: x");
+    expect(email.subject).not.toContain("\r");
   });
 });
 

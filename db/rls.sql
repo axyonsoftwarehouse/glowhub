@@ -110,7 +110,8 @@ begin
     'coupons', 'coupon_redemptions', 'notifications',
     'push_tokens',
     'gift_cards', 'gift_card_redemptions', 'loyalty_settings',
-    'loyalty_points', 'campaigns'
+    'loyalty_points', 'campaigns',
+    'client_otp_codes', 'client_sessions'
   ]
   loop
     execute format('alter table public.%I enable row level security', t);
@@ -430,6 +431,13 @@ revoke all on public.rate_limits from glowhub_app;
 -- legal_acceptances: historico de aceite (LGPD), so pela conexao admin.
 alter table public.legal_acceptances enable row level security;
 revoke all on public.legal_acceptances from glowhub_app;
+
+-- Autenticacao do cliente final (OTP + sessao Bearer): so pela conexao admin,
+-- com escopo explicito de tenant (como o canal publico).
+alter table public.client_otp_codes enable row level security;
+alter table public.client_sessions enable row level security;
+revoke all on public.client_otp_codes from glowhub_app;
+revoke all on public.client_sessions from glowhub_app;
 
 -- Billing da plataforma (assinatura do GlowHub): so pela conexao admin.
 alter table public.platform_subscriptions enable row level security;
