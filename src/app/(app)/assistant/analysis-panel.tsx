@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { SpeakButton } from "@/components/voice";
 import { runAnalysisAction } from "./actions";
 import type { AnalysisKind } from "@/lib/assistant";
 
@@ -96,13 +97,16 @@ export function AnalysisPanel({ disabled }: { disabled: boolean }) {
             <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">
               Análise
             </p>
-            <button
-              type="button"
-              onClick={copy}
-              className="rounded-full border border-border bg-white px-3 py-1 text-xs font-medium hover:bg-muted"
-            >
-              {copied ? "Copiado!" : "Copiar"}
-            </button>
+            <div className="flex items-center gap-2">
+              <SpeakButton text={result} />
+              <button
+                type="button"
+                onClick={copy}
+                className="rounded-full border border-border bg-white px-3 py-1 text-xs font-medium hover:bg-muted"
+              >
+                {copied ? "Copiado!" : "Copiar"}
+              </button>
+            </div>
           </div>
           <p className="mt-3 whitespace-pre-wrap text-sm">{result}</p>
         </div>

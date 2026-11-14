@@ -529,6 +529,13 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
     promoções e legendas a partir de tipo/tom/contexto (sem alterar dados).
   - **Análises**: resumo do dia/semana, clientes inativos (60+ dias) e ocupação/
     previsão de caixa; os números são calculados no servidor e a IA só interpreta.
+  - **Comprovantes**: foto/print de Pix ou cartão é comprimida no navegador e
+    enviada à visão do Gemini; o assistente extrai valor, data, pagador, forma e
+    referência, e sugere cobranças em aberto compatíveis. Nada é registrado
+    automaticamente: a confirmação é humana no Financeiro.
+  - **Voz**: reconhecimento de fala e leitura em voz alta via Web Speech API do
+    navegador (Chrome/Edge/Safari; sem custo de API). O modo voz encadeia
+    pergunta falada → resposta falada e pode ser desligado a qualquer momento.
   - Modelo padrão `google/gemini-2.5-flash` (`OPENROUTER_MODEL` muda); rate limit
     de 20 solicitações/5 min por usuário. Sem `OPENROUTER_API_KEY`, a página só
     mostra o aviso.

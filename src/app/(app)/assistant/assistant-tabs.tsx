@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { AnalysisPanel } from "./analysis-panel";
 import { AssistantChat } from "./assistant-chat";
+import { ReceiptPanel } from "./receipt-panel";
 import { WritingPanel } from "./writing-panel";
 
-type Tab = "qa" | "writing" | "analysis";
+type Tab = "qa" | "writing" | "analysis" | "receipts";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "qa", label: "Perguntas" },
   { id: "writing", label: "Escrita" },
   { id: "analysis", label: "Análises" },
+  { id: "receipts", label: "Comprovantes" },
 ];
 
 export function AssistantTabs({
@@ -52,6 +54,7 @@ export function AssistantTabs({
       )}
       {tab === "writing" && <WritingPanel disabled={disabled} />}
       {tab === "analysis" && <AnalysisPanel disabled={disabled} />}
+      {tab === "receipts" && <ReceiptPanel disabled={disabled} />}
     </div>
   );
 }

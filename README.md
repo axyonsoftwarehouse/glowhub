@@ -213,7 +213,8 @@ Acesse: http://localhost:3000/dashboard
 - [x] Gateway online (mock + Mercado Pago + InfinitePay) com webhooks assinados
       (InfinitePay confirmado via `/payment_check`)
 - [x] Assistente de IA em `/assistant` (OpenRouter, padrão Gemini 2.5 Flash):
-      perguntas, escrita assistida e análises (dia, semana, inativos, caixa)
+      perguntas, escrita assistida, análises (dia, semana, inativos, caixa),
+      leitura de comprovantes Pix/cartão e modo voz (fala e resposta falada)
 - [x] Onboarding solo com vários serviços iniciais
 - [x] Estorno formal de cobrança (ledger, estoque, cupom e comissão) e retry de webhooks
 - [x] API v1 para app (login Bearer, agenda e booking público) — **[contrato](docs/api-mobile.md)**

@@ -9,6 +9,7 @@ import {
   notInArray,
   sql,
 } from "drizzle-orm";
+import { z } from "zod";
 import {
   appointments,
   branchHours,
@@ -22,7 +23,7 @@ import {
 import { addDays } from "@/lib/availability-data";
 import { withUser, type AppTx } from "@/lib/db";
 import { logger } from "@/lib/logger";
-import { formatCentsBRL } from "@/lib/money";
+import { formatCentsBRL, parsePriceToCents } from "@/lib/money";
 import { zonedDateKey, zonedTimeToUtc } from "@/lib/timezone";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
@@ -60,6 +61,40 @@ export type WritingRequest = {
 };
 
 export type AnalysisKind = "today" | "week" | "inactive" | "cash";
+
+export type ReceiptMethod =
+  | "pix"
+  | "credit"
+  | "debit"
+  | "cash"
+  | "transfer"
+  | "other";
+
+export type ReceiptConfidence = "alta" | "media" | "baixa";
+
+export type ReceiptData = {
+  amountCents: number | null;
+  date: string | null;
+  payer: string | null;
+  method: ReceiptMethod | null;
+  reference: string | null;
+  confidence: ReceiptConfidence;
+  notes: string | null;
+};
+
+export type ReceiptCandidate = {
+  id: string;
+  clientName: string | null;
+  description: string;
+  totalCents: number;
+  createdAt: string;
+};
+
+export type ReceiptAnalysis = {
+  isReceipt: boolean;
+  receipt: ReceiptData;
+  candidates: ReceiptCandidate[];
+};
 
 export function isAssistantConfigured(): boolean {
   return Boolean(process.env.OPENROUTER_API_KEY);
@@ -676,12 +711,17 @@ function systemPrompt(context: BusinessContext): string {
   ].join("\n");
 }
 
+type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
 async function callOpenRouter(params: {
   system: string;
-  user: string;
+  user: string | ContentPart[];
   history?: AssistantMessage[];
   temperature?: number;
   maxTokens?: number;
+  json?: boolean;
 }): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -705,6 +745,7 @@ async function callOpenRouter(params: {
       model: assistantModel(),
       temperature: params.temperature ?? 0.2,
       max_tokens: params.maxTokens ?? 800,
+      ...(params.json ? { response_format: { type: "json_object" } } : {}),
       messages: [
         { role: "system", content: params.system },
         ...history,
@@ -836,4 +877,150 @@ export async function runAnalysis(params: {
     temperature: 0.3,
     maxTokens: 900,
   });
+}
+
+const receiptSchema = z.object({
+  is_receipt: z.boolean().default(true),
+  amount: z.union([z.string(), z.number()]).nullable().optional(),
+  date: z.string().trim().max(40).nullable().optional(),
+  payer: z.string().trim().max(200).nullable().optional(),
+  method: z
+    .enum(["pix", "credit", "debit", "cash", "transfer", "other"])
+    .nullable()
+    .optional(),
+  reference: z.string().trim().max(300).nullable().optional(),
+  confidence: z.enum(["alta", "media", "baixa"]).default("media"),
+  notes: z.string().trim().max(500).nullable().optional(),
+});
+
+function parseReceiptJson(raw: string): unknown {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    // O modelo pode envolver o JSON em texto; tenta recortar o objeto.
+  }
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start >= 0 && end > start) {
+    try {
+      return JSON.parse(raw.slice(start, end + 1));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/**
+ * Lê um comprovante (imagem) e sugere cobranças em aberto compatíveis.
+ * Não registra pagamento: a confirmação é sempre humana, no Financeiro.
+ */
+export async function analyzeReceipt(params: {
+  userId: string;
+  tenant: AssistantTenant;
+  imageDataUrl: string;
+}): Promise<ReceiptAnalysis> {
+  const system = [
+    "Você lê comprovantes de pagamento (Pix, cartão de crédito/débito) de um negócio de beleza.",
+    "Extraia somente o que estiver legível. Não invente dados.",
+    "Responda APENAS com JSON válido, sem markdown, no formato:",
+    '{"is_receipt": true, "amount": "80,00", "date": "AAAA-MM-DD", "payer": "nome", "method": "pix|credit|debit|cash|transfer|other", "reference": "id/transacao", "confidence": "alta|media|baixa", "notes": "observacao curta"}',
+    'Use null nos campos ausentes. "amount" é o valor em reais, com vírgula (ex.: "80,00").',
+    'Se a imagem não for um comprovante de pagamento, devolva {"is_receipt": false}.',
+  ].join("\n");
+
+  const raw = await callOpenRouter({
+    system,
+    user: [
+      {
+        type: "text",
+        text: "Leia este comprovante e devolva o JSON conforme o formato.",
+      },
+      { type: "image_url", image_url: { url: params.imageDataUrl } },
+    ],
+    temperature: 0,
+    maxTokens: 500,
+    json: true,
+  });
+
+  const json = parseReceiptJson(raw);
+  if (!json) {
+    throw new Error("Não foi possível ler o comprovante.");
+  }
+  const parsed = receiptSchema.safeParse(json);
+  if (!parsed.success) {
+    throw new Error("Não foi possível interpretar os dados do comprovante.");
+  }
+
+  const amountText =
+    parsed.data.amount === null || parsed.data.amount === undefined
+      ? ""
+      : String(parsed.data.amount).trim();
+  const amountCents = amountText ? parsePriceToCents(amountText) : null;
+
+  const receipt: ReceiptData = {
+    amountCents,
+    date: parsed.data.date || null,
+    payer: parsed.data.payer || null,
+    method: parsed.data.method ?? null,
+    reference: parsed.data.reference || null,
+    confidence: parsed.data.confidence,
+    notes: parsed.data.notes || null,
+  };
+
+  if (!parsed.data.is_receipt) {
+    return { isReceipt: false, receipt, candidates: [] };
+  }
+
+  const candidates = await withUser(params.userId, async (tx) => {
+    const rows = await tx
+      .select({
+        id: charges.id,
+        totalCents: charges.totalCents,
+        clientName: clients.name,
+        createdAt: charges.createdAt,
+        description: sql<string | null>`(select ci.description from charge_items ci where ci.charge_id = ${charges.id} order by ci.created_at asc limit 1)`,
+      })
+      .from(charges)
+      .leftJoin(clients, eq(clients.id, charges.clientId))
+      .where(
+        and(
+          eq(charges.tenantId, params.tenant.id),
+          eq(charges.status, "open"),
+        ),
+      )
+      .orderBy(asc(charges.createdAt))
+      .limit(50);
+
+    const payer = receipt.payer?.toLowerCase().trim() ?? "";
+    const scored = rows.map((row) => {
+      let score = 0;
+      if (receipt.amountCents !== null && row.totalCents === receipt.amountCents) {
+        score += 10;
+      }
+      if (payer && row.clientName) {
+        const clientName = row.clientName.toLowerCase();
+        if (clientName.includes(payer) || payer.includes(clientName)) {
+          score += 5;
+        }
+      }
+      return { row, score };
+    });
+
+    scored.sort(
+      (a, b) =>
+        b.score - a.score ||
+        b.row.createdAt.getTime() - a.row.createdAt.getTime(),
+    );
+
+    return scored.slice(0, 5).map(({ row }) => ({
+      id: row.id,
+      clientName: row.clientName,
+      description: row.description ?? "Cobrança em aberto",
+      totalCents: row.totalCents,
+      createdAt: row.createdAt.toISOString(),
+    }));
+  });
+
+  return { isReceipt: true, receipt, candidates };
 }

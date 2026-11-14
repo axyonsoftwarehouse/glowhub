@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import {
+  analyzeReceipt,
   askAssistant,
   generateWriting,
   isAssistantConfigured,
@@ -9,6 +10,7 @@ import {
   type AnalysisKind,
   type AssistantMessage,
   type AssistantTenant,
+  type ReceiptAnalysis,
   type WritingRequest,
 } from "@/lib/assistant";
 import { logger } from "@/lib/logger";
@@ -18,6 +20,10 @@ import { getCurrentTenant } from "@/lib/tenant";
 
 export type AssistantActionResult =
   | { status: "success"; answer: string }
+  | { status: "error"; message: string };
+
+export type ReceiptActionResult =
+  | { status: "success"; analysis: ReceiptAnalysis }
   | { status: "error"; message: string };
 
 const messageSchema = z.object({
@@ -46,6 +52,15 @@ const writingSchema = z.object({
 });
 
 const analysisSchema = z.enum(["today", "week", "inactive", "cash"]);
+
+const imageSchema = z
+  .string()
+  .min(100, "Envie uma imagem.")
+  .max(1_000_000, "Imagem muito grande. Tire uma foto menor e tente de novo.")
+  .regex(
+    /^data:image\/(png|jpe?g|webp);base64,[A-Za-z0-9+/=]+$/,
+    "Envie uma imagem PNG, JPG ou WebP.",
+  );
 
 async function guard(): Promise<
   { error: string } | { userId: string; tenant: AssistantTenant }
@@ -86,7 +101,7 @@ async function guard(): Promise<
   };
 }
 
-function failure(cause: unknown): AssistantActionResult {
+function failure(cause: unknown): { status: "error"; message: string } {
   logger.error("assistant_failed", {
     error: cause instanceof Error ? cause.message : String(cause),
   });
@@ -174,6 +189,41 @@ export async function runAnalysisAction(
       kind: parsed.data,
     });
     return { status: "success", answer };
+  } catch (cause) {
+    return failure(cause);
+  }
+}
+
+export async function analyzeReceiptAction(
+  imageDataUrl: string,
+): Promise<ReceiptActionResult> {
+  const prepared = await guard();
+  if ("error" in prepared) {
+    return { status: "error", message: prepared.error };
+  }
+
+  const parsed = imageSchema.safeParse(imageDataUrl);
+  if (!parsed.success) {
+    return {
+      status: "error",
+      message: parsed.error.issues[0]?.message ?? "Imagem inválida.",
+    };
+  }
+
+  try {
+    const analysis = await analyzeReceipt({
+      userId: prepared.userId,
+      tenant: prepared.tenant,
+      imageDataUrl: parsed.data,
+    });
+    if (!analysis.isReceipt) {
+      return {
+        status: "error",
+        message:
+          "Não identifiquei um comprovante de pagamento na imagem. Tente uma foto mais nítida.",
+      };
+    }
+    return { status: "success", analysis };
   } catch (cause) {
     return failure(cause);
   }
