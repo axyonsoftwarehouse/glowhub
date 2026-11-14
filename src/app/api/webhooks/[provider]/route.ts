@@ -68,9 +68,13 @@ export async function POST(
     return Response.json({ error: "Payload muito grande." }, { status: 413 });
   }
 
-  const secret = getSecret(provider);
-  if (!secret) {
-    // Sem segredo nao ha como autenticar: nao aceitar eventos (safe by default).
+  const adapter = getPaymentProvider(provider);
+  const secret = getSecret(provider) ?? "";
+  const requiresSecret = adapter ? adapter.requiresSecret !== false : true;
+
+  if (requiresSecret && !secret) {
+    // Sem segredo nao ha como autenticar: recusar (safe by default). Adapters
+    // que confirmam por API (ex.: InfinitePay) declaram requiresSecret: false.
     logger.warn("webhook_not_configured", { provider });
     recordMetric("webhook_event", 1, { provider, status: "not_configured" });
     return Response.json(
@@ -86,7 +90,6 @@ export async function POST(
     payload = { raw };
   }
 
-  const adapter = getPaymentProvider(provider);
   const webhookRequest = {
     raw,
     headers: request.headers,
@@ -95,7 +98,7 @@ export async function POST(
   };
 
   const valid = adapter
-    ? adapter.verifyWebhook({ request: webhookRequest, secret })
+    ? await adapter.verifyWebhook({ request: webhookRequest, secret })
     : verifySignature(
         raw,
         request.headers.get("x-webhook-signature") ??

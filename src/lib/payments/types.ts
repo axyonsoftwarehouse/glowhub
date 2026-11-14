@@ -37,8 +37,21 @@ export type WebhookRequest = {
  */
 export type PaymentProviderAdapter = {
   id: string;
+  /**
+   * Exige `WEBHOOK_<PROVIDER>_SECRET`/`WEBHOOK_SECRET`? Padrão `true`. Provedores
+   * sem assinatura no webhook (ex.: InfinitePay) confirmam por API e podem
+   * declarar `false`.
+   */
+  requiresSecret?: boolean;
   createCheckout(input: CheckoutInput): Promise<CheckoutResult>;
-  verifyWebhook(params: { request: WebhookRequest; secret: string }): boolean;
+  /**
+   * Pode ser assíncrono para provedores que confirmam o evento por API (ex.:
+   * InfinitePay, que não assina o webhook). Retorne `false` para recusar.
+   */
+  verifyWebhook(params: {
+    request: WebhookRequest;
+    secret: string;
+  }): boolean | Promise<boolean>;
   parseWebhook(params: {
     request: WebhookRequest;
     secret: string;

@@ -20,15 +20,58 @@ function slugify(value: string): string {
 const inputClass =
   "w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-brand";
 
+type ServiceDraft = {
+  key: number;
+  name: string;
+  durationMinutes: string;
+  price: string;
+};
+
+const emptyService = (key: number): ServiceDraft => ({
+  key,
+  name: "",
+  durationMinutes: "30",
+  price: "",
+});
+
 export function OnboardingForm() {
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugEdited, setSlugEdited] = useState(false);
   const [solo, setSolo] = useState(false);
+  const [services, setServices] = useState<ServiceDraft[]>([emptyService(1)]);
+  const [nextKey, setNextKey] = useState(2);
   const [result, setResult] = useState<TenantActionState>(
     initialTenantActionState,
   );
   const [pending, startTransition] = useTransition();
+
+  const serializedServices = JSON.stringify(
+    services.map((service) => ({
+      name: service.name,
+      durationMinutes: Number(service.durationMinutes) || 30,
+      price: service.price,
+    })),
+  );
+
+  function updateService(key: number, patch: Partial<ServiceDraft>) {
+    setServices((current) =>
+      current.map((service) =>
+        service.key === key ? { ...service, ...patch } : service,
+      ),
+    );
+  }
+
+  function addService() {
+    setServices((current) => [...current, emptyService(nextKey)]);
+    setNextKey((key) => key + 1);
+  }
+
+  function removeService(key: number) {
+    setServices((current) =>
+      current.length > 1 ? current.filter((service) => service.key !== key) : current,
+    );
+  }
 
   function submit(formData: FormData) {
     startTransition(async () => {
@@ -103,7 +146,7 @@ export function OnboardingForm() {
           <span>
             <span className="block text-sm font-medium">Trabalho sozinho</span>
             <span className="mt-0.5 block text-xs text-foreground/70">
-              Cria seu profissional, um serviço inicial, horário seg–sáb e o
+              Cria seu profissional, seus serviços iniciais, horário seg–sáb e o
               plano de contas. Você pode ajustar tudo depois.
             </span>
           </span>
@@ -111,75 +154,111 @@ export function OnboardingForm() {
 
         {solo && (
           <div className="space-y-3 rounded-xl border border-brand/30 bg-brand/5 p-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-brand">
-              Seu atendimento inicial
-            </p>
-            <div>
-              <label
-                htmlFor="serviceName"
-                className="text-xs font-medium text-foreground/60"
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+                Seus serviços iniciais
+              </p>
+              <button
+                type="button"
+                onClick={addService}
+                className="rounded-full border border-brand/40 bg-white px-3 py-1 text-xs font-medium text-brand"
               >
-                Serviço principal
-              </label>
-              <input
-                id="serviceName"
-                name="serviceName"
-                defaultValue="Atendimento"
-                className={`mt-1 ${inputClass}`}
-              />
-              {result.fieldErrors?.serviceName?.[0] && (
-                <p className="mt-1 text-xs text-red-600">
-                  {result.fieldErrors.serviceName[0]}
-                </p>
-              )}
+                + Adicionar
+              </button>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label
-                  htmlFor="serviceDuration"
-                  className="text-xs font-medium text-foreground/60"
-                >
-                  Duração (min)
-                </label>
-                <input
-                  id="serviceDuration"
-                  name="serviceDuration"
-                  type="number"
-                  min={5}
-                  max={480}
-                  defaultValue={30}
-                  className={`mt-1 ${inputClass}`}
-                />
-                {result.fieldErrors?.serviceDuration?.[0] && (
-                  <p className="mt-1 text-xs text-red-600">
-                    {result.fieldErrors.serviceDuration[0]}
+
+            <input type="hidden" name="services" value={serializedServices} />
+
+            {services.map((service, index) => (
+              <div
+                key={service.key}
+                className="space-y-3 rounded-xl border border-border bg-white/80 p-3"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-foreground/60">
+                    Serviço {index + 1}
                   </p>
-                )}
+                  {services.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeService(service.key)}
+                      className="text-xs font-medium text-red-600 hover:underline"
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+                <div>
+                  <label
+                    htmlFor={`service-${service.key}`}
+                    className="text-xs font-medium text-foreground/60"
+                  >
+                    Nome
+                  </label>
+                  <input
+                    id={`service-${service.key}`}
+                    value={service.name}
+                    onChange={(event) =>
+                      updateService(service.key, { name: event.target.value })
+                    }
+                    placeholder="Ex.: Design de sobrancelhas"
+                    className={`mt-1 ${inputClass}`}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      htmlFor={`service-${service.key}-duration`}
+                      className="text-xs font-medium text-foreground/60"
+                    >
+                      Duração (min)
+                    </label>
+                    <input
+                      id={`service-${service.key}-duration`}
+                      type="number"
+                      min={5}
+                      max={480}
+                      value={service.durationMinutes}
+                      onChange={(event) =>
+                        updateService(service.key, {
+                          durationMinutes: event.target.value,
+                        })
+                      }
+                      className={`mt-1 ${inputClass}`}
+                    />
+                  </div>
+                  <div>
+                    <label
+                      htmlFor={`service-${service.key}-price`}
+                      className="text-xs font-medium text-foreground/60"
+                    >
+                      Preço (R$)
+                    </label>
+                    <input
+                      id={`service-${service.key}-price`}
+                      inputMode="decimal"
+                      value={service.price}
+                      onChange={(event) =>
+                        updateService(service.key, { price: event.target.value })
+                      }
+                      placeholder="0,00"
+                      className={`mt-1 ${inputClass}`}
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label
-                  htmlFor="servicePrice"
-                  className="text-xs font-medium text-foreground/60"
-                >
-                  Preço (R$)
-                </label>
-                <input
-                  id="servicePrice"
-                  name="servicePrice"
-                  inputMode="decimal"
-                  placeholder="0,00"
-                  className={`mt-1 ${inputClass}`}
-                />
-                {result.fieldErrors?.servicePrice?.[0] && (
-                  <p className="mt-1 text-xs text-red-600">
-                    {result.fieldErrors.servicePrice[0]}
-                  </p>
-                )}
-              </div>
-            </div>
+            ))}
+
+            {result.fieldErrors?.services?.[0] && (
+              <p className="text-xs text-red-600">
+                {result.fieldErrors.services[0]}
+              </p>
+            )}
+
             <p className="text-[11px] text-foreground/60">
               Horário inicial: segunda a sexta 9h–18h e sábado 9h–13h. Ajuste em
-              Horários depois.
+              Horários depois. Deixe um serviço em branco para usar
+              &quot;Atendimento&quot;.
             </p>
           </div>
         )}

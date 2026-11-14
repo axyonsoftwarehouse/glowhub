@@ -197,17 +197,20 @@ desktop a sidebar continua disponível. O modo pode ser ligado/desligado em
 ## Pagamento online (gateway)
 - **Adapter portável** (`src/lib/payments/*`): interface `PaymentProviderAdapter`
   (`createCheckout`, `verifyWebhook`, `parseWebhook`). Provedores: `mock`
-  (padrão, para dev/testes — link local `/pay/mock`) e `mercadopago`
-  (Checkout Pro). Ativo via `PAYMENT_PROVIDER`.
+  (padrão, para dev/testes — link local `/pay/mock`), `mercadopago`
+  (Checkout Pro) e `infinitepay` (Checkout Integrado). Ativo via
+  `PAYMENT_PROVIDER`.
 - **Link de checkout**: na comanda aberta, "Cobrar online" cria uma preferência
   no provedor, registra um `payment` **pendente** (`provider` + `provider_ref`)
   e devolve o link (`init_point`).
 - **Webhook** (`/api/webhooks/<provider>`): assinatura verificada por provedor
-  (Mercado Pago usa `x-signature`/`x-request-id`); o evento é gravado
+  (Mercado Pago usa `x-signature`/`x-request-id`; InfinitePay não assina e é
+  confirmado no `/payment_check` via `requiresSecret: false`); o evento é gravado
   idempotente e despachado (`processPaymentWebhook`) para **confirmar**
   (D Caixa/Banco, C Contas a Receber) ou **estornar** (D Contas a Receber,
   C Caixa/Banco) via `confirmPendingPayment` — a mesma lógica usada na
-  conciliação manual. Sem segredo configurado, o endpoint rejeita (safe default).
+  conciliação manual. Sem segredo configurado, adapters que o exigem rejeitam
+  (safe default).
 
 ## Canal público (agendamento online)
 - `/book` resolve o tenant por **subdomínio/slug** (`getCurrentTenant`) e deixa o

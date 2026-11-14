@@ -129,6 +129,7 @@ export function MobileNav({
     {
       title: isSolo ? "Mais módulos" : "Equipe e comercial",
       items: [
+        { href: "/assistant", label: "Assistente IA" },
         ...(!isSolo
           ? [
               { href: "/branches", label: "Filiais" },
