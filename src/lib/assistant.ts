@@ -1,6 +1,17 @@
-import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  gte,
+  inArray,
+  lt,
+  lte,
+  notInArray,
+  sql,
+} from "drizzle-orm";
 import {
   appointments,
+  branchHours,
   branches,
   charges,
   clients,
@@ -9,7 +20,7 @@ import {
   services,
 } from "@/db/schema";
 import { addDays } from "@/lib/availability-data";
-import { withUser } from "@/lib/db";
+import { withUser, type AppTx } from "@/lib/db";
 import { logger } from "@/lib/logger";
 import { formatCentsBRL } from "@/lib/money";
 import { zonedDateKey, zonedTimeToUtc } from "@/lib/timezone";
@@ -27,6 +38,28 @@ export type AssistantTenant = {
   name: string;
   isSolo: boolean;
 };
+
+export type WritingKind =
+  | "whatsapp"
+  | "description"
+  | "promotion"
+  | "reply"
+  | "instagram";
+
+export type WritingTone =
+  | "simples"
+  | "acolhedor"
+  | "profissional"
+  | "divertido";
+
+export type WritingRequest = {
+  kind: WritingKind;
+  tone: WritingTone;
+  context: string;
+  audience?: string;
+};
+
+export type AnalysisKind = "today" | "week" | "inactive" | "cash";
 
 export function isAssistantConfigured(): boolean {
   return Boolean(process.env.OPENROUTER_API_KEY);
@@ -66,6 +99,55 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "cancelado",
   no_show: "não compareceu",
 };
+
+function dateFormatter(timezone: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: timezone,
+  });
+}
+
+type BranchContext = {
+  primaryBranchId: string | null;
+  timezone: string;
+  today: string;
+  start: Date;
+  end: Date;
+};
+
+async function getBranchContext(
+  tx: AppTx,
+  tenantId: string,
+): Promise<BranchContext> {
+  const rows = await tx
+    .select({
+      id: branches.id,
+      timezone: branches.timezone,
+      isActive: branches.isActive,
+    })
+    .from(branches)
+    .where(eq(branches.tenantId, tenantId))
+    .orderBy(asc(branches.name));
+
+  const primary = rows.find((branch) => branch.isActive) ?? rows[0];
+  const timezone = primary?.timezone ?? "America/Sao_Paulo";
+  const today = zonedDateKey(new Date().toISOString(), timezone);
+
+  return {
+    primaryBranchId: primary?.id ?? null,
+    timezone,
+    today,
+    start: zonedTimeToUtc(today, "00:00", timezone),
+    end: zonedTimeToUtc(addDays(today, 1), "00:00", timezone),
+  };
+}
+
+function minutesOfDay(value: string): number {
+  const [hour, minute] = value.split(":");
+  return Number(hour) * 60 + Number(minute);
+}
 
 async function buildBusinessContext(
   userId: string,
@@ -247,6 +329,339 @@ function formatContext(context: BusinessContext): string {
   return lines.join("\n");
 }
 
+async function buildWritingBrief(
+  userId: string,
+  tenant: AssistantTenant,
+): Promise<string> {
+  return withUser(userId, async (tx) => {
+    const context = await getBranchContext(tx, tenant.id);
+    const serviceRows = await tx
+      .select({
+        name: services.name,
+        durationMinutes: services.durationMinutes,
+        priceCents: services.priceCents,
+      })
+      .from(services)
+      .where(
+        and(eq(services.tenantId, tenant.id), eq(services.isActive, true)),
+      )
+      .orderBy(asc(services.name));
+
+    return [
+      `Empresa: ${tenant.name}${tenant.isSolo ? " (profissional autônoma)" : ""}.`,
+      `Hoje é ${context.today}.`,
+      serviceRows.length
+        ? `Serviços e preços:\n${serviceRows
+            .map(
+              (service) =>
+                `- ${service.name}: ${service.durationMinutes} min, ${formatCentsBRL(service.priceCents)}`,
+            )
+            .join("\n")}`
+        : "Serviços: nenhum cadastrado.",
+    ].join("\n");
+  });
+}
+
+async function buildWeekAnalysis(
+  userId: string,
+  tenant: AssistantTenant,
+): Promise<string> {
+  return withUser(userId, async (tx) => {
+    const context = await getBranchContext(tx, tenant.id);
+    const lastStart = zonedTimeToUtc(
+      addDays(context.today, -6),
+      "00:00",
+      context.timezone,
+    );
+    const nextEnd = zonedTimeToUtc(
+      addDays(context.today, 7),
+      "00:00",
+      context.timezone,
+    );
+
+    const pastRows = await tx
+      .select({
+        status: appointments.status,
+        priceCents: appointments.priceCents,
+        serviceName: services.name,
+      })
+      .from(appointments)
+      .innerJoin(services, eq(services.id, appointments.serviceId))
+      .where(
+        and(
+          eq(appointments.tenantId, tenant.id),
+          gte(appointments.startsAt, lastStart),
+          lt(appointments.startsAt, context.end),
+        ),
+      );
+
+    const statusCount: Record<string, number> = {};
+    const serviceCount = new Map<string, number>();
+    let completedRevenueCents = 0;
+    for (const row of pastRows) {
+      statusCount[row.status] = (statusCount[row.status] ?? 0) + 1;
+      if (row.status === "completed") {
+        completedRevenueCents += row.priceCents;
+      }
+      const key = row.serviceName;
+      serviceCount.set(key, (serviceCount.get(key) ?? 0) + 1);
+    }
+
+    const topServices = [...serviceCount.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count]) => `${name} (${count})`)
+      .join(", ");
+
+    const [paidLast] = await tx
+      .select({
+        total: sql<number>`coalesce(sum(${payments.amountCents}), 0)`.mapWith(
+          Number,
+        ),
+      })
+      .from(payments)
+      .where(
+        and(
+          eq(payments.tenantId, tenant.id),
+          eq(payments.status, "confirmed"),
+          gte(payments.createdAt, lastStart),
+          lt(payments.createdAt, context.end),
+        ),
+      );
+
+    const [upcoming] = await tx
+      .select({
+        count: sql<number>`count(*)`.mapWith(Number),
+        total: sql<number>`coalesce(sum(${appointments.priceCents}), 0)`.mapWith(
+          Number,
+        ),
+      })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.tenantId, tenant.id),
+          gte(appointments.startsAt, context.end),
+          lt(appointments.startsAt, nextEnd),
+          inArray(appointments.status, ["pending", "confirmed", "check_in"]),
+        ),
+      );
+
+    const [openTotal] = await tx
+      .select({
+        total: sql<number>`coalesce(sum(${charges.totalCents}), 0)`.mapWith(
+          Number,
+        ),
+      })
+      .from(charges)
+      .where(
+        and(eq(charges.tenantId, tenant.id), eq(charges.status, "open")),
+      );
+
+    const date = dateFormatter(context.timezone);
+    return [
+      `Últimos 7 dias (${date.format(lastStart)} a ${date.format(new Date(context.end.getTime() - 1))}):`,
+      `- Atendimentos: ${pastRows.length} (concluídos ${statusCount.completed ?? 0}, confirmados ${statusCount.confirmed ?? 0}, aguardando ${statusCount.pending ?? 0}, cancelados ${statusCount.cancelled ?? 0}, não compareceram ${statusCount.no_show ?? 0}).`,
+      `- Recebido (pagamentos confirmados): ${formatCentsBRL(paidLast?.total ?? 0)}.`,
+      `- Valor dos atendimentos concluídos: ${formatCentsBRL(completedRevenueCents)}.`,
+      `- Serviços mais agendados: ${topServices || "nenhum"}.`,
+      `Próximos 7 dias: ${upcoming?.count ?? 0} agendamentos, valor previsto ${formatCentsBRL(upcoming?.total ?? 0)}.`,
+      `Contas em aberto: ${formatCentsBRL(openTotal?.total ?? 0)}.`,
+    ].join("\n");
+  });
+}
+
+async function buildInactiveAnalysis(
+  userId: string,
+  tenant: AssistantTenant,
+): Promise<string> {
+  return withUser(userId, async (tx) => {
+    const context = await getBranchContext(tx, tenant.id);
+    const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
+
+    const rows = await tx
+      .select({
+        name: clients.name,
+        phone: clients.phone,
+        lastVisit: sql<Date | string | null>`max(${appointments.startsAt})`,
+        visits: sql<number>`count(${appointments.id})`.mapWith(Number),
+      })
+      .from(clients)
+      .leftJoin(
+        appointments,
+        and(
+          eq(appointments.clientId, clients.id),
+          eq(appointments.tenantId, tenant.id),
+        ),
+      )
+      .where(
+        and(eq(clients.tenantId, tenant.id), eq(clients.isActive, true)),
+      )
+      .groupBy(clients.id, clients.name, clients.phone)
+      .having(
+        sql`max(${appointments.startsAt}) is null or max(${appointments.startsAt}) < ${cutoff}`,
+      )
+      .orderBy(sql`max(${appointments.startsAt}) asc nulls first`)
+      .limit(12);
+
+    const date = dateFormatter(context.timezone);
+    return [
+      `Clientes ativos sem atendimento há mais de 60 dias (até 12 listados): ${rows.length}.`,
+      rows.length
+        ? rows
+            .map((row) => {
+              const last = row.lastVisit ? new Date(row.lastVisit) : null;
+              return `- ${row.name}${row.phone ? ` · ${row.phone}` : ""} · último atendimento: ${last ? date.format(last) : "nunca"} · atendimentos: ${row.visits}`;
+            })
+            .join("\n")
+        : "- Nenhum cliente inativo encontrado.",
+    ].join("\n");
+  });
+}
+
+async function buildCashAnalysis(
+  userId: string,
+  tenant: AssistantTenant,
+): Promise<string> {
+  return withUser(userId, async (tx) => {
+    const context = await getBranchContext(tx, tenant.id);
+    const last30Start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const nextEnd = zonedTimeToUtc(
+      addDays(context.today, 7),
+      "00:00",
+      context.timezone,
+    );
+
+    const [paid30] = await tx
+      .select({
+        total: sql<number>`coalesce(sum(${payments.amountCents}), 0)`.mapWith(
+          Number,
+        ),
+      })
+      .from(payments)
+      .where(
+        and(
+          eq(payments.tenantId, tenant.id),
+          eq(payments.status, "confirmed"),
+          gte(payments.createdAt, last30Start),
+        ),
+      );
+
+    const [completed30] = await tx
+      .select({
+        count: sql<number>`count(*)`.mapWith(Number),
+        total: sql<number>`coalesce(sum(${appointments.priceCents}), 0)`.mapWith(
+          Number,
+        ),
+      })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.tenantId, tenant.id),
+          eq(appointments.status, "completed"),
+          gte(appointments.startsAt, last30Start),
+        ),
+      );
+
+    const [openTotal] = await tx
+      .select({
+        total: sql<number>`coalesce(sum(${charges.totalCents}), 0)`.mapWith(
+          Number,
+        ),
+      })
+      .from(charges)
+      .where(
+        and(eq(charges.tenantId, tenant.id), eq(charges.status, "open")),
+      );
+
+    const [upcoming] = await tx
+      .select({
+        count: sql<number>`count(*)`.mapWith(Number),
+        total: sql<number>`coalesce(sum(${appointments.priceCents}), 0)`.mapWith(
+          Number,
+        ),
+      })
+      .from(appointments)
+      .where(
+        and(
+          eq(appointments.tenantId, tenant.id),
+          gte(appointments.startsAt, context.end),
+          lt(appointments.startsAt, nextEnd),
+          inArray(appointments.status, ["pending", "confirmed", "check_in"]),
+        ),
+      );
+
+    let availableMinutes = 0;
+    let bookedMinutes = 0;
+    if (context.primaryBranchId) {
+      const hours = await tx
+        .select({
+          weekday: branchHours.weekday,
+          startTime: branchHours.startTime,
+          endTime: branchHours.endTime,
+        })
+        .from(branchHours)
+        .where(
+          and(
+            eq(branchHours.tenantId, tenant.id),
+            eq(branchHours.branchId, context.primaryBranchId),
+          ),
+        );
+
+      const weekly = [0, 0, 0, 0, 0, 0, 0];
+      for (const row of hours) {
+        weekly[row.weekday] +=
+          minutesOfDay(row.endTime) - minutesOfDay(row.startTime);
+      }
+      for (let i = 0; i < 7; i += 1) {
+        const day = addDays(context.today, i);
+        const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
+        availableMinutes += weekly[weekday] ?? 0;
+      }
+
+      const booked = await tx
+        .select({
+          startsAt: appointments.startsAt,
+          endsAt: appointments.endsAt,
+        })
+        .from(appointments)
+        .where(
+          and(
+            eq(appointments.tenantId, tenant.id),
+            gte(appointments.startsAt, context.start),
+            lt(appointments.startsAt, nextEnd),
+            notInArray(appointments.status, ["cancelled", "no_show"]),
+          ),
+        );
+      bookedMinutes = booked.reduce(
+        (sum, row) =>
+          sum + (row.endsAt.getTime() - row.startsAt.getTime()) / 60_000,
+        0,
+      );
+    }
+
+    const occupancy =
+      availableMinutes > 0
+        ? Math.round((bookedMinutes / availableMinutes) * 100)
+        : null;
+
+    const averageTicket =
+      (completed30?.count ?? 0) > 0
+        ? Math.round((completed30?.total ?? 0) / (completed30?.count ?? 1))
+        : 0;
+
+    return [
+      `Recebido nos últimos 30 dias: ${formatCentsBRL(paid30?.total ?? 0)}.`,
+      `Atendimentos concluídos nos últimos 30 dias: ${completed30?.count ?? 0}, valor ${formatCentsBRL(completed30?.total ?? 0)}.`,
+      `Ticket médio dos atendimentos concluídos: ${formatCentsBRL(averageTicket)}.`,
+      `Total em aberto (a receber): ${formatCentsBRL(openTotal?.total ?? 0)}.`,
+      `Próximos 7 dias: ${upcoming?.count ?? 0} agendamentos, valor previsto ${formatCentsBRL(upcoming?.total ?? 0)}.`,
+      occupancy === null
+        ? "Ocupação dos próximos 7 dias: sem horário de funcionamento cadastrado."
+        : `Ocupação aproximada dos próximos 7 dias: ${occupancy}% (${(bookedMinutes / 60).toFixed(1)}h agendadas de ${(availableMinutes / 60).toFixed(1)}h disponíveis; não considera bloqueios/feriados).`,
+    ].join("\n");
+  });
+}
+
 function systemPrompt(context: BusinessContext): string {
   return [
     "Você é o Assistente do GlowHub, um sistema de gestão para salões, barbearias e estúdios de beleza.",
@@ -261,20 +676,19 @@ function systemPrompt(context: BusinessContext): string {
   ].join("\n");
 }
 
-export async function askAssistant(params: {
-  userId: string;
-  tenant: AssistantTenant;
-  question: string;
-  history: AssistantMessage[];
+async function callOpenRouter(params: {
+  system: string;
+  user: string;
+  history?: AssistantMessage[];
+  temperature?: number;
+  maxTokens?: number;
 }): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error("Assistente não configurado (defina OPENROUTER_API_KEY).");
   }
 
-  const context = await buildBusinessContext(params.userId, params.tenant);
-
-  const history = params.history.slice(-12).map((message) => ({
+  const history = (params.history ?? []).slice(-12).map((message) => ({
     role: message.role,
     content: message.content,
   }));
@@ -289,12 +703,12 @@ export async function askAssistant(params: {
     },
     body: JSON.stringify({
       model: assistantModel(),
-      temperature: 0.2,
-      max_tokens: 800,
+      temperature: params.temperature ?? 0.2,
+      max_tokens: params.maxTokens ?? 800,
       messages: [
-        { role: "system", content: systemPrompt(context) },
+        { role: "system", content: params.system },
         ...history,
-        { role: "user", content: params.question },
+        { role: "user", content: params.user },
       ],
     }),
   });
@@ -316,4 +730,110 @@ export async function askAssistant(params: {
     throw new Error("O assistente não retornou uma resposta.");
   }
   return answer;
+}
+
+export async function askAssistant(params: {
+  userId: string;
+  tenant: AssistantTenant;
+  question: string;
+  history: AssistantMessage[];
+}): Promise<string> {
+  const context = await buildBusinessContext(params.userId, params.tenant);
+  return callOpenRouter({
+    system: systemPrompt(context),
+    user: params.question,
+    history: params.history,
+    temperature: 0.2,
+    maxTokens: 800,
+  });
+}
+
+const WRITING_LABELS: Record<WritingKind, string> = {
+  whatsapp: "mensagem de WhatsApp",
+  description: "descrição de serviço",
+  promotion: "promoção/campanha",
+  reply: "resposta a uma cliente",
+  instagram: "legenda para Instagram",
+};
+
+export async function generateWriting(params: {
+  userId: string;
+  tenant: AssistantTenant;
+  request: WritingRequest;
+}): Promise<string> {
+  const brief = await buildWritingBrief(params.userId, params.tenant);
+  const system = [
+    "Você é redator do GlowHub, especializado em negócios de beleza e estética.",
+    "Gere apenas o texto final, pronto para copiar. Não inclua explicações, títulos, saudações de IA ou aspas ao redor.",
+    "Use somente os serviços e preços fornecidos no contexto. Não invente preços, serviços ou promoções.",
+    "Se faltar uma informação, use um marcador entre colchetes, como [nome da cliente] ou [data].",
+    "Escreva em português do Brasil, natural e sem exageros.",
+    "",
+    "Contexto da empresa:",
+    brief,
+  ].join("\n");
+
+  const user = [
+    `Tipo de texto: ${WRITING_LABELS[params.request.kind]}.`,
+    `Tom: ${params.request.tone}.`,
+    params.request.audience
+      ? `Público: ${params.request.audience}.`
+      : "",
+    `Contexto/instruções: ${params.request.context}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return callOpenRouter({
+    system,
+    user,
+    temperature: 0.7,
+    maxTokens: 700,
+  });
+}
+
+const ANALYSIS_LABELS: Record<AnalysisKind, string> = {
+  today: "Resumo do dia",
+  week: "Resumo da semana",
+  inactive: "Clientes inativos",
+  cash: "Ocupação e previsão de caixa",
+};
+
+export async function runAnalysis(params: {
+  userId: string;
+  tenant: AssistantTenant;
+  kind: AnalysisKind;
+}): Promise<string> {
+  let metrics: string;
+  if (params.kind === "today") {
+    metrics = formatContext(
+      await buildBusinessContext(params.userId, params.tenant),
+    );
+  } else if (params.kind === "week") {
+    metrics = await buildWeekAnalysis(params.userId, params.tenant);
+  } else if (params.kind === "inactive") {
+    metrics = await buildInactiveAnalysis(params.userId, params.tenant);
+  } else {
+    metrics = await buildCashAnalysis(params.userId, params.tenant);
+  }
+
+  const system = [
+    "Você é analista do GlowHub, um sistema de gestão para beleza e estética.",
+    "Use somente os números e dados fornecidos. Não invente valores, clientes ou tendências.",
+    "Responda em português do Brasil, de forma curta e prática.",
+    "Estruture em até três blocos: Resumo, Pontos de atenção e Próximos passos.",
+    "Sugira ações concretas que a profissional consiga executar no painel.",
+  ].join("\n");
+
+  return callOpenRouter({
+    system,
+    user: [
+      `Gere a análise: ${ANALYSIS_LABELS[params.kind]}.`,
+      "",
+      "Dados:",
+      metrics,
+    ].join("\n"),
+    temperature: 0.3,
+    maxTokens: 900,
+  });
 }

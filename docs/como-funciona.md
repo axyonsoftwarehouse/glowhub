@@ -521,11 +521,17 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
   ações de status via `PATCH /api/v1/appointments/:id/status`, booking público
   e registro de push. O `EXPO_PUBLIC_API_URL` aponta para a API e
   `EXPO_PUBLIC_TENANT_SLUG` para o salão do booking; push exige projectId EAS.
-- **Assistente de IA** (`/assistant`): server action autenticada monta um resumo
-  somente-leitura da empresa (agenda de hoje, próximos 7 dias, serviços,
-  clientes, recebido hoje e em aberto) com `withUser` (RLS) e chama a OpenRouter
-  (`OPENROUTER_API_KEY`, padrão `google/gemini-2.5-flash`). Rate limit de 20
-  perguntas/5 min por usuário; sem a chave, a página só mostra o aviso.
+- **Assistente de IA** (`/assistant`): três modos no mesmo lugar.
+  - **Perguntas**: server action autenticada monta um resumo somente-leitura da
+    empresa (agenda de hoje, próximos 7 dias, serviços, clientes, recebido hoje e
+    em aberto) com `withUser` (RLS) e chama a OpenRouter.
+  - **Escrita**: gera mensagens de WhatsApp, respostas, descrições de serviço,
+    promoções e legendas a partir de tipo/tom/contexto (sem alterar dados).
+  - **Análises**: resumo do dia/semana, clientes inativos (60+ dias) e ocupação/
+    previsão de caixa; os números são calculados no servidor e a IA só interpreta.
+  - Modelo padrão `google/gemini-2.5-flash` (`OPENROUTER_MODEL` muda); rate limit
+    de 20 solicitações/5 min por usuário. Sem `OPENROUTER_API_KEY`, a página só
+    mostra o aviso.
 
 ## 11. Ambientes e deploy
 
