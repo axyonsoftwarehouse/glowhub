@@ -49,6 +49,59 @@ export type AppointmentsResponse = {
   appointments: Appointment[];
 };
 
+export type ClientTenant = {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+};
+
+export type ClientIdentity = {
+  id: string | null;
+  name: string;
+  email: string;
+  phone: string | null;
+};
+
+export type ClientMeResponse = {
+  client: ClientIdentity;
+  tenant: ClientTenant;
+  tenants: ClientTenant[];
+};
+
+export type ClientOtpRequestResponse = {
+  ok: true;
+  expiresInSeconds: number;
+  devCode?: string;
+  tenant: { name: string; slug: string };
+};
+
+export type ClientVerifyResponse = {
+  token: string;
+  expiresAt: string;
+  client: ClientIdentity;
+  tenant: ClientTenant;
+  tenants: ClientTenant[];
+};
+
+export type ClientAppointment = {
+  id: string;
+  startsAt: string;
+  endsAt: string;
+  status: AppointmentStatus;
+  priceCents: number;
+  notes: string | null;
+  branch: { id: string; name: string; timezone: string };
+  professional: { id: string; name: string };
+  service: { id: string; name: string };
+};
+
+export type ClientAppointmentsResponse = {
+  from: string;
+  to: string;
+  appointments: ClientAppointment[];
+};
+
 export type PublicTenant = {
   id: string;
   name: string;
@@ -263,8 +316,58 @@ export function publicTenantSlug(): string {
   return process.env.EXPO_PUBLIC_TENANT_SLUG?.trim() || "demo";
 }
 
+function tenantHeaders(slug?: string): Record<string, string> {
+  return { "x-tenant-slug": slug?.trim() || publicTenantSlug() };
+}
+
 function publicHeaders(): Record<string, string> {
-  return { "x-tenant-slug": publicTenantSlug() };
+  return tenantHeaders();
+}
+
+export async function requestClientOtp(email: string, slug?: string) {
+  return request<ClientOtpRequestResponse>("/api/v1/client/auth/request", {
+    method: "POST",
+    headers: tenantHeaders(slug),
+    body: { email },
+  });
+}
+
+export async function verifyClientOtp(
+  email: string,
+  code: string,
+  slug?: string,
+) {
+  return request<ClientVerifyResponse>("/api/v1/client/auth/verify", {
+    method: "POST",
+    headers: tenantHeaders(slug),
+    body: { email, code },
+  });
+}
+
+export async function clientMe(token: string) {
+  return request<ClientMeResponse>("/api/v1/client/me", { token });
+}
+
+export async function clientAppointments(token: string) {
+  return request<ClientAppointmentsResponse>(
+    "/api/v1/client/appointments",
+    { token },
+  );
+}
+
+export async function clientSwitchTenant(token: string, tenantId: string) {
+  return request<ClientVerifyResponse>("/api/v1/client/tenant", {
+    method: "POST",
+    token,
+    body: { tenantId },
+  });
+}
+
+export async function clientLogout(token: string) {
+  return request<{ ok: boolean }>("/api/v1/client/auth/logout", {
+    method: "POST",
+    token,
+  });
 }
 
 export async function publicTenant() {

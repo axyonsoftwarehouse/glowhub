@@ -46,17 +46,28 @@ npm run typecheck  # tsc --noEmit
 
 ## Telas
 
-- **Login** (`src/app/index.tsx`): e-mail/senha em `/api/v1/auth/login`; token no
-  SecureStore (localStorage no web).
-- **Agenda** (`src/app/agenda.tsx`): `/api/v1/me` + `/api/v1/appointments`;
-  filtros Hoje/7 dias, pull-to-refresh, status do atendimento, modo solo e
-  profissional vinculado. Ações: Confirmar, Check-in, Checkout, Concluir,
-  Cancelar e Não veio (`PATCH /appointments/:id/status`).
+- **Login** (`src/app/index.tsx`): alterna entre **Equipe** (e-mail/senha em
+  `/api/v1/auth/login`) e **Cliente** (OTP de 6 dígitos por e-mail em
+  `/api/v1/client/auth/request|verify`). Tokens ficam no SecureStore
+  (localStorage no web) em chaves separadas.
+- **Agenda da equipe** (`src/app/agenda.tsx`): `/api/v1/me` +
+  `/api/v1/appointments`; filtros Hoje/7 dias, pull-to-refresh, status do
+  atendimento, modo solo e profissional vinculado. Ações: Confirmar, Check-in,
+  Checkout, Concluir, Cancelar e Não veio
+  (`PATCH /appointments/:id/status`).
+- **Área do cliente** (`src/app/client.tsx`): `/api/v1/client/me` +
+  `/api/v1/client/appointments`; lista os agendamentos, troca de empresa
+  (`/api/v1/client/tenant`) quando o e-mail tem cadastro em mais de um tenant e
+  faz logout.
 - **Booking público** (`src/app/book/index.tsx`): sem login, em 4 passos —
   serviço, profissional/filial, data/horário e contato; usa
   `/api/v1/public/catalog|availability|bookings` com `EXPO_PUBLIC_TENANT_SLUG`.
 
+O login do cliente exige um **cadastro de cliente com e-mail** no tenant (o
+booking público cria esse cadastro; o e-mail é opcional no booking). No dev/demo,
+sem `RESEND_API_KEY`, a tela mostra o `devCode` retornado pela API.
+
 ## Próximos passos
 
-- Login do cliente final (OTP) e troca de tenant.
 - Testar push em aparelho físico/development build e gerar build EAS.
+- Avaliar cancelamento/remarcação pelo próprio cliente.

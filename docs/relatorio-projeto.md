@@ -6,8 +6,8 @@
 
 - Repositório: https://github.com/axyonsoftwarehouse/glowhub (público).
 - Estágio: **MVP interno funcional** (Fases 0–8 implementadas; Fase 6 parcial —
-  app mobile ainda sem push em development build, login do cliente final e build
-  EAS). Ainda **não pronto para produção** (ver backlog e riscos).
+  app mobile ainda sem push em development build e build EAS). Ainda **não
+  pronto para produção** (ver backlog e riscos).
 - Última atualização: **2026-11-14**, conferida contra o código do commit
   `09ba388` (assistente de IA, billing da plataforma, LGPD, auth/e-mail,
   InfinitePay e push registrado).
@@ -57,7 +57,7 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Gerente (manager) | Opera filiais, catálogo, agenda e equipe. |
 | Recepção / staff | Agenda, check-in/checkout, cobrança, clientes. |
 | Profissional | **Minha agenda** (`/my-schedule`): agenda do dia/semana e confirma/inicia/conclui os próprios atendimentos. |
-| Cliente final | **Agendamento online** em `/book`; app mobile inicial (push/EAS e login do cliente final pendentes). |
+| Cliente final | **Agendamento online** em `/book` e app mobile com **login OTP** (e-mail) para ver os próprios agendamentos; push/EAS pendentes. |
 
 ### 1.6 Escopo funcional (módulos)
 
@@ -79,7 +79,7 @@ Papéis por tenant: **owner, admin, manager, staff, viewer**.
 | Fidelização | **Gift cards** (valor fixo + código; passivo→receita no resgate), **programa de pontos** (acúmulo ao quitar a comanda, resgate como crédito na carteira) e **campanhas por segmento** (e-mail com opt-in) | ✅ |
 | Pacotes & Assinaturas | Pré-pago e recorrente, com ledger, **consumo/limites por período** e **renovação automática** (cron) | ✅ |
 | Notificações | Caixa de saída + e-mail (adapter Resend), lembretes diários e **registro de push** (tokens Expo por usuário/tenant) | ✅ (envio real de push e SMS pendentes) |
-| Canal cliente | Agendamento online `(/book)`; app mobile | 🟡 |
+| Canal cliente | Agendamento online `(/book)`; app mobile com login OTP do cliente e troca de empresa | 🟡 (push/EAS pendentes) |
 | Relatórios & BI | Balancete, resultado, receita/dia, recebimentos por forma, **ocupação por profissional**; **inteligência de clientes** (segmentos/RFM); **lucratividade & DRE** (margem por serviço/produto, ranking e fluxo de caixa vs. competência) | ✅ |
 | Billing da plataforma | Planos Solo/Equipe/Rede, teste grátis de 14 dias, limites de profissionais/filiais/usuários, tolerância de 7 dias, bloqueio do painel e cobrança via Mercado Pago Assinaturas (`/billing`) | ✅ (validar no sandbox e confirmar preços) |
 | Assistente de IA | Perguntas sobre o negócio, escrita assistida, análises, **leitura de comprovantes** Pix/cartão e **modo voz** (`/assistant`, OpenRouter) | ✅ (depende de `OPENROUTER_API_KEY`) |
@@ -127,6 +127,10 @@ Browser ──► Next (RSC + Server Actions)
 - **Canal público** (`/book`, `/api/webhooks/*`) usa `getDb()` (owner) com
   **escopo explícito por `tenant_id`** — decisão consciente. No `/book`, o tenant
   vem só do host (`getPublicTenant`), nunca de header/query.
+- **Cliente final (OTP)**: o código é guardado como HMAC-SHA256 (tenant+e-mail,
+  10 min, 5 tentativas) e a sessão como SHA-256 (30 dias); `/api/v1/client/*`
+  usa `getDb()` com escopo explícito de tenant. O e-mail é a identidade do
+  cliente no tenant.
 - **Convites**: `SECURITY DEFINER` (`accept_invitation`).
 - **Modo demonstração**: tenants do seed têm `is_read_only = true`; um trigger
   (`enforce_readonly_tenant`) bloqueia escrita em catálogo/configuração/
@@ -159,6 +163,8 @@ Browser ──► Next (RSC + Server Actions)
   por usuário/tenant).
 - **Billing da plataforma:** `platform_subscriptions`, `platform_payments`.
 - **Legal:** `legal_acceptances` (documento, versão, data, IP e navegador).
+- **Auth do cliente final:** `client_otp_codes` (hash do código, validade e
+  tentativas) e `client_sessions` (hash do token Bearer, validade e revogação).
 
 ### 2.5 Financeiro (princípios e estado)
 - **Partidas dobradas**, **append-only** (sem UPDATE/DELETE para a role do app;
@@ -284,6 +290,9 @@ Rotas: `/`, `/login`, `/forgot-password`, `/reset-password`, `/verify-email`,
   envio real pendente de EAS/development build).
 - **API v1** para app: login Bearer, tenant ativo, agenda da equipe e catálogo/
   disponibilidade/booking público (sem login).
+- **Cliente final no app**: login **OTP por e-mail**, sessão Bearer de 30 dias,
+  meus agendamentos e **troca de empresa** (`/api/v1/client/*`); a área do
+  cliente (`mobile/src/app/client.tsx`) lista os agendamentos e permite sair.
 - **Pacote mobile solo**: navegação inferior, painel “Hoje” com ações rápidas e
   checklist, modo solo (`tenants.is_solo`) e onboarding que cria profissional,
   serviço, horários e plano de contas.
@@ -294,7 +303,7 @@ Rotas: `/`, `/login`, `/forgot-password`, `/reset-password`, `/verify-email`,
 - **Assistente de IA** (`/assistant`, OpenRouter): perguntas sobre o negócio,
   escrita assistida, análises, leitura de comprovantes Pix/cartão e **modo voz**
   (Web Speech API); rate limit próprio e chave só no servidor.
-- **CI** + **155 testes unitários** (24 arquivos) e **16 cenários e2e** (+ setup;
+- **CI** + **164 testes unitários** (25 arquivos) e **16 cenários e2e** (+ setup;
   Playwright: login demo, minha agenda + status, histórico do cliente, booking,
   API v1 pública, navegação mobile, assinaturas, fechamento e **7 verificações
   de acessibilidade com axe**); `tsc`/`eslint`/`build` verdes.
@@ -313,8 +322,9 @@ Rotas: `/`, `/login`, `/forgot-password`, `/reset-password`, `/verify-email`,
 - [x] **App mobile inicial (Expo)**: login Bearer, token no SecureStore, agenda
       Hoje/7 dias, ações de status, booking público e registro de push
       ([`mobile/`](../mobile/README.md)).
-- [ ] **App mobile completo**: push validado em development build, login do
-      cliente final e build EAS.
+- [x] **Login do cliente final (OTP)**: código por e-mail, sessão Bearer de
+      30 dias, meus agendamentos e troca de empresa no app.
+- [ ] **App mobile completo**: push validado em development build e build EAS.
 
 ### Financeiro / comercial
 - [x] **Gateway online** (adapter portável: mock + Mercado Pago + InfinitePay),
@@ -406,6 +416,9 @@ Rotas: `/`, `/login`, `/forgot-password`, `/reset-password`, `/verify-email`,
   confirmado ainda em aberto (o estorno de cobrança aberta está pronto).
 - **Assistente**: depende de `OPENROUTER_API_KEY`; custo por uso e privacidade
   dos dados enviados ao provedor devem ser avaliados antes de produção.
+- **Login do cliente (OTP)**: depende de e-mail real para produção e só funciona
+  para clientes que informaram e-mail no cadastro; sem provedor (dev/demo) o
+  código aparece no console/`devCode`.
 - **RLS vs. canal público**: o `/book` usa a conexão admin com escopo explícito;
   manter essa disciplina ao evoluir.
 
@@ -438,6 +451,8 @@ Pontos de entrada úteis:
 - Auth: `src/lib/auth.ts`, `src/lib/session.ts`, `src/app/api/auth/[...all]/route.ts`.
 - Auth/e-mail (recuperação, verificação): `src/lib/auth-emails.ts`,
   `src/lib/email.ts`, `src/app/(auth)/forgot-password|reset-password|verify-email/*`.
+- Cliente final (OTP): `src/lib/client-auth.ts`, `src/lib/client-auth-tokens.ts`,
+  `src/app/api/v1/client/*`, `mobile/src/app/client.tsx`.
 - LGPD: `src/lib/legal.ts`, `src/app/(legal)/termos|privacidade/*`,
   `src/app/(auth)/aceite-termos/*`.
 - Billing da plataforma: `src/lib/billing/*` (planos, acesso, provedores,
@@ -483,3 +498,5 @@ definitivo de gateway.
   assinaturas vendidas aos clientes do salão).
 - **Assistente**: camada de IA em `/assistant` (OpenRouter) que só lê um resumo
   via RLS e nunca grava dados sozinha.
+- **OTP**: código de uso único enviado por e-mail para o cliente final entrar no
+  app; o servidor guarda só o hash, com validade e limite de tentativas.

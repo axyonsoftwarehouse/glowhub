@@ -18,6 +18,21 @@ O login é encapsulado no servidor para o app nativo não precisar enviar o head
 `Origin` (exigido pelo Better Auth no fluxo web). A sessão web continua usando
 cookie normalmente.
 
+### App do cliente final (OTP)
+
+1. `POST /api/v1/client/auth/request` com `{ "email": "..." }` e o tenant em
+   `x-tenant-slug` (ou `?tenant=`/subdomínio).
+2. O código de **6 dígitos** chega por e-mail (vale 10 min, 5 tentativas).
+3. `POST /api/v1/client/auth/verify` com `{ "email": "...", "code": "123456" }`
+   devolve `{ token, expiresAt, client, tenant, tenants }`.
+4. Envie `Authorization: Bearer <token>` nas rotas `/client/*`.
+5. `POST /api/v1/client/auth/logout` revoga a sessão.
+
+O e-mail é a identidade do cliente **dentro do tenant**; cadastros repetidos com
+o mesmo e-mail são tratados como o mesmo cliente. A resposta do `request` é
+sempre genérica (não revela se o e-mail existe). Em `APP_ENV=dev`/`demo` sem
+`RESEND_API_KEY`, a resposta inclui `devCode` para testes.
+
 ### Canal público (app do cliente / booking)
 
 Não exige login. O tenant é resolvido por:
@@ -65,6 +80,35 @@ de `pending`/`confirmed` (cancelamento também de `check_in`/`checkout`).
 Respostas: `200 { ok, status }`, `409 INVALID_TRANSITION`, `403
 CANCELLATION_WINDOW`/`FORBIDDEN`, `404 NOT_FOUND`.
 
+## Endpoints do cliente final
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `POST` | `/client/auth/request` | Envia o código OTP por e-mail |
+| `POST` | `/client/auth/verify` | Valida o código e devolve o token Bearer |
+| `POST` | `/client/auth/logout` | Revoga a sessão atual |
+| `GET` | `/client/me` | Cliente, empresa ativa e empresas do mesmo e-mail |
+| `POST` | `/client/tenant` | Troca a empresa (`{ "tenantId": "..." }`) e devolve novo token |
+| `GET` | `/client/appointments` | Agenda/histórico do cliente; `from`/`to` opcionais |
+
+`GET /client/appointments` usa por padrão a janela de -30 a +90 dias e devolve
+até 100 registros com `branch` (incluindo `timezone`), `professional`,
+`service`, `status` e `priceCents`.
+
+### Corpo do request/verify
+
+```json
+{ "email": "ana@exemplo.com" }
+```
+
+```json
+{ "email": "ana@exemplo.com", "code": "123456" }
+```
+
+Respostas: `200 { ok, expiresInSeconds, tenant }` no request; `200 { token,
+expiresAt, client, tenant, tenants }` no verify. Erros: `INVALID_CODE` (400),
+`CODE_EXPIRED` (400), `TOO_MANY_ATTEMPTS` (429), `TENANT_FORBIDDEN` (403).
+
 ## Endpoints públicos
 
 | Método | Rota | Descrição |
@@ -99,8 +143,10 @@ ocupado; `400` para dados inválidos; `429` para excesso de tentativas.
 { "error": { "code": "UNAUTHORIZED", "message": "Sessão ausente ou expirada." } }
 ```
 
-Códigos: `UNAUTHORIZED`, `NO_TENANT`, `TENANT_FORBIDDEN`, `INVALID_*`,
-`SLOT_TAKEN`, `UNAVAILABLE`, `RATE_LIMITED`, `INTERNAL_ERROR`.
+Códigos: `UNAUTHORIZED`, `NO_TENANT`, `TENANT_REQUIRED`, `TENANT_NOT_FOUND`,
+`TENANT_FORBIDDEN`, `INVALID_*`, `INVALID_CODE`, `CODE_EXPIRED`,
+`TOO_MANY_ATTEMPTS`, `SLOT_TAKEN`, `UNAVAILABLE`, `RATE_LIMITED`,
+`INTERNAL_ERROR`.
 
 ## CORS
 
@@ -111,21 +157,30 @@ nativos com Bearer. Para restringir clientes web, defina
 ## Limites e segurança
 
 - Login: 10 tentativas/min por IP; booking: 10/10min; disponibilidade: 60/min.
+- OTP do cliente: request 5/10min por IP e 3/10min por e-mail; verify 15/10min
+  por IP e 10/10min por e-mail.
 - O app não deve guardar senha: apenas o token, em armazenamento seguro.
 - O token dá acesso ao tenant ativo; a troca de tenant é validada contra
   `memberships` e atualiza `profiles.active_tenant_id`.
+- **Cliente final**: o código OTP é guardado como HMAC-SHA256 (ligado a
+  tenant+e-mail) e o token da sessão como SHA-256; a sessão vale 30 dias e é
+  revogada no logout/troca de empresa. O tenant vem do slug/host.
 - Rotas públicas nunca aceitam `tenant_id` do corpo; o tenant vem do slug/host.
 
 ## App mobile (implementado)
 
 O app Expo fica em [`mobile/`](../mobile/README.md):
 
-- **Login** (`src/app/index.tsx`) chama `/auth/login`, guarda o token no
-  SecureStore (localStorage no web) e navega para a agenda.
-- **Agenda** (`src/app/agenda.tsx`) chama `/me` e `/appointments`; mostra
-  Hoje/7 dias, pull-to-refresh, status, profissional, modo solo e preço. Os
-  botões Confirmar/Check-in/Checkout/Concluir, Cancelar e Não veio chamam
+- **Login** (`src/app/index.tsx`): alterna entre **Equipe** (e-mail/senha em
+  `/auth/login`) e **Cliente** (OTP por e-mail). Cada modo guarda o token em uma
+  chave própria no SecureStore (localStorage no web) e limpa a sessão do outro.
+- **Agenda da equipe** (`src/app/agenda.tsx`) chama `/me` e `/appointments`;
+  mostra Hoje/7 dias, pull-to-refresh, status, profissional, modo solo e preço.
+  Os botões Confirmar/Check-in/Checkout/Concluir, Cancelar e Não veio chamam
   `PATCH /appointments/:id/status`.
+- **Área do cliente** (`src/app/client.tsx`): `/client/me` e
+  `/client/appointments`; mostra os agendamentos, permite **trocar de empresa**
+  (`/client/tenant`) quando o e-mail tem cadastro em mais de um tenant e sair.
 - **Booking público** (`src/app/book/index.tsx`): sem login, em 4 passos —
   serviço, profissional/filial, data/horário e contato; usa
   `/public/catalog|availability|bookings` com `EXPO_PUBLIC_TENANT_SLUG`.
@@ -138,5 +193,5 @@ O app Expo fica em [`mobile/`](../mobile/README.md):
 
 ## Próximos passos do app
 
-- Login do cliente final (OTP) e troca de tenant no app.
 - Testar push em aparelho físico/development build e gerar build EAS.
+- Avaliar cancelamento/remarcação pelo próprio cliente na área `/client`.

@@ -142,6 +142,13 @@ Consequências práticas:
   (não há e-mail de convite).
 - **Troca de tenant**: atualiza `profiles.active_tenant_id`; não há refresh de
   token nem novo login.
+- **Cliente final (OTP)**: `/api/v1/client/auth/request|verify` resolvem o tenant
+  por slug/host, guardam só o HMAC do código (10 min, 5 tentativas) e criam uma
+  sessão Bearer de 30 dias em `client_sessions` (token só como SHA-256). O
+  e-mail é a identidade do cliente dentro do tenant; `/api/v1/client/*` usa a
+  conexão admin com escopo explícito. Rate limit: request 5/10min por IP e
+  3/10min por e-mail; verify 15/10min por IP e 10/10min por e-mail. Sem
+  `RESEND_API_KEY`, o código aparece no console (dev) e em `devCode` (dev/demo).
 
 ## 4. Isolamento por tenant (RLS)
 
@@ -574,10 +581,11 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
 
 ## 12. Testes e verificação
 
-- **Unitários (Vitest, 24 arquivos / 155 casos)**: dinheiro, fuso,
+- **Unitários (Vitest, 25 arquivos / 164 casos)**: dinheiro, fuso,
   disponibilidade, erros de banco/agendamento, estoque, fidelidade, CRM,
   lucratividade, assinatura/retry de webhook, estorno de cobrança, lembretes,
-  push, métricas, alertas, billing/acesso, e-mails de auth, LGPD e `APP_ENV`.
+  push, métricas, alertas, billing/acesso, e-mails de auth, OTP do cliente,
+  LGPD e `APP_ENV`.
 - **e2e (Playwright, 16 cenários + setup de auth)**: login demo, minha agenda
   (vínculo e mudança de status), histórico do cliente, booking público,
   assinaturas, fechamento, API v1 pública, navegação mobile e 7 verificações de
@@ -630,8 +638,8 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
   última hora dependem do botão manual em `/notifications`.
 - **Registro de push** existe; o envio real depende de `projectId` EAS e
   development build. Canais **SMS** não implementados.
-- O app mobile inicial e a **API v1** existem; faltam push/EAS e login do
-  cliente final.
+- O app mobile inicial, a **API v1** e o **login OTP do cliente final** existem;
+  faltam push em development build e build EAS.
 - **Billing da plataforma** existe (`/billing`); falta validar o Mercado Pago no
   sandbox e confirmar os preços dos planos.
 - Storage de arquivos por tenant não existe (logo/imagem só por URL).

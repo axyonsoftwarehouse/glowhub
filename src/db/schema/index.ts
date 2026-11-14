@@ -20,3 +20,4 @@ export * from "./push";
 export * from "./infra";
 export * from "./legal";
 export * from "./billing";
+export * from "./client-auth";

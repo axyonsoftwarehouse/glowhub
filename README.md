@@ -223,6 +223,7 @@ Acesse: http://localhost:3000/dashboard
 - [x] Pacote mobile solo: navegação inferior, painel “Hoje”, modo solo e
       onboarding assistido
 - [x] App mobile (Expo) inicial: login Bearer + agenda + ações de status + booking público + push — **[como rodar](mobile/README.md)**
-- [ ] Push validado em development build, login do cliente final e build EAS
+- [x] Login do cliente final no app (OTP por e-mail): meus agendamentos e troca de empresa
+- [ ] Push validado em development build e build EAS
 - [ ] Provedor de e-mail real (Resend + domínio), SMS e storage de arquivos
 - [ ] Validar billing no sandbox do Mercado Pago e preencher `LEGAL_COMPANY`

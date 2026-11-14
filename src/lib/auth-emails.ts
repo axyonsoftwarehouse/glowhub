@@ -73,6 +73,27 @@ export function buildVerificationEmail(params: {
   };
 }
 
+/** Codigo de acesso do cliente final (login OTP no app). */
+export function buildClientOtpEmail(params: {
+  tenantName: string;
+  code: string;
+  minutes: number;
+}): AuthEmail {
+  const tenant = escapeHtml(params.tenantName);
+  const subjectTenant =
+    params.tenantName.replace(/[\r\n]+/g, " ").trim() || "GlowHub";
+  return {
+    subject: `Seu código de acesso - ${subjectTenant}`,
+    html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;color:#1f1f1f">
+<p style="font-size:18px;font-weight:bold">Glow<span style="color:#a21caf">Hub</span></p>
+<p>Seu código de acesso em <strong>${tenant}</strong>:</p>
+<p style="margin:24px 0;font-size:34px;font-weight:bold;letter-spacing:8px">${escapeHtml(params.code)}</p>
+<p>O código vale por ${params.minutes} minutos e só pode ser usado uma vez.</p>
+<p style="font-size:13px;color:#555">Se você não pediu este código, ignore este e-mail.</p>
+</div>`,
+  };
+}
+
 /**
  * Exige e-mail confirmado para entrar? Desligado por padrao: enquanto nao houver
  * provedor de e-mail real (depende do dominio), exigir travaria todo cadastro.
