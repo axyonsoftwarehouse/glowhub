@@ -315,10 +315,11 @@ desktop a sidebar continua disponível. O modo pode ser ligado/desligado em
   `active_tenant_id`.
 
 ## Decisões em aberto (roadmap de ADRs)
-- **Verificação de e-mail** no cadastro e **envio de convites** por e-mail
-  (o adapter Resend já existe; falta ligar o fluxo).
-- Canais **push/SMS** e agendador com granularidade menor que a diária.
+- **Provedor de e-mail real** (Resend + domínio) e **envio do convite de equipe**
+  por e-mail; a verificação de e-mail já existe e é opcional.
+- Envio real de **push** (projectId EAS + development build) e canais **SMS**;
+  agendador com granularidade menor que a diária.
 - **Isolamento de arquivos** (Storage buckets por tenant; hoje só URL).
-- **API** para o app mobile (expor uma API dedicada ou consumir o mesmo banco).
-- **Billing da própria plataforma** (planos do SaaS) — hoje as assinaturas são
-  vendidas ao cliente final do salão.
+- **Billing da própria plataforma**: planos e cobrança já implementados
+  (`/billing`); falta validar no sandbox do Mercado Pago e confirmar os preços.
+- **Conciliação automática** de extrato bancário e provedor definitivo de gateway.
