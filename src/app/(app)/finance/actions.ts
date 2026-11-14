@@ -1237,6 +1237,7 @@ export async function payProfessionalAction(
 
     if ("error" in result) return { status: "error", message: result.error };
     revalidatePath("/finance");
+    revalidatePath("/helpers");
     return {
       status: "success",
       message: result.already ? "Nada a repassar." : "Repasse registrado.",
