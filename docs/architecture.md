@@ -260,6 +260,18 @@ desktop a sidebar continua disponível. O modo pode ser ligado/desligado em
   `ALERT_WEBHOOK_URL` existir, empurra um payload compatível com
   Slack/Discord/Mattermost a partir de `ALERT_MIN_LEVEL` (padrão `error`),
   suprimindo títulos repetidos por `ALERT_COOLDOWN_SECONDS` (padrão 300s).
+- **Sentry** (`@sentry/nextjs`, ligado por `NEXT_PUBLIC_SENTRY_DSN`):
+  `src/instrumentation.ts` inicia o SDK em Node/Edge e exporta
+  `onRequestError` (Server Components, Route Handlers, Server Actions e proxy);
+  `src/instrumentation-client.ts` cobre o navegador. As telas `error.tsx`/
+  `global-error.tsx` e o `logger.error` (erros tratados, agrupados pelo título
+  do log) também enviam. LGPD: coleta automática do SDK desligada (`dataCollection`; na v11
+  `sendDefaultPii` não existe mais e o padrão coleta IP, cookies e headers),
+  usuário só por `id`,
+  tag `tenant` com o id da empresa e `beforeSend` (`src/lib/sentry.ts`) que
+  remove cookies, corpo, query string e chaves sensíveis. Eventos do navegador
+  passam pelo túnel `/monitoring`; source maps sobem no build só com
+  `SENTRY_AUTH_TOKEN`.
 - **Health** (`/api/health`) checa o banco; instrumentado com métricas/alertas.
 - Nota serverless: contadores em memória são **por instância**; séries
   históricas vêm do log drain / coletor HTTP.

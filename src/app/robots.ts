@@ -5,6 +5,7 @@ import { siteUrl } from "@/lib/site";
 // Rotas privadas (painel, API, fluxos com token) nao entram em buscadores.
 const PRIVATE_PREFIXES = [
   "/api/",
+  "/monitoring",
   "/pay/",
   "/invite/",
   "/billing",

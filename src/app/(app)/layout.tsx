@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { isConfigured } from "@/lib/env";
@@ -44,6 +45,10 @@ export default async function AppLayout({
     getUserTenants(),
     getMyProfessional(),
   ]);
+
+  // Sentry: so ids (sem e-mail/nome), para achar a empresa afetada por um erro.
+  Sentry.setUser({ id: user.id });
+  if (tenant) Sentry.setTag("tenant", tenant.id);
 
   const activeRole = tenants.find((t) => t.id === tenant?.id)?.role ?? "";
   const canManageTenant = activeRole === "owner" || activeRole === "admin";

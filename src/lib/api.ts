@@ -86,7 +86,10 @@ export function handleApi<C = unknown>(
       if (cause instanceof ApiError) {
         return apiError(request, cause.status, cause.code, cause.message);
       }
-      logger.error("api_unhandled_error", { error: String(cause) });
+      // Passa o Error original: o log registra a mensagem e o Sentry a stack.
+      logger.error("api_unhandled_error", {
+        error: cause instanceof Error ? cause : String(cause),
+      });
       return apiError(
         request,
         500,
