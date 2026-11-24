@@ -12,7 +12,7 @@ import { TenantSwitcher } from "@/app/(app)/tenant-switcher";
 import { CancelButton, PlanButton } from "./plan-button";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Plano e cobrança · GlowHub" };
+export const metadata = { title: "Plano e cobrança" };
 
 const STATUS_LABEL: Record<string, string> = {
   trialing: "Teste grátis",

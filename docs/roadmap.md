@@ -135,6 +135,14 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [ ] Credenciais de produção do billing (Mercado Pago) e do assistente
       (`OPENROUTER_API_KEY`), além do gateway ativo (`PAYMENT_PROVIDER`)
 
+### Acabamento público (feito)
+- [x] Landing comercial (`/`): recursos, passos, planos lidos de `PLANS`, FAQ e
+      CTA de teste grátis (`/login?modo=cadastro`); link "Ver demonstração" por
+      `NEXT_PUBLIC_DEMO_URL`
+- [x] Páginas de erro (`error.tsx` na raiz e no painel, `global-error.tsx`) e 404
+- [x] SEO: `metadataBase`, título com template, Open Graph gerado, ícones,
+      `robots.txt` (bloqueia tudo fora de `APP_ENV=production`) e `sitemap.xml`
+
 ## Concluído fora das fases
 - [x] Gateway de pagamento online (adapter portável: mock + Mercado Pago +
       InfinitePay; Fase 4)

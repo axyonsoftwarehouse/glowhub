@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AuthCard } from "../auth-card";
 import { ResetPasswordForm } from "./reset-password-form";
 
-export const metadata = { title: "Nova senha · GlowHub" };
+export const metadata = { title: "Nova senha" };
 
 export default async function ResetPasswordPage({
   searchParams,

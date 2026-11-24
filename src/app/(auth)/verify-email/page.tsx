@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { AuthCard } from "../auth-card";
 
-export const metadata = { title: "Confirmação de e-mail · GlowHub" };
+export const metadata = { title: "Confirmação de e-mail" };
 
 export default async function VerifyEmailPage({
   searchParams,
