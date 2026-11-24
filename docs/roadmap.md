@@ -63,7 +63,8 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Web mobile solo: navegação inferior, painel “Hoje”, modo solo e onboarding assistido
 - [x] App mobile inicial (Expo): login Bearer + agenda + ações de status + booking público + registro de push
 - [x] Login do cliente final (OTP por e-mail) e troca de empresa no app
-- [ ] Push em development build e build EAS
+- [ ] Rodar o build EAS (development e produção) e validar push no aparelho —
+  config pronta (`mobile/eas.json` + `expo-dev-client`)
 
 ## Fase 7 — Relatórios & Inteligência de Negócio (BI)
 - [x] CRM de clientes: aniversário, tags e preferências no cadastro; segmentação

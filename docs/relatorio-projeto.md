@@ -251,6 +251,10 @@ Browser ──► Next (RSC + Server Actions)
   nascem somente leitura; `DEMO_READ_ONLY=false` libera escrita em dev/preview.
 - **Conciliação:** `/reconciliation` casa cobrança ↔ pagamento ↔ gateway e permite
   confirmar pagamentos pendentes (efeito de webhook).
+- **App mobile/EAS:** `mobile/eas.json` (perfis development/preview/production)
+  e `expo-dev-client` prontos; `android.package`/`ios.bundleIdentifier` em
+  `com.glowhub.app`. Falta rodar o build e validar push em aparelho físico
+  (credenciais FCM/APNs e conta EAS).
 
 ---
 
@@ -324,7 +328,9 @@ Rotas: `/`, `/login`, `/forgot-password`, `/reset-password`, `/verify-email`,
       ([`mobile/`](../mobile/README.md)).
 - [x] **Login do cliente final (OTP)**: código por e-mail, sessão Bearer de
       30 dias, meus agendamentos e troca de empresa no app.
-- [ ] **App mobile completo**: push validado em development build e build EAS.
+- [ ] **App mobile completo**: rodar o build EAS (development e produção) e
+      validar push em aparelho físico — `mobile/eas.json` e `expo-dev-client` já
+      estão configurados.
 
 ### Financeiro / comercial
 - [x] **Gateway online** (adapter portável: mock + Mercado Pago + InfinitePay),

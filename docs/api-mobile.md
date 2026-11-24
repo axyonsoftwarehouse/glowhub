@@ -187,11 +187,14 @@ O app Expo fica em [`mobile/`](../mobile/README.md):
 - **Push**: após o login, o app pede permissão e registra o token Expo em
   `/push-tokens`. No Android, push remoto exige **development build** (não Expo
   Go) e um `projectId` EAS; sem isso o app mostra push como indisponível.
+  `mobile/eas.json` (development/preview/production) e `expo-dev-client` já
+  estão configurados; falta rodar o build com credenciais FCM/APNs.
 - Rodar: `cd mobile && npm install && cp .env.example .env && npm start`.
   Ajuste `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_TENANT_SLUG` e, se houver,
   `EXPO_PUBLIC_EAS_PROJECT_ID`.
 
 ## Próximos passos do app
 
-- Testar push em aparelho físico/development build e gerar build EAS.
+- `npm run eas:init` + `npm run build:dev` e validar push em aparelho físico;
+  depois gerar o build de produção.
 - Avaliar cancelamento/remarcação pelo próprio cliente na área `/client`.

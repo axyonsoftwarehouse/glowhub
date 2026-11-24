@@ -317,8 +317,9 @@ desktop a sidebar continua disponível. O modo pode ser ligado/desligado em
 ## Decisões em aberto (roadmap de ADRs)
 - **Provedor de e-mail real** (Resend + domínio) e **envio do convite de equipe**
   por e-mail; a verificação de e-mail já existe e é opcional.
-- Envio real de **push** (projectId EAS + development build) e canais **SMS**;
-  agendador com granularidade menor que a diária.
+- Envio real de **push**: `mobile/eas.json`/`expo-dev-client` prontos; falta
+  rodar o build com projectId EAS e credenciais FCM/APNs. Canais **SMS** e
+  agendador com granularidade menor que a diária seguem pendentes.
 - **Isolamento de arquivos** (Storage buckets por tenant; hoje só URL).
 - **Billing da própria plataforma**: planos e cobrança já implementados
   (`/billing`); falta validar no sandbox do Mercado Pago e confirmar os preços.

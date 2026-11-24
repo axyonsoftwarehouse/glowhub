@@ -511,7 +511,8 @@ documentadas no próprio código (`charge-revenue-<id>`, `payment-<id>`,
   manual em `/notifications`.
 - **Push**: `push_tokens` guarda o token Expo por usuário/tenant; o app registra
   após o login e o booking público dispara “Novo agendamento” para os aparelhos
-  do tenant. O envio real exige `projectId` EAS e development build no Android.
+  do tenant. O envio real exige `projectId` EAS e development build no Android;
+  `mobile/eas.json` e `expo-dev-client` já preparam esses builds.
 - `src/lib/email.ts`: Resend se `RESEND_API_KEY` existir; senão loga no console
   e devolve sucesso de desenvolvimento.
 

@@ -53,6 +53,9 @@ export async function enablePush(token: string): Promise<PushStatus> {
     const pushToken = await Notifications.getExpoPushTokenAsync({
       projectId: id,
     });
+    if (__DEV__) {
+      console.log("[push] ExpoPushToken:", pushToken.data);
+    }
     await registerPushToken(
       token,
       pushToken.data,

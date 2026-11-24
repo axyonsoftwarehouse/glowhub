@@ -44,6 +44,37 @@ npm run typegen    # gera os tipos das rotas (.expo)
 npm run typecheck  # tsc --noEmit
 ```
 
+## EAS, development build e push
+
+O projeto já tem `eas.json` (perfis `development`, `preview` e `production`) e
+`expo-dev-client`. O primeiro build precisa da sua conta Expo:
+
+```bash
+npx eas-cli@latest login
+npm run eas:init        # cria/associa o projeto e grava extra.eas.projectId
+npm run build:dev       # development client (interna)
+npm run build:preview   # APK interno para testar sem dev tools
+npm run build:prod      # produção (autoIncrement)
+```
+
+- **Android push** exige **FCM v1** (projeto Firebase + service account). O
+  `eas build` pergunta pelas credenciais e guarda no projeto EAS.
+- **iOS push** exige conta paga do Apple Developer; registre o aparelho antes e
+  aceite a criação da chave APNs no primeiro build.
+- O `projectId` também pode vir de `EXPO_PUBLIC_EAS_PROJECT_ID` (fallback).
+- Instale o development build no aparelho, rode `npm start` e abra o app pelo
+  development client. Depois do login, o token Expo é enviado para
+  `/api/v1/push-tokens`.
+- Para testar: use https://expo.dev/notifications com o token do aparelho ou
+  crie um agendamento público — o booking dispara “Novo agendamento” via
+  `sendPushToTenant`.
+- `EXPO_PUBLIC_API_URL` precisa ser alcançável pelo aparelho (IP da máquina na
+  rede ou URL publicada). Sem `projectId`, o app segue funcionando e mostra push
+  como indisponível.
+
+Os identificadores `com.glowhub.app` (`android.package`/`ios.bundleIdentifier`)
+podem ser trocados antes da primeira publicação nas lojas.
+
 ## Telas
 
 - **Login** (`src/app/index.tsx`): alterna entre **Equipe** (e-mail/senha em
@@ -69,5 +100,6 @@ sem `RESEND_API_KEY`, a tela mostra o `devCode` retornado pela API.
 
 ## Próximos passos
 
-- Testar push em aparelho físico/development build e gerar build EAS.
+- Rodar o build de development, validar push em aparelho físico e gerar o build
+  de produção no EAS.
 - Avaliar cancelamento/remarcação pelo próprio cliente.
