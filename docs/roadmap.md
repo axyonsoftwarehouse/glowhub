@@ -96,7 +96,8 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [x] Onboarding de tenant (cadastro cria empresa + filial + owner)
 - [x] CI (lint + typecheck + build no GitHub Actions)
 - [x] Testes unitários (vitest) + e2e (Playwright: login demo, minha agenda, histórico do cliente, booking, API v1 pública, assinaturas, fechamento, axe/a11y)
-- [x] Observabilidade in-app (logger estruturado, `/api/health`, logs de webhook); métricas e alertas externos (`/api/metrics`, sink HTTP `METRICS_WEBHOOK_URL`, `sendAlert`/`ALERT_WEBHOOK_URL`)
+- [x] Observabilidade in-app (logger estruturado, `/api/health`, logs de webhook); métricas e alertas externos (`/api/metrics`, sink HTTP `METRICS_WEBHOOK_URL`, `sendAlert`/`ALERT_WEBHOOK_URL`) e rastreamento de erros com Sentry
+  (servidor, navegador e `logger.error`; sem PII, ligado por `NEXT_PUBLIC_SENTRY_DSN`)
 - [x] Segurança (rate limiting no Better Auth, tabela interna `rate_limits`; revisão contínua de policies)
 - [x] Acessibilidade (foco visível, skip link, labels/aria, contraste AA, axe e2e). Projeto **somente pt-BR** (sem i18n)
 - [x] Migrations versionadas (`drizzle/` + `npm run db:migrate`; sem `drizzle-kit push`) e guarda no CI
@@ -132,6 +133,8 @@ Construção incremental. Cada fase entrega algo utilizável e testável.
 - [ ] Banco de produção limpo (`npm run db:migrate`), sem conta demo (`APP_ENV=production`)
 - [ ] Demo em endereço próprio (ex.: `demo.<domínio>`)
 - [ ] E-mail real (verificação de conta, convites, lembretes)
+- [ ] Projeto no Sentry: `NEXT_PUBLIC_SENTRY_DSN` (+ `SENTRY_AUTH_TOKEN` para
+      source maps) e alertas de nova issue
 - [ ] Credenciais de produção do billing (Mercado Pago) e do assistente
       (`OPENROUTER_API_KEY`), além do gateway ativo (`PAYMENT_PROVIDER`)
 

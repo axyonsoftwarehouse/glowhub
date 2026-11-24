@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { useEffect } from "react";
 
@@ -14,6 +15,7 @@ type ErrorPanelProps = {
 export function ErrorPanel({ error, retry, homeHref, homeLabel }: ErrorPanelProps) {
   useEffect(() => {
     console.error(error);
+    Sentry.captureException(error);
   }, [error]);
 
   return (
