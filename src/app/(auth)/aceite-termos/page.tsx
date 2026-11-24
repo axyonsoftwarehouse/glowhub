@@ -6,7 +6,7 @@ import { AuthCard, primaryButtonClass } from "../auth-card";
 import { SignOutButton } from "@/app/(app)/sign-out-button";
 import { acceptLegalAction } from "./actions";
 
-export const metadata = { title: "Termos atualizados · GlowHub" };
+export const metadata = { title: "Termos atualizados" };
 
 export default async function AcceptTermsPage({
   searchParams,

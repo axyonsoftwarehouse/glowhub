@@ -3,7 +3,7 @@ import { getAppEnv } from "@/lib/app-env";
 import { formatPrice } from "@/lib/billing/plans";
 import { simulateMockPaymentAction } from "../actions";
 
-export const metadata = { title: "Pagamento simulado · GlowHub" };
+export const metadata = { title: "Pagamento simulado" };
 
 /** Checkout simulado do provedor `mock` (apenas APP_ENV=dev). */
 export default async function MockBillingCheckout({

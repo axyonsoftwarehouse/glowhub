@@ -2,7 +2,7 @@ import Link from "next/link";
 import { LEGAL_COMPANY as C, LEGAL_VERSIONS } from "@/lib/legal";
 import { LegalPage } from "../legal-layout";
 
-export const metadata = { title: "Termos de Uso · GlowHub" };
+export const metadata = { title: "Termos de Uso" };
 
 export default function TermsPage() {
   return (

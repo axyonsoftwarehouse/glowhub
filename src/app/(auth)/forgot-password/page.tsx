@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AuthCard } from "../auth-card";
 import { ForgotPasswordForm } from "./forgot-password-form";
 
-export const metadata = { title: "Esqueci minha senha · GlowHub" };
+export const metadata = { title: "Esqueci minha senha" };
 
 export default function ForgotPasswordPage() {
   return (
