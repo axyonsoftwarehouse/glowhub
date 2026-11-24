@@ -224,6 +224,6 @@ Acesse: http://localhost:3000/dashboard
       onboarding assistido
 - [x] App mobile (Expo) inicial: login Bearer + agenda + ações de status + booking público + push — **[como rodar](mobile/README.md)**
 - [x] Login do cliente final no app (OTP por e-mail): meus agendamentos e troca de empresa
-- [ ] Push validado em development build e build EAS
+- [ ] Rodar build EAS (development/produção) e validar push no aparelho — config em `mobile/eas.json`
 - [ ] Provedor de e-mail real (Resend + domínio), SMS e storage de arquivos
 - [ ] Validar billing no sandbox do Mercado Pago e preencher `LEGAL_COMPANY`
